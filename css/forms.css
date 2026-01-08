@@ -1,0 +1,569 @@
+/* ===== FORMULARIO DE COMANDA ===== */
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.header {
+    background: #1e40af;
+    color: white;
+    padding: 15px 20px;
+}
+
+.header h1 {
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-container {
+    padding: 25px;
+}
+
+.form-section {
+    margin-bottom: 25px;
+}
+
+.form-section h3 {
+    color: #1e293b;
+    margin-bottom: 5px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #3b82f6;
+    font-size: 1.3rem;
+}
+
+.form-group {
+    margin-bottom: 8px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.95rem;
+}
+
+.required::after {
+    content: " *";
+    color: #dc2626;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    transition: border 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== CHECKBOXES ===== */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 0.5fr));
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 8px;
+    border: 2px solid #e2e8f0;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.checkbox-label:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 12px;
+    height: 12px;
+}
+
+/* ===== MULTIPLICADORES ===== */
+.multiplicadores-container {
+    display: grid;
+    grid-template-columns: 0.5fr 0.5fr;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.multiplicador-section {
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.multiplicador-section h4 {
+    color: #1e293b;
+    margin-bottom: 5px;
+    font-size: 1rem;
+}
+
+.multiplicador-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 5px;
+}
+
+.multiplicador-input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    text-align: center;
+    min-width: 40px;
+}
+
+.multiplicador-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.multiplicador-label {
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.9rem;
+    min-width: 40px;
+}
+
+.info-cantidad {
+    margin-top: 5px;
+    padding: 6px 8px;
+    background: #dbeafe;
+    border-radius: 6px;
+    font-size: 0.85rem;
+}
+
+.info-cantidad strong {
+    color: #1e40af;
+}
+
+/* ===== MENÚS ===== */
+.menu-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 0.5fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.menu-option {
+    padding: 8px;
+    border: 2px solid #e2e8f0;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-option:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.menu-option.selected {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+.menu-option h4 {
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.menu-option p {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* ===== REFERENCIAS ===== */
+.referencias-container {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.referencias-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 0.5fr));
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.referencia-option {
+    padding: 5px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.9rem;
+}
+
+.referencia-option:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.referencia-option.selected {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+.cantidad-control {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cantidad-input {
+    width: 70px;
+    padding: 6px;
+    text-align: center;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.unidad-select {
+    width: 60px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ===== BOTÓN AÑADIR MENÚ ===== */
+.btn-add-menu {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    margin-top: 10px;
+    transition: all 0.3s;
+}
+
+.btn-add-menu:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
+}
+
+.menus-adicionales-container {
+    margin-top: 20px;
+}
+
+.menu-adicional-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #8b5cf6;
+}
+
+.menu-adicional-info h4 {
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.menu-adicional-info p {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.menu-adicional-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-remove-menu {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-pax-input {
+    width: 70px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ===== HISTORIAL DE COMANDA ===== */
+#historialPage {
+    display: none;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.historial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    color: white;
+}
+
+.historial-header h1 {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.historial-container {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.historial-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.historial-filters input,
+.historial-filters select {
+    padding: 10px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.comandas-list {
+    display: grid;
+    gap: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.comanda-item {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.comanda-item:hover {
+    border-color: #3b82f6;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.comanda-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.comanda-codigo {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #1e40af;
+}
+
+.comanda-fecha {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.comanda-empresa {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 5px;
+}
+
+.comanda-info {
+    color: #475569;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.comanda-estado {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.estado-creada {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.estado-proceso {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.estado-completada {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.comanda-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.btn-editar {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-imprimir {
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-eliminar {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-editar:hover,
+.btn-imprimir:hover,
+.btn-eliminar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* ===== DETALLE DE COMANDA ===== */
+#detalleComanda {
+    display: none;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.detalle-container {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.detalle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.detalle-codigo {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.detalle-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8fafc;
+    border-radius: 10px;
+}
+
+.detalle-section h4 {
+    color: #1e293b;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.detalle-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.info-item {
+    margin-bottom: 10px;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    color: #1e293b;
+    font-size: 1rem;
+}

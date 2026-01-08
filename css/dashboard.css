@@ -1,0 +1,93 @@
+/* ===== DASHBOARD ===== */
+.dashboard-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.dashboard-header h1 {
+    font-size: 3rem;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.dashboard-header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 1fr 350px;
+    gap: 30px;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+    height: fit-content;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+    border-color: #3b82f6;
+}
+
+.card-icon {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    display: block;
+}
+
+.card-title {
+    font-size: 1.8rem;
+    color: #1e293b;
+    margin-bottom: 10px;
+}
+
+.card-description {
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.card-comanda {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-color: #3b82f6;
+}
+
+.card-logistica {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-color: #10b981;
+}
+
+.card-inventario {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #f59e0b;
+}
+
+.card-historial {
+    background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+    border-color: #8b5cf6;
+}

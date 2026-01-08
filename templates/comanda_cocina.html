@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaterCloud - Comanda Cocina</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            background: #1e40af;
+            color: white;
+            padding: 25px 30px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-section h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #475569;
+        }
+        
+        .required::after {
+            content: " *";
+            color: #dc2626;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .checkbox-label:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .message-success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+        
+        .message-error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+        
+        .menu-selection {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .menu-option {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .menu-option:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+        }
+        
+        .menu-option.selected {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+        
+        .menu-option h4 {
+            color: #1e293b;
+            margin-bottom: 5px;
+        }
+        
+        .menu-option p {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>👨‍🍳</span>
+                Comanda de Cocina
+            </h1>
+            <p>Complete los datos para la comanda de cocina</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="comandaCocinaForm">
+                <!-- Sección 1: Información básica -->
+                <div class="form-section">
+                    <h3>📋 Información Básica</h3>
+                    
+                    <div class="form-group">
+                        <label for="empresa" class="required">Empresa</label>
+                        <input type="text" id="empresa" placeholder="Nombre de la empresa" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="responsable" class="required">Responsable</label>
+                        <input type="text" id="responsable" placeholder="Nombre del responsable" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="pax" class="required">Número de PAX</label>
+                        <input type="number" id="pax" placeholder="Número de personas" min="1" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hora_salida" class="required">Hora de Salida</label>
+                        <input type="time" id="hora_salida" required>
+                    </div>
+                </div>
+                
+                <!-- Sección 2: Selección de Menú -->
+                <div class="form-section">
+                    <h3>🍴 Selección de Menú</h3>
+                    
+                    <div class="form-group">
+                        <label for="categoria">Categoría del Menú</label>
+                        <select id="categoria" onchange="cargarMenus()">
+                            <option value="">Selecciona una categoría</option>
+                        </select>
+                    </div>
+                    
+                    <div id="menusContainer" class="menu-selection">
+                        <!-- Menús se cargarán aquí -->
+                    </div>
+                    <input type="hidden" id="menu_id" name="menu_id">
+                </div>
+                
+                <!-- Sección 3: Alérgenos -->
+                <div class="form-section">
+                    <h3>⚠️ Alérgenos y Restricciones</h3>
+                    
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="sin_alergias" name="alergias" value="sin_alergias">
+                            <span>Sin alergias</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="alergia_gluten" name="alergias" value="gluten">
+                            <span>Gluten</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="alergia_lactosa" name="alergias" value="lactosa">
+                            <span>Lactosa</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="alergia_frutos_secos" name="alergias" value="frutos_secos">
+                            <span>Frutos Secos</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="alergia_marisco" name="alergias" value="marisco">
+                            <span>Marisco</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="es_vegano" name="alergias" value="vegano">
+                            <span>Vegano</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="es_vegetariano" name="alergias" value="vegetariano">
+                            <span>Vegetariano</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="alergias_notas">Notas adicionales sobre alergias</label>
+                        <textarea id="alergias_notas" rows="3" placeholder="Otras alergias o restricciones..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Mensajes -->
+                <div id="message" class="message"></div>
+                
+                <!-- Botones -->
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="window.location.href='/'">
+                        ← Volver al Inicio
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        📋 Crear Comanda de Cocina
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let menuSeleccionado = null;
+        
+        // Cargar categorías al iniciar
+        document.addEventListener('DOMContentLoaded', cargarCategorias);
+        
+        // Manejar envío del formulario
+        document.getElementById('comandaCocinaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<div class="loader"></div>';
+            submitBtn.disabled = true;
+            
+            // Obtener datos del formulario
+            const formData = new FormData();
+            formData.append('empresa', document.getElementById('empresa').value);
+            formData.append('responsable', document.getElementById('responsable').value);
+            formData.append('pax', document.getElementById('pax').value);
+            formData.append('hora_salida', document.getElementById('hora_salida').value);
+            formData.append('alergia_gluten', document.getElementById('alergia_gluten').checked);
+            formData.append('alergia_lactosa', document.getElementById('alergia_lactosa').checked);
+            formData.append('alergia_frutos_secos', document.getElementById('alergia_frutos_secos').checked);
+            formData.append('alergia_marisco', document.getElementById('alergia_marisco').checked);
+            formData.append('es_vegano', document.getElementById('es_vegano').checked);
+            formData.append('es_vegetariano', document.getElementById('es_vegetariano').checked);
+            formData.append('sin_alergias', document.getElementById('sin_alergias').checked);
+            formData.append('alergias_notas', document.getElementById('alergias_notas').value);
+            
+            if (menuSeleccionado) {
+                formData.append('menu_id', menuSeleccionado.id);
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/comandas/cocina/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    mostrarMensaje(`✅ Comanda ${result.comanda_codigo} creada`, 'success');
+                    
+                    // Redirigir a logística después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 2000);
+                    
+                } else {
+                    mostrarMensaje('❌ Error: ' + (result.detail || 'Error desconocido'), 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error de conexión', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        // ========== FUNCIONES PARA CARGAR MENÚS ==========
+        
+        async function cargarCategorias() {
+            try {
+                const response = await fetch(`${API_URL}/menus/categorias/`);
+                const categorias = await response.json();
+                
+                const select = document.getElementById('categoria');
+                select.innerHTML = '<option value="">Selecciona una categoría</option>';
+                
+                categorias.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.id;
+                    option.textContent = cat.nombre;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando categorías:', error);
+                // Si hay error, cargar datos por defecto
+                cargarCategoriasPorDefecto();
+            }
+        }
+        
+        function cargarCategoriasPorDefecto() {
+            const select = document.getElementById('categoria');
+            select.innerHTML = '<option value="">Selecciona una categoría</option>';
+            
+            const categoriasDefecto = [
+                {id: 1, nombre: 'Desayunos'},
+                {id: 2, nombre: 'Foodbox/Comida'},
+                {id: 3, nombre: 'Servicios'}
+            ];
+            
+            categoriasDefecto.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = cat.nombre;
+                select.appendChild(option);
+            });
+        }
+        
+        async function cargarMenus() {
+            const categoriaId = document.getElementById('categoria').value;
+            const categoriaNombre = document.getElementById('categoria').selectedOptions[0].textContent;
+            const container = document.getElementById('menusContainer');
+            
+            if (!categoriaId) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/menus/${categoriaId}/menus/`);
+                const menus = await response.json();
+                
+                if (menus.length === 0) {
+                    // Si no hay menús en la BD, cargar por defecto
+                    cargarMenusPorDefecto(categoriaId, categoriaNombre, container);
+                    return;
+                }
+                
+                mostrarMenus(menus, container);
+                
+            } catch (error) {
+                console.error('Error cargando menús:', error);
+                // Si hay error, cargar menús por defecto
+                cargarMenusPorDefecto(categoriaId, categoriaNombre, container);
+            }
+        }
+        
+        function cargarMenusPorDefecto(categoriaId, categoriaNombre, container) {
+            let menusPorDefecto = [];
+            
+            if (categoriaNombre === 'Desayunos') {
+                menusPorDefecto = [
+                    {id: 1, nombre: 'Desayuno Healthy', descripcion: 'Opción saludable'},
+                    {id: 2, nombre: 'Desayuno Classic', descripcion: 'Desayuno tradicional'},
+                    {id: 3, nombre: 'Desayuno Premium', descripcion: 'Desayuno gourmet'},
+                    {id: 4, nombre: 'Desayuno Veggie', descripcion: 'Desayuno vegetariano'},
+                ];
+            } else if (categoriaNombre === 'Foodbox/Comida') {
+                menusPorDefecto = [
+                    {id: 5, nombre: 'ElEconomico', descripcion: '7 salados + 1 postre', items_salados_min: 7, items_salados_max: 7, items_postres_min: 1, items_postres_max: 1},
+                    {id: 6, nombre: 'ElDeEnMedio', descripcion: '10 salados + 3 postres', items_salados_min: 10, items_salados_max: 10, items_postres_min: 3, items_postres_max: 3},
+                    {id: 7, nombre: 'ElMuyTop', descripcion: '12 salados + 3 postres', items_salados_min: 12, items_salados_max: 12, items_postres_min: 3, items_postres_max: 3},
+                ];
+            } else if (categoriaNombre === 'Servicios') {
+                menusPorDefecto = [
+                    {id: 8, nombre: 'Afterwork', descripcion: 'Selección de 6 items', items_salados_min: 6, items_salados_max: 6},
+                    {id: 9, nombre: 'Networking', descripcion: 'Selección de 6 items', items_salados_min: 6, items_salados_max: 6},
+                    {id: 10, nombre: 'VinoEspañol', descripcion: 'Selección de 7 items', items_salados_min: 7, items_salados_max: 7},
+                    {id: 11, nombre: 'CoctelDecuatro', descripcion: 'Selección de 9 items', items_salados_min: 9, items_salados_max: 9},
+                    {id: 12, nombre: 'Alucinancia', descripcion: 'Selección de 12 items', items_salados_min: 12, items_salados_max: 12},
+                    {id: 13, nombre: 'Atractividad', descripcion: 'Selección de 17 items', items_salados_min: 17, items_salados_max: 17},
+                ];
+            }
+            
+            mostrarMenus(menusPorDefecto, container);
+        }
+        
+        function mostrarMenus(menus, container) {
+            if (menus.length === 0) {
+                container.innerHTML = '<p style="color: #94a3b8; text-align: center; grid-column: 1/-1;">No hay menús disponibles en esta categoría</p>';
+                return;
+            }
+            
+            let html = '';
+            menus.forEach(menu => {
+                html += `
+                    <div class="menu-option" onclick="seleccionarMenu(${menu.id}, this)" data-menu='${JSON.stringify(menu)}'>
+                        <h4>${menu.nombre}</h4>
+                        <p>${menu.descripcion || 'Sin descripción'}</p>
+                        ${menu.items_salados_min > 0 ? 
+                            `<p style="font-size: 0.8rem; color: #64748b; margin-top: 5px;">
+                                📋 ${menu.items_salados_min}-${menu.items_salados_max} salados
+                                ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
+                            </p>` : 
+                            ''
+                        }
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function seleccionarMenu(menuId, element) {
+            // Deseleccionar todos
+            document.querySelectorAll('.menu-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            // Seleccionar este
+            element.classList.add('selected');
+            menuSeleccionado = JSON.parse(element.dataset.menu);
+            document.getElementById('menu_id').value = menuId;
+        }
+        
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('message');
+            div.textContent = texto;
+            div.className = `message message-${tipo}`;
+            
+            setTimeout(() => {
+                div.className = 'message';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

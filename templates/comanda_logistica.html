@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaterCloud - Comanda Logística</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            background: #10b981;
+            color: white;
+            padding: 25px 30px;
+        }
+        
+        .header h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .info-summary {
+            background: #f0f9ff;
+            border-bottom: 2px solid #bae6fd;
+            padding: 20px 30px;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .summary-item {
+            padding: 10px;
+        }
+        
+        .summary-label {
+            font-size: 0.9rem;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+        
+        .summary-value {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .form-container {
+            padding: 30px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+        }
+        
+        .form-section h3 {
+            color: #1e293b;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #10b981;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #475569;
+        }
+        
+        .required::after {
+            content: " *";
+            color: #dc2626;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .message-success {
+            background: #d1fae5;
+            color: #065f46;
+            display: block;
+        }
+        
+        .message-error {
+            background: #fee2e2;
+            color: #991b1b;
+            display: block;
+        }
+        
+        .alergenos-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .alergeno-tag {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🚚</span>
+                Comanda de Logística
+            </h1>
+            <p>Complete los datos para la comanda de logística</p>
+        </div>
+        
+        <!-- Resumen de comanda de cocina -->
+        <div class="info-summary" id="cocinaSummary">
+            <p style="color: #64748b; margin-bottom: 15px;">📋 Información de la comanda de cocina:</p>
+            <div class="summary-grid" id="summaryGrid">
+                <!-- Se llenará con JavaScript -->
+            </div>
+        </div>
+        
+        <div class="form-container">
+            <form id="comandaLogisticaForm">
+                <!-- Información del cliente -->
+                <div class="form-section">
+                    <h3>👤 Información del Cliente</h3>
+                    
+                    <div class="form-group">
+                        <label for="cliente" class="required">Cliente</label>
+                        <input type="text" id="cliente" placeholder="Nombre del cliente" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="telefono" class="required">Teléfono</label>
+                        <input type="tel" id="telefono" placeholder="+34 600 000 000" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="direccion" class="required">Dirección de Entrega</label>
+                        <textarea id="direccion" rows="3" placeholder="Calle, número, ciudad, código postal..." required></textarea>
+                    </div>
+                </div>
+                
+                <!-- Horarios -->
+                <div class="form-section">
+                    <h3>⏰ Horarios</h3>
+                    
+                    <div class="form-group">
+                        <label for="hora_salida">Hora de Salida (desde cocina)</label>
+                        <input type="time" id="hora_salida" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="hora_entrega" class="required">Hora de Entrega (al cliente)</label>
+                        <input type="time" id="hora_entrega" required>
+                    </div>
+                </div>
+                
+                <!-- Observaciones -->
+                <div class="form-section">
+                    <h3>📝 Observaciones</h3>
+                    
+                    <div class="form-group">
+                        <label for="observaciones">Notas para logística</label>
+                        <textarea id="observaciones" rows="4" placeholder="Instrucciones especiales, acceso al edificio, contacto en destino..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Mensajes -->
+                <div id="message" class="message"></div>
+                
+                <!-- Botones -->
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="window.location.href='/'">
+                        ← Volver al Inicio
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        🚚 Crear Comanda de Logística
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let comandaCocinaId = null;
+        let comandaCocina = null;
+        
+        // Obtener ID de comanda de cocina de la URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            comandaCocinaId = urlParams.get('comanda_cocina_id');
+            
+            if (!comandaCocinaId) {
+                mostrarMensaje('❌ No se especificó una comanda de cocina', 'error');
+                return;
+            }
+            
+            cargarComandaCocina();
+        });
+        
+        async function cargarComandaCocina() {
+            try {
+                const response = await fetch(`${API_URL}/comandas/${comandaCocinaId}`);
+                comandaCocina = await response.json();
+                
+                if (!comandaCocina) {
+                    mostrarMensaje('❌ Comanda de cocina no encontrada', 'error');
+                    return;
+                }
+                
+                // Mostrar resumen
+                const summaryGrid = document.getElementById('summaryGrid');
+                
+                // Obtener alergenos activos
+                const alergenos = [];
+                if (comandaCocina.alergia_gluten) alergenos.push('Gluten');
+                if (comandaCocina.alergia_lactosa) alergenos.push('Lactosa');
+                if (comandaCocina.alergia_frutos_secos) alergenos.push('Frutos Secos');
+                if (comandaCocina.alergia_marisco) alergenos.push('Marisco');
+                if (comandaCocina.es_vegano) alergenos.push('Vegano');
+                if (comandaCocina.es_vegetariano) alergenos.push('Vegetariano');
+                if (comandaCocina.sin_alergias) alergenos.push('Sin alergias');
+                
+                summaryGrid.innerHTML = `
+                    <div class="summary-item">
+                        <div class="summary-label">Código</div>
+                        <div class="summary-value" style="font-family: monospace; font-size: 1.2rem;">${comandaCocina.codigo}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Empresa</div>
+                        <div class="summary-value">${comandaCocina.empresa}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Responsable</div>
+                        <div class="summary-value">${comandaCocina.responsable}</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">PAX</div>
+                        <div class="summary-value">${comandaCocina.pax} personas</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">Hora Salida</div>
+                        <div class="summary-value">${comandaCocina.hora_salida || 'No especificada'}</div>
+                    </div>
+                    <div class="summary-item" style="grid-column: 1/-1;">
+                        <div class="summary-label">Alérgenos</div>
+                        <div class="alergenos-list">
+                            ${alergenos.length > 0 ? 
+                                alergenos.map(a => `<span class="alergeno-tag">${a}</span>`).join('') : 
+                                '<span style="color: #94a3b8;">No especificados</span>'
+                            }
+                        </div>
+                    </div>
+                `;
+                
+                // Rellenar campos heredados
+                document.getElementById('hora_salida').value = comandaCocina.hora_salida || '';
+                
+            } catch (error) {
+                console.error('Error cargando comanda:', error);
+                mostrarMensaje('❌ Error cargando comanda de cocina', 'error');
+            }
+        }
+        
+        // Manejar envío del formulario
+        document.getElementById('comandaLogisticaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<div class="loader"></div>';
+            submitBtn.disabled = true;
+            
+            // Obtener datos del formulario
+            const formData = new FormData();
+            formData.append('comanda_cocina_id', comandaCocinaId);
+            formData.append('cliente', document.getElementById('cliente').value);
+            formData.append('telefono', document.getElementById('telefono').value);
+            formData.append('direccion', document.getElementById('direccion').value);
+            formData.append('hora_entrega', document.getElementById('hora_entrega').value);
+            formData.append('observaciones', document.getElementById('observaciones').value);
+            
+            try {
+                const response = await fetch(`${API_URL}/comandas/logistica/`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    mostrarMensaje(`✅ Comanda de logística ${result.comanda_codigo} creada`, 'success');
+                    
+                    // Redirigir al inicio después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                    
+                } else {
+                    mostrarMensaje('❌ Error: ' + (result.detail || 'Error desconocido'), 'error');
+                    submitBtn.innerHTML = originalText;
+                    submitBtn.disabled = false;
+                }
+            } catch (error) {
+                mostrarMensaje('❌ Error de conexión', 'error');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+        
+        function mostrarMensaje(texto, tipo) {
+            const div = document.getElementById('message');
+            div.textContent = texto;
+            div.className = `message message-${tipo}`;
+            
+            setTimeout(() => {
+                div.className = 'message';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
