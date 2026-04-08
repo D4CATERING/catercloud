@@ -6,7 +6,7 @@
 function mostrarComandaCocina() {
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'block';
-    
+
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('fecha_evento').value = hoy;
     
@@ -27,7 +27,11 @@ function mostrarComandaCocina() {
  * Muestra el módulo de logística
  */
 function mostrarLogistica() {
-    alert('🚚 Módulo de Logística - En desarrollo\nPróximamente disponible');
+    if (typeof mostrarMensaje === 'function') {
+        mostrarMensaje('🚚 Módulo de Logística - En desarrollo. Próximamente disponible', 'info');
+    } else {
+        alert('🚚 Módulo de Logística - En desarrollo\nPróximamente disponible');
+    }
 }
 
 /**
@@ -50,6 +54,8 @@ function volverAlDashboard() {
     document.getElementById('comandaForm').style.display = 'none';
     document.getElementById('historialPage').style.display = 'none';
     document.getElementById('detalleComanda').style.display = 'none';
+    const clientesPanel = document.getElementById('clientesPanel');
+    if (clientesPanel) clientesPanel.style.display = 'none';
     
     window.comandaEditando = null;
     
@@ -67,5 +73,51 @@ function volverAlHistorial() {
     
     if (typeof cargarHistorial === 'function') {
         cargarHistorial();
+    }
+}
+
+/**
+ * Inicializa el material de logística inline cuando se selecciona categoría
+ * Se llama desde comanda-form.js o referencias.js al cargar menús
+ */
+function inicializarMaterialLogisticaInline(categoriaId) {
+    const container = document.getElementById('materialLogisticaInline');
+    const seccionLog = document.getElementById('logisticaInlineSection');
+    
+    if (!container) return;
+    
+    // Solo mostrar si la sección de logística inline está visible
+    if (seccionLog && seccionLog.style.display !== 'none') {
+        container.style.display = 'block';
+        
+        // Inicializar tabla
+        if (typeof window.inicializarMaterialLogistica === 'function') {
+            window.inicializarMaterialLogistica('materialLogisticaInline');
+        }
+        
+        // Autocompletar según categoría
+        if (typeof window.autocompletarMaterialPorCategoria === 'function' && categoriaId) {
+            window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
+        }
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Inicializa el material para la página separada de logística (Cocteles)
+ */
+function inicializarMaterialLogisticaPage(categoriaId) {
+    const container = document.getElementById('materialLogisticaPage');
+    if (!container) return;
+    
+    // Inicializar tabla
+    if (typeof window.inicializarMaterialLogistica === 'function') {
+        window.inicializarMaterialLogistica('materialLogisticaPage');
+    }
+    
+    // Autocompletar según categoría (cat 3 = servicios)
+    if (typeof window.autocompletarMaterialPorCategoria === 'function' && categoriaId) {
+        window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaPage');
     }
 }

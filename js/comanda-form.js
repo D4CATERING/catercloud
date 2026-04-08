@@ -1,15 +1,115 @@
-// ========== VARIABLES DEL FORMULARIO ==========
-let menuSeleccionado = null;
-let menusAdicionales = [];
-let multiplicadores = {
-    saladas: 1,
-    postres: 1
-};
-let pax = 0;
-let referenciasSeleccionadas = {
-    saladas: [],
-    postres: []
-};
+// ========== VARIABLES GLOBALES DEL FORMULARIO ==========
+
+// Usar window para asegurar que sean globales y accesibles desde todos los archivos
+if (!window.menuSeleccionado) window.menuSeleccionado = null;
+if (!window.menusAdicionales) window.menusAdicionales = [];
+if (!window.multiplicadores) window.multiplicadores = { saladas: 1, postres: 1 };
+if (!window.pax) window.pax = 0;
+if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { saladas: [], postres: [] };
+if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
+
+// ========== NUEVO: AÑADIR VARIABLE FOODBOX ==========
+if (!window.seleccionesFoodbox) {
+    window.seleccionesFoodbox = {
+        ensaladas: [], // Array de objetos: {id, nombre, cantidad}
+        sandwiches: [], // Array de objetos: {id, nombre, cantidad}
+        postres: [], // Array de objetos: {id, nombre, cantidad}
+        totalPAX: 0
+    };
+}
+
+// ========== FUNCIONES PARA ACTUALIZAR CANTIDADES ==========
+
+/**
+ * Actualiza las cantidades basadas en el PAX
+ */
+function actualizarCantidades() {
+    const pax = parseInt(document.getElementById('pax').value) || 0;
+    window.pax = pax;
+    
+    // Actualizar valores en la interfaz
+    document.querySelectorAll('#paxValue, #paxValue2').forEach(span => {
+        span.textContent = pax;
+    });
+    
+    // Actualizar cálculos de multiplicadores
+    if (window.multiplicadores) {
+        const multSaladas = window.multiplicadores.saladas || 1;
+        const multPostres = window.multiplicadores.postres || 1;
+        
+        const totalSaladas = Math.ceil(pax * multSaladas);
+        const totalPostres = Math.ceil(pax * multPostres);
+        
+        document.getElementById('totalSaladasValue').textContent = totalSaladas;
+        document.getElementById('totalPostresValue').textContent = totalPostres;
+        
+        document.getElementById('multSaladasValue').textContent = multSaladas;
+        document.getElementById('multPostresValue').textContent = multPostres;
+    }
+    
+    // Actualizar referencias seleccionadas
+    actualizarCantidadesReferencias();
+    
+}
+
+/**
+ * Actualiza las cantidades de las referencias seleccionadas
+ */
+function actualizarCantidadesReferencias() {
+    const pax = window.pax || 0;
+    
+    // Actualizar cantidad en referencias saladas
+    document.querySelectorAll('.referencia-option.selected').forEach(ref => {
+        const cantidadInput = ref.querySelector('.cantidad-input');
+        if (cantidadInput) {
+            const tipo = ref.closest('#referenciasSaladasGrid') ? 'saladas' : 'postres';
+            const multiplicador = window.multiplicadores ? window.multiplicadores[tipo] || 1 : 1;
+            const cantidad = Math.ceil(pax * multiplicador);
+            cantidadInput.value = cantidad;
+            
+            // Actualizar en el objeto global si existe
+            if (window.referenciasSeleccionadas && window.referenciasSeleccionadas[tipo]) {
+                const refId = ref.dataset.id;
+                const refIndex = window.referenciasSeleccionadas[tipo].findIndex(r => r.id === refId);
+                if (refIndex !== -1) {
+                    window.referenciasSeleccionadas[tipo][refIndex].cantidad = cantidad;
+                }
+            }
+        }
+    });
+}
+
+/**
+ * Función placeholder para actualizar cantidades de desayuno
+ */
+function actualizarCantidadesDesayuno() {
+    const pax = window.pax || 0;
+    console.log('actualizarCantidadesDesayuno llamada con PAX:', pax);
+    // Implementar cuando tengas la lógica de desayunos
+}
+
+/**
+ * Actualiza el multiplicador y recalcula cantidades
+ */
+function actualizarMultiplicador(tipo, valor) {
+    if (!window.multiplicadores) window.multiplicadores = { saladas: 1, postres: 1 };
+    
+    window.multiplicadores[tipo] = parseFloat(valor) || 1;
+    
+    // Actualizar visualización
+    if (tipo === 'saladas') {
+        document.getElementById('multSaladasValue').textContent = window.multiplicadores.saladas;
+        const pax = window.pax || 0;
+        document.getElementById('totalSaladasValue').textContent = Math.ceil(pax * window.multiplicadores.saladas);
+    } else if (tipo === 'postres') {
+        document.getElementById('multPostresValue').textContent = window.multiplicadores.postres;
+        const pax = window.pax || 0;
+        document.getElementById('totalPostresValue').textContent = Math.ceil(pax * window.multiplicadores.postres);
+    }
+    
+    // Actualizar cantidades en referencias seleccionadas
+    actualizarCantidadesReferencias();
+}
 
 // ========== CARGAR MENÚS PRINCIPALES ==========
 
@@ -23,8 +123,8 @@ async function cargarMenus() {
     
     document.getElementById('multiplicadorSection').style.display = 'none';
     document.getElementById('referenciasSection').style.display = 'none';
-    menuSeleccionado = null;
-    referenciasSeleccionadas = { saladas: [], postres: [] };
+    window.menuSeleccionado = null;
+    window.referenciasSeleccionadas = { saladas: [], postres: [] };
     
     if (!categoriaId) return;
     
@@ -58,7 +158,21 @@ async function cargarMenus() {
     }
     else if (categoriaId == 4) {
         menus = [
-            { id: 15, nombre: 'FOODBOX LUNCH', descripcion: 'Ensalada + Sándwich + Postre + Bebida' }
+            {
+                id: 15,
+                nombre: 'FOODBOX LUNCH',
+                descripcion: 'Elige una ensalada o un sándwich + postre + bebida',
+                tipo: 'foodbox_lunch',
+                items_salados_min: 0,
+                items_salados_max: 0,
+                items_postres_min: 0,
+                items_postres_max: 0
+            }
+        ];
+    }
+    else if (categoriaId == 5) {
+        menus = [
+            { id: 16, nombre: 'BANDEJAS PREPARADAS', descripcion: 'Seleccion de Bandejas' }
         ];
     }
     
@@ -67,7 +181,6 @@ async function cargarMenus() {
 
 /**
  * Muestra los menús en el contenedor
- * @param {Array} menus - Lista de menús
  */
 function mostrarMenusPrincipales(menus) {
     const container = document.getElementById('menusContainer');
@@ -78,6 +191,7 @@ function mostrarMenusPrincipales(menus) {
     }
     
     let html = '';
+    
     menus.forEach(menu => {
         html += `
         <div class="menu-option" onclick="seleccionarMenu(${menu.id}, this)" data-menu='${JSON.stringify(menu)}'>
@@ -85,9 +199,10 @@ function mostrarMenusPrincipales(menus) {
             <p>${menu.descripcion || 'Sin descripción'}</p>
             ${menu.items_salados_min > 0 ?
                 `<p style="font-size: 0.75rem; color: #64748b; margin-top: 3px;">
-                📋 ${menu.items_salados_min}-${menu.items_salados_max} salados
-                ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
-                </p>` : ''}
+                    📋 ${menu.items_salados_min}-${menu.items_salados_max} salados
+                    ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
+                </p>` : ''
+            }
         </div>
         `;
     });
@@ -97,408 +212,215 @@ function mostrarMenusPrincipales(menus) {
 
 /**
  * Selecciona un menú principal
- * @param {number} menuId - ID del menú
- * @param {HTMLElement} element - Elemento HTML clickeado
  */
 async function seleccionarMenu(menuId, element) {
+    // Limpiar secciones, bebidas y menaje del menú anterior
+    document.querySelectorAll('[data-zumo-id], [data-menaje-desayuno], [data-extras-desayuno], [data-menaje-foodbox], [data-extras-foodbox]').forEach(el => el.remove());
+    if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
+
+    // UI: selección
     document.querySelectorAll('.menu-option').forEach(opt => {
         opt.classList.remove('selected');
     });
-    
+
     element.classList.add('selected');
-    menuSeleccionado = JSON.parse(element.dataset.menu);
+
+    // Estado global
+    window.menuSeleccionado = JSON.parse(element.dataset.menu);
     document.getElementById('menu_id').value = menuId;
-    
-    pax = parseInt(document.getElementById('pax').value) || 0;
-    
-    if (pax > 0) {
-        document.getElementById('multiplicadorSection').style.display = 'block';
-        
-        if (menuSeleccionado.items_postres_min > 0) {
-            document.getElementById('multiplicadorPostresSection').style.display = 'block';
+    window.pax = parseInt(document.getElementById('pax').value) || 0;
+
+    // Obtener categoría
+    const categoriaId = parseInt(document.getElementById('categoria').value);
+
+
+    // ===== DESAYUNOS =====
+    if (categoriaId === 1) {
+        // Ocultar secciones de Foodbox/Comida
+        document.getElementById('multiplicadorSection').style.display = 'none';
+        document.getElementById('referenciasSection').style.display = 'none';
+
+        // Mostrar/crear sección de desayuno
+        let desayunoSection = document.getElementById('desayunoReferencesSection');
+        if (!desayunoSection) {
+            const antesDeNotas = document.querySelector('#referenciasSection');
+
+            if (antesDeNotas) {
+                antesDeNotas.insertAdjacentHTML('afterend', `
+                    <div class="form-section dc-section" id="desayunoReferencesSection" style="display: block;">
+                        <div class="dc-section-header">
+                            <h3>🥐 Referencias del Desayuno</h3>
+                        </div>
+                        <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 15px;">Cantidades por persona. Puedes modificar si es necesario:</p>
+                        <div id="referenciasDesayunoGrid" class="dc-items-grid"></div>
+                    </div>
+                `);
+            }
+
+            desayunoSection = document.getElementById('desayunoReferencesSection');
         } else {
-            document.getElementById('multiplicadorPostresSection').style.display = 'none';
+            desayunoSection.style.display = 'block';
         }
-        
-        actualizarCantidades();
+
+        // Seleccionar desechable por defecto si no hay tipo de menaje elegido
+        const selectMenaje = document.getElementById('tipo_menaje');
+        if (selectMenaje && !selectMenaje.value) {
+            selectMenaje.value = 'desechable';
+        }
+
+        // Inicializar logística para desayunos (crea materialLogisticaInline_bebidas)
+        if (typeof inicializarMaterialLogistica === 'function') {
+            await inicializarMaterialLogistica('materialLogisticaInline');
+            if (typeof autocompletarMaterialPorCategoria === 'function') {
+                await autocompletarMaterialPorCategoria(1, 'materialLogisticaInline');
+            }
+        }
+
+        // Cargar referencias del desayuno (zumo/agua se inyectan en _bebidas)
+        if (typeof cargarReferenciasDesayuno === 'function') {
+            cargarReferenciasDesayuno(window.menuSeleccionado);
+        } else {
+            console.error('No existe cargarReferenciasDesayuno(). Falta importar/definir el módulo de desayunos.');
+        }
+
+        return;
     }
-    
-    if ([2, 3].includes(parseInt(document.getElementById('categoria').value))) {
+
+    // ===== FOODBOX/COMIDA y SERVICIOS =====
+    if (categoriaId === 2 || categoriaId === 3) {
+        // Ocultar sección de desayunos si existe
+        const desayunoSection = document.getElementById('desayunoReferencesSection');
+        if (desayunoSection) {
+            desayunoSection.style.display = 'none';
+        }
+
+        // Reglas específicas para SERVICIOS (cat 3)
+        const _norm = (s) => (s || '').toString().trim().toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const _serviciosRules = {
+            'coctel decuatro': { saladas: 8, postres: 2 },
+            'alucinancia':     { saladas: 10, postres: 2 },
+            'atractividad':    { saladas: 14, postres: 3 }
+        };
+
+        const _menuKey = _norm(window.menuSeleccionado?.nombre);
+        const _rule = (categoriaId === 3) ? _serviciosRules[_menuKey] : null;
+
+        // Si hay regla, forzamos min/max para que todo (UI + validaciones) sea coherente
+        if (_rule) {
+            window.menuSeleccionado.items_salados_min = _rule.saladas;
+            window.menuSeleccionado.items_salados_max = _rule.saladas;
+            window.menuSeleccionado.items_postres_min = _rule.postres;
+            window.menuSeleccionado.items_postres_max = _rule.postres;
+        }
+
+        if (window.pax > 0) {
+            document.getElementById('multiplicadorSection').style.display = 'block';
+
+            const hasPostres = (window.menuSeleccionado.items_postres_min || 0) > 0;
+            document.getElementById('multiplicadorPostresSection').style.display = hasPostres ? 'block' : 'none';
+
+            if (typeof actualizarCantidades === 'function') {
+                actualizarCantidades();
+            }
+        }
+
         document.getElementById('referenciasSection').style.display = 'block';
-        
-        await cargarReferencias();
-        
-        document.getElementById('minSaladas').textContent = menuSeleccionado.items_salados_min;
-        document.getElementById('maxSaladas').textContent = menuSeleccionado.items_salados_max;
-        
-        if (menuSeleccionado.items_postres_min > 0) {
+
+        if (typeof cargarReferencias === 'function') {
+            await cargarReferencias();
+        } else {
+            console.error('No existe cargarReferencias(). Falta importar/definir el módulo de referencias.');
+            return;
+        }
+
+        document.getElementById('minSaladas').textContent = window.menuSeleccionado.items_salados_min || 0;
+        document.getElementById('maxSaladas').textContent = window.menuSeleccionado.items_salados_max || 0;
+
+        if (window.menuSeleccionado.items_postres_min > 0) {
             document.getElementById('referenciasPostresGroup').style.display = 'block';
-            document.getElementById('minPostres').textContent = menuSeleccionado.items_postres_min;
-            document.getElementById('maxPostres').textContent = menuSeleccionado.items_postres_max;
+            document.getElementById('minPostres').textContent = window.menuSeleccionado.items_postres_min;
+            document.getElementById('maxPostres').textContent = window.menuSeleccionado.items_postres_max;
         } else {
             document.getElementById('referenciasPostresGroup').style.display = 'none';
         }
-    } else {
-        document.getElementById('referenciasSection').style.display = 'none';
-    }
-}
 
-// ========== MULTIPLICADORES ==========
+        // Inicializar logística para Foodbox/Comida (2) y Servicios (3)
+        if (typeof inicializarMaterialLogistica === 'function') {
+            await inicializarMaterialLogistica('materialLogisticaInline');
+            if (typeof autocompletarMaterialPorCategoria === 'function') {
+                await autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
+            }
+        }
 
-/**
- * Actualiza un multiplicador
- * @param {string} tipo - 'saladas' o 'postres'
- * @param {number} valor - Nuevo valor del multiplicador
- */
-function actualizarMultiplicador(tipo, valor) {
-    const numValor = parseFloat(valor);
-    
-    if (isNaN(numValor) || numValor < 0.1 || numValor > 10) {
-        mostrarMensaje('❌ El multiplicador debe estar entre 0.1 y 10', 'error');
+        // Menaje y extras vienen de Supabase (logistics-material.js)
+
         return;
     }
-    
-    multiplicadores[tipo] = numValor;
-    actualizarCantidades();
-}
 
-/**
- * Actualiza todas las cantidades basadas en PAX y multiplicadores
- */
-function actualizarCantidades() {
-    pax = parseInt(document.getElementById('pax').value) || 0;
-    const totalSaladas = Math.ceil(pax * multiplicadores.saladas);
-    const totalPostres = Math.ceil(pax * multiplicadores.postres);
     
-    document.getElementById('paxValue').textContent = pax;
-    document.getElementById('paxValue2').textContent = pax;
-    document.getElementById('multSaladasValue').textContent = multiplicadores.saladas.toFixed(1);
-    document.getElementById('multPostresValue').textContent = multiplicadores.postres.toFixed(1);
-    document.getElementById('totalSaladasValue').textContent = totalSaladas;
-    document.getElementById('totalPostresValue').textContent = totalPostres;
-    
-    if (pax > 0 && menuSeleccionado) {
-        document.getElementById('multiplicadorSection').style.display = 'block';
-    }
-    
-    if (typeof actualizarCantidadesReferencias === 'function') {
-        actualizarCantidadesReferencias();
-    }
-}
-
-// ========== REFERENCIAS ==========
-
-/**
- * Carga las referencias (saladas y postres)
- */
-async function cargarReferencias() {
-    const referenciasSaladas = [
-        { id: 1, nombre: 'Tabla de Embutidos Ibéricos con Picos', unidad: 'bandeja' },
-        { id: 2, nombre: 'Tabla de Quesos con Uva y Frutos Secos', unidad: 'bandeja' },
-        { id: 3, nombre: 'Croquetas de Jamón', unidad: 'uds' },
-        { id: 4, nombre: 'Mini Croissant de Salmón Ahumado', unidad: 'uds' },
-        { id: 5, nombre: 'Mini Burguer con Queso', unidad: 'uds' },
-        { id: 6, nombre: 'Hummus con Pan de Pita', unidad: 'bandeja' },
-        { id: 7, nombre: 'Brocheta Capresse con Pesto', unidad: 'uds' },
-        { id: 8, nombre: 'Tortilla de Patata con Chistorra y Padrón', unidad: 'bandeja' }
-    ];
-    
-    const referenciasPostres = [
-        { id: 101, nombre: 'Brocheta de Fruta Natural', unidad: 'uds' },
-        { id: 102, nombre: 'Mousse de Chocolate', unidad: 'uds' },
-        { id: 103, nombre: 'Macarons', unidad: 'uds' },
-        { id: 104, nombre: 'Cremoso de Cheese Cake', unidad: 'uds' },
-        { id: 105, nombre: 'Arroz con Leche', unidad: 'uds' }
-    ];
-    
-    mostrarReferenciasPrincipales(referenciasSaladas, 'referenciasSaladasGrid', 'saladas');
-    mostrarReferenciasPrincipales(referenciasPostres, 'referenciasPostresGrid', 'postres');
-}
-
-/**
- * Muestra referencias en el contenedor
- * @param {Array} referencias - Lista de referencias
- * @param {string} containerId - ID del contenedor
- * @param {string} tipo - 'saladas' o 'postres'
- */
-function mostrarReferenciasPrincipales(referencias, containerId, tipo) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-    
-    const cantidadBase = Math.ceil(pax * multiplicadores[tipo]);
-    
-    referencias.forEach(ref => {
-        const div = document.createElement('div');
-        div.className = 'referencia-option';
-        div.innerHTML = `
-            <span style="flex: 1;">${ref.nombre}</span>
-            <div class="cantidad-control">
-                <input type="number" class="cantidad-input" value="${cantidadBase}" min="1"
-                       onchange="actualizarCantidadReferencia(${ref.id}, '${tipo}', this.value)">
-                <select class="unidad-select" onchange="actualizarUnidadReferencia(${ref.id}, '${tipo}', this.value)">
-                    <option value="uds" ${ref.unidad === 'uds' ? 'selected' : ''}>uds</option>
-                    <option value="kg" ${ref.unidad === 'kg' ? 'selected' : ''}>kg</option>
-                    <option value="l" ${ref.unidad === 'l' ? 'selected' : ''}>l</option>
-                    <option value="bandeja" ${ref.unidad === 'bandeja' ? 'selected' : ''}>bandeja</option>
-                    <option value="caja" ${ref.unidad === 'caja' ? 'selected' : ''}>caja</option>
-                </select>
-            </div>
-        `;
+    // ===== FOODBOX LUNCH =====
+    if (categoriaId === 4) {
+        document.getElementById('multiplicadorSection').style.display = 'none';
+        document.getElementById('referenciasSection').style.display = 'none';
         
-        div.dataset.id = ref.id;
-        div.dataset.nombre = ref.nombre;
-        div.dataset.tipo = tipo;
+        const desayunoSection = document.getElementById('desayunoReferencesSection');
+        if (desayunoSection) desayunoSection.style.display = 'none';
         
-        div.onclick = (e) => {
-            if (!e.target.classList.contains('cantidad-input') && !e.target.classList.contains('unidad-select')) {
-                seleccionarReferenciaPrincipal(ref.id, ref.nombre, tipo, cantidadBase, ref.unidad, div);
-            }
-        };
-        
-        container.appendChild(div);
-    });
-}
-
-/**
- * Actualiza cantidades de referencias
- */
-function actualizarCantidadesReferencias() {
-    const cantidadSaladas = Math.ceil(pax * multiplicadores.saladas);
-    const cantidadPostres = Math.ceil(pax * multiplicadores.postres);
-    
-    document.querySelectorAll('.referencia-option[data-tipo="saladas"] .cantidad-input').forEach(input => {
-        input.value = cantidadSaladas;
-    });
-    
-    document.querySelectorAll('.referencia-option[data-tipo="postres"] .cantidad-input').forEach(input => {
-        input.value = cantidadPostres;
-    });
-    
-    referenciasSeleccionadas.saladas.forEach(ref => {
-        ref.cantidad = cantidadSaladas;
-    });
-    
-    referenciasSeleccionadas.postres.forEach(ref => {
-        ref.cantidad = cantidadPostres;
-    });
-}
-
-/**
- * Actualiza cantidad de una referencia
- */
-function actualizarCantidadReferencia(refId, tipo, cantidad) {
-    const ref = referenciasSeleccionadas[tipo].find(r => r.id === refId);
-    if (ref) {
-        ref.cantidad = parseInt(cantidad);
-    }
-}
-
-/**
- * Actualiza unidad de una referencia
- */
-function actualizarUnidadReferencia(refId, tipo, unidad) {
-    const ref = referenciasSeleccionadas[tipo].find(r => r.id === refId);
-    if (ref) {
-        ref.unidad = unidad;
-    }
-}
-
-/**
- * Selecciona/deselecciona una referencia
- */
-function seleccionarReferenciaPrincipal(refId, refNombre, tipo, cantidad, unidad, element) {
-    const max = tipo === 'saladas' ? menuSeleccionado.items_salados_max : menuSeleccionado.items_postres_max;
-    const min = tipo === 'saladas' ? menuSeleccionado.items_salados_min : menuSeleccionado.items_postres_min;
-    const seleccionadas = referenciasSeleccionadas[tipo];
-    const index = seleccionadas.findIndex(r => r.id === refId);
-    
-    if (index > -1) {
-        seleccionadas.splice(index, 1);
-        element.classList.remove('selected');
-    } else {
-        if (seleccionadas.length >= max) {
-            alert(`Solo puedes seleccionar hasta ${max} referencias ${tipo}`);
-            return;
+        if (typeof cargarOpcionesFoodboxLunch === 'function') {
+            cargarOpcionesFoodboxLunch();
+        } else {
+            console.error('No existe cargarOpcionesFoodboxLunch()');
         }
         
-        const cantidadInput = element.querySelector('.cantidad-input').value;
-        const unidadSelect = element.querySelector('.unidad-select').value;
-        
-        seleccionadas.push({
-            id: refId,
-            nombre: refNombre,
-            cantidad: parseInt(cantidadInput),
-            unidad: unidadSelect
-        });
-        
-        element.classList.add('selected');
-    }
-}
+        // Mostrar y inicializar logística para Foodbox Lunch
+        const logisticaContainer = document.getElementById('materialLogisticaInline');
+        if (logisticaContainer) {
+            logisticaContainer.style.display = 'block';
+            
+            if (typeof inicializarMaterialLogistica === 'function') {
+                await inicializarMaterialLogistica('materialLogisticaInline');
+                if (typeof autocompletarMaterialPorCategoria === 'function') {
+                    await autocompletarMaterialPorCategoria(4, 'materialLogisticaInline');
+                }
+            }
+        }
 
-// ========== MENÚS ADICIONALES ==========
-
-/**
- * Muestra el modal para agregar menús adicionales
- */
-function mostrarModalMenus() {
-    document.getElementById('modalMenus').style.display = 'block';
-    document.getElementById('modalCategoria').value = '';
-    document.getElementById('modalMenusContainer').innerHTML = '';
-}
-
-/**
- * Cierra el modal de menús adicionales
- */
-function cerrarModalMenus() {
-    document.getElementById('modalMenus').style.display = 'none';
-}
-
-/**
- * Carga menús en el modal
- */
-function cargarMenusModal() {
-    const categoriaId = document.getElementById('modalCategoria').value;
-    const container = document.getElementById('modalMenusContainer');
-    container.innerHTML = '';
-    
-    if (!categoriaId) return;
-    
-    let menus = [];
-    
-    if (categoriaId == 1) {
-        menus = [
-            { id: 1001, nombre: 'HEALTHY ADICIONAL', descripcion: 'Termo café + leche + infusión + mini bollería + sandwich jamón/tomate + yogurt con muesli + zumo naranja' },
-            { id: 1002, nombre: 'CLASSIC ADICIONAL', descripcion: 'Termo café + leche + infusión + 2 mini bollerías + 2 sandwiches + fruta preparada + zumo naranja' }
-        ];
-    }
-    else if (categoriaId == 2) {
-        menus = [
-            { id: 1003, nombre: 'ELECONÓMICO ADICIONAL', descripcion: '7 salados + 1 postre', items_salados_min: 7, items_salados_max: 7, items_postres_min: 1, items_postres_max: 1 },
-            { id: 1004, nombre: 'ELDEENMEDIO ADICIONAL', descripcion: '10 salados + 3 postres', items_salados_min: 10, items_salados_max: 10, items_postres_min: 3, items_postres_max: 3 }
-        ];
-    }
-    else if (categoriaId == 3) {
-        menus = [
-            { id: 1005, nombre: 'AFTERWORK ADICIONAL', descripcion: '6 items salados', items_salados_min: 6, items_salados_max: 6 },
-            { id: 1006, nombre: 'VINOESPAÑOL ADICIONAL', descripcion: '7 items salados', items_salados_min: 7, items_salados_max: 7 }
-        ];
-    }
-    else if (categoriaId == 4) {
-        menus = [
-            { id: 1007, nombre: 'FOODBOX LUNCH ADICIONAL', descripcion: 'Ensalada + Sándwich + Postre + Bebida' }
-        ];
-    }
-    
-    mostrarMenusModal(menus);
-}
-
-/**
- * Muestra menús en el modal
- */
-function mostrarMenusModal(menus) {
-    const container = document.getElementById('modalMenusContainer');
-    
-    if (menus.length === 0) {
-        container.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem;">No hay menús disponibles</p>';
         return;
     }
-    
-    let html = '';
-    menus.forEach(menu => {
-        html += `
-        <div class="menu-option" onclick="seleccionarMenuAdicional(${menu.id}, this)" data-menu='${JSON.stringify(menu)}'>
-            <h4>${menu.nombre}</h4>
-            <p>${menu.descripcion || 'Sin descripción'}</p>
-            ${menu.items_salados_min > 0 ?
-                `<p style="font-size: 0.75rem; color: #64748b; margin-top: 3px;">
-                📋 ${menu.items_salados_min}-${menu.items_salados_max} salados
-                ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
-                </p>` : ''}
-        </div>
-        `;
-    });
-    
-    container.innerHTML = html;
-}
 
-/**
- * Selecciona un menú adicional
- */
-function seleccionarMenuAdicional(menuId, element) {
-    document.querySelectorAll('#modalMenusContainer .menu-option').forEach(opt => {
-        opt.classList.remove('selected');
-    });
     
-    element.classList.add('selected');
-    const menu = JSON.parse(element.dataset.menu);
-    const paxAdicional = prompt(`¿Cuántos PAX para el menú "${menu.nombre}"?`, pax || "1");
-    
-    if (paxAdicional && !isNaN(paxAdicional) && parseInt(paxAdicional) > 0) {
-        agregarMenuAdicional({
-            ...menu,
-            pax_adicional: parseInt(paxAdicional),
-            categoria: document.getElementById('modalCategoria').selectedOptions[0].text
-        });
-        
-        cerrarModalMenus();
+// ===== BANDEJAS PREPARADAS =====
+if (categoriaId === 5) {
+    document.getElementById('multiplicadorSection').style.display = 'none';
+    document.getElementById('referenciasSection').style.display = 'none';
+
+    const desayunoSection = document.getElementById('desayunoReferencesSection');
+    if (desayunoSection) desayunoSection.style.display = 'none';
+
+    const foodboxLunchSection2 = document.getElementById('foodboxLunchSection');
+    if (foodboxLunchSection2) foodboxLunchSection2.style.display = 'none';
+
+    // ✅ Aquí es donde se llama
+    if (typeof cargarBandejasPreparadas === 'function') {
+        cargarBandejasPreparadas();
     } else {
-        alert('Por favor, ingresa un número válido de PAX');
+        console.error('No existe cargarBandejasPreparadas(). Revisa que bandejas-preparadas.js esté cargando bien.');
     }
+
+    return;
 }
 
-/**
- * Agrega un menú adicional a la lista
- */
-function agregarMenuAdicional(menuData) {
-    menusAdicionales.push(menuData);
-    actualizarListaMenusAdicionales();
-}
+    // ===== OTRAS (p.ej. Bandejas) =====
+    document.getElementById('multiplicadorSection').style.display = 'none';
+    document.getElementById('referenciasSection').style.display = 'none';
 
-/**
- * Elimina un menú adicional
- */
-function eliminarMenuAdicional(index) {
-    menusAdicionales.splice(index, 1);
-    actualizarListaMenusAdicionales();
-}
-
-/**
- * Actualiza la lista de menús adicionales
- */
-function actualizarListaMenusAdicionales() {
-    const container = document.getElementById('menusAdicionalesList');
-    
-    if (menusAdicionales.length === 0) {
-        container.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem;">No hay menús adicionales añadidos</p>';
-        return;
+    const desayunoSection = document.getElementById('desayunoReferencesSection');
+    if (desayunoSection) {
+        desayunoSection.style.display = 'none';
     }
-    
-    let html = '';
-    menusAdicionales.forEach((menu, index) => {
-        html += `
-        <div class="menu-adicional-item">
-            <div class="menu-adicional-info">
-                <h4>${menu.nombre}</h4>
-                <p>${menu.categoria} - ${menu.pax_adicional} PAX</p>
-                <p style="font-size: 0.8rem; color: #64748b;">${menu.descripcion}</p>
-            </div>
-            <div class="menu-adicional-controls">
-                <input type="number" class="menu-pax-input" value="${menu.pax_adicional}" min="1"
-                       onchange="actualizarPaxMenuAdicional(${index}, this.value)">
-                <button type="button" class="btn-remove-menu" onclick="eliminarMenuAdicional(${index})">✕</button>
-            </div>
-        </div>
-        `;
-    });
-    
-    container.innerHTML = html;
+
 }
 
-/**
- * Actualiza PAX de un menú adicional
- */
-function actualizarPaxMenuAdicional(index, valor) {
-    if (menusAdicionales[index]) {
-        menusAdicionales[index].pax_adicional = parseInt(valor) || 1;
-    }
-}
+
+

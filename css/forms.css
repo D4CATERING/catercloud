@@ -3,7 +3,7 @@
     max-width: 900px;
     margin: 0 auto;
     background: white;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
@@ -11,39 +11,39 @@
 .header {
     background: #1e40af;
     color: white;
-    padding: 15px 20px;
+    padding: 6px 10px;
 }
 
 .header h1 {
     font-size: 2rem;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
 }
 
 .form-container {
-    padding: 25px;
+    padding: 15px;
 }
 
 .form-section {
-    margin-bottom: 25px;
+    margin-bottom: 15px;
 }
 
 .form-section h3 {
     color: #1e293b;
-    margin-bottom: 5px;
-    padding-bottom: 6px;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
     border-bottom: 1px solid #3b82f6;
     font-size: 1.3rem;
 }
 
 .form-group {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     font-weight: 500;
     color: #475569;
     font-size: 0.95rem;
@@ -56,9 +56,9 @@ label {
 
 input, select, textarea {
     width: 100%;
-    padding: 6px 8px;
+    padding: 4px 6px;
     border: 1px solid #cbd5e1;
-    border-radius: 5px;
+    border-radius: 4px;
     font-size: 0.95rem;
     transition: border 0.3s;
 }
@@ -72,18 +72,18 @@ input:focus, select:focus, textarea:focus {
 /* ===== CHECKBOXES ===== */
 .checkbox-group {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 0.5fr));
-    gap: 5px;
-    margin-top: 5px;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 0.5fr));
+    gap: 4px;
+    margin-top: 4px;
 }
 
 .checkbox-label {
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 8px;
+    gap: 4px;
+    padding: 4px 6px;
     border: 2px solid #e2e8f0;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
     font-size: 0.9rem;
@@ -95,8 +95,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .checkbox-label input[type="checkbox"] {
-    width: 12px;
-    height: 12px;
+    width: 8px;
+    height: 8px;
 }
 
 /* ===== MULTIPLICADORES ===== */
@@ -116,25 +116,28 @@ input:focus, select:focus, textarea:focus {
 
 .multiplicador-section h4 {
     color: #1e293b;
-    margin-bottom: 5px;
-    font-size: 1rem;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    text-transform: none;
 }
 
 .multiplicador-input-group {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-top: 5px;
+    margin-top: 4px;
 }
 
 .multiplicador-input {
     flex: 1;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border: 2px solid #cbd5e1;
     border-radius: 4px;
     font-size: 0.95rem;
     text-align: center;
-    min-width: 40px;
+    min-width: 60px;
 }
 
 .multiplicador-input:focus {
@@ -144,18 +147,22 @@ input:focus, select:focus, textarea:focus {
 }
 
 .multiplicador-label {
-    font-weight: 500;
+    font-weight: 400;
     color: #475569;
-    font-size: 0.9rem;
-    min-width: 40px;
+    font-size: 0.78rem;
+    min-width: 60px;
+    text-transform: none;
+    font-family: 'Roboto', sans-serif;
 }
 
 .info-cantidad {
-    margin-top: 5px;
-    padding: 6px 8px;
+    margin-top: 4px;
+    padding: 4px 6px;
     background: #dbeafe;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+    text-transform: none;
 }
 
 .info-cantidad strong {
@@ -166,14 +173,14 @@ input:focus, select:focus, textarea:focus {
 .menu-selection {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 0.5fr));
-    gap: 8px;
-    margin-top: 8px;
+    gap: 4px;
+    margin-top: 4px;
 }
 
 .menu-option {
-    padding: 8px;
+    padding: 4px;
     border: 2px solid #e2e8f0;
-    border-radius: 5px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -202,33 +209,36 @@ input:focus, select:focus, textarea:focus {
 
 /* ===== REFERENCIAS ===== */
 .referencias-container {
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 6px;
+    padding-top: 6px;
     border-top: 2px solid #e2e8f0;
 }
 
 .referencias-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 0.5fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 5px;
     margin-top: 5px;
 }
 
+/* === Casillas idénticas a Foodbox Lunch === */
 .referencia-option {
-    padding: 5px;
-    border: 2px solid #e2e8f0;
-    border-radius: 6px;
-    transition: all 0.2s;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 5px;
-    font-size: 0.9rem;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    gap: 8px;
+    min-height: 32px;
+    cursor: pointer;
+    transition: all 0.15s;
 }
 
 .referencia-option:hover {
-    border-color: #3b82f6;
-    background: #f0f9ff;
+    background: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
 .referencia-option.selected {
@@ -236,24 +246,55 @@ input:focus, select:focus, textarea:focus {
     background: #d1fae5;
 }
 
+/* Nombre del item */
+.referencia-option span {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+    text-transform: none;
+}
+
+.referencia-option.selected span {
+    color: #065f46;
+}
+
 .cantidad-control {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
+    flex-shrink: 0;
 }
 
 .cantidad-input {
-    width: 70px;
-    padding: 6px;
+    width: 40px;
+    height: 22px;
+    padding: 2px 4px;
     text-align: center;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #e2e8f0;
     border-radius: 4px;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+    background: white;
 }
 
 .unidad-select {
-    width: 60px;
-    padding: 6px;
+    height: 22px;
+    padding: 0 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-family: 'Roboto', sans-serif;
+    color: #64748b;
+    background: white;
+    cursor: pointer;
+    text-transform: none;
+}
+
+.unidad-select {
+    width: 70px;
+    padding:5px;
     border: 1px solid #cbd5e1;
     border-radius: 4px;
     font-size: 0.85rem;
@@ -457,50 +498,119 @@ input:focus, select:focus, textarea:focus {
     color: #065f46;
 }
 
+/* Botones de documentos en tarjetas de historial */
+.comanda-docs {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-doc {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-doc-cocina {
+    background: #131B23;
+    color: #ffffff;
+    border: 1px solid #131B23;
+}
+.btn-doc-cocina:hover {
+    background: #1e2d3d;
+}
+
+.btn-doc-logistica {
+    background: #E1342E;
+    color: #ffffff;
+    border: 1px solid #E1342E;
+}
+.btn-doc-logistica:hover {
+    background: #c62020;
+}
+
 .comanda-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 15px;
+    gap: 6px;
+    align-items: center;
 }
 
-.btn-editar {
-    background: #3b82f6;
-    color: white;
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     border: none;
     border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
+    background: transparent;
+    color: #94a3b8;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
+    padding: 0;
 }
 
-.btn-imprimir {
-    background: #10b981;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
+.btn-icon:hover {
+    background: #f1f5f9;
+    color: #131B23;
 }
 
-.btn-eliminar {
-    background: #ef4444;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
+.btn-icon-danger {
+    color: #cbd5e1;
 }
 
-.btn-editar:hover,
-.btn-imprimir:hover,
-.btn-eliminar:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.btn-icon-danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ===== LOGÍSTICA EN DETALLE ===== */
+.log-seccion {
+    margin-bottom: 12px;
+}
+.log-seccion-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-family: 'Roboto', sans-serif;
+    border-bottom: 1px solid #f1f5f9;
+}
+.log-item-sub {
+    padding-left: 24px;
+    color: #64748b;
+}
+.log-item-nombre {
+    color: #1e293b;
+    flex: 1;
+}
+.log-item-cantidad {
+    color: #475569;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    margin-left: 12px;
 }
 
 /* ===== DETALLE DE COMANDA ===== */
@@ -510,60 +620,1597 @@ input:focus, select:focus, textarea:focus {
     margin: 0 auto;
 }
 
+/* ══════════════════════════════════════════
+   DETALLE DE COMANDA — estilo corporativo
+   ══════════════════════════════════════════ */
+
 .detalle-container {
     background: white;
-    border-radius: 20px;
-    padding: 25px;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    max-width: 860px;
+    margin: 0 auto;
 }
 
 .detalle-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #e2e8f0;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E1342E;
 }
 
 .detalle-codigo {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #1e40af;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #131B23;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
+.detalle-fecha-sub {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+
+/* Sección con banda negra tipo dc-section del formulario */
+.detalle-container .dc-section {
+    margin-bottom: 3px;
+    border-radius: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+.detalle-container .dc-section:first-of-type { border-radius: 8px 8px 0 0; }
+.detalle-container .dc-section:last-of-type  { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+
+.detalle-container .dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #131B23;
+    border-top: 3px solid #E1342E;
+    border-bottom: 3px solid #E1342E;
+    padding: 6px 14px;
+}
+
+.detalle-container .dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0;
+    flex: 1;
+}
+
+/* Tipo menaje en el mismo banner */
+.detalle-container .dc-section-header .detalle-menaje-inline {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E1342E;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-left: auto;
+    padding-left: 16px;
+}
+
+.detalle-container .dc-section-header span:not(.detalle-menaje-inline) {
+    font-size: 0.9rem;
+}
+
+/* Grid de campos info básica — compacto */
+.detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0;
+    padding: 6px 14px 8px;
+}
+
+.detalle-field {
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.detalle-field-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.detalle-field-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #131B23;
+}
+
+/* Área de contenido dentro de sección */
+.detalle-body {
+    padding: 6px 14px 10px;
+}
+
+/* Badge menaje: ahora va DENTRO del banner — .detalle-menaje-inline arriba */
+
+/* Material en detalle — sin checkbox, texto al inicio */
+.detalle-container .dc-material-item {
+    grid-template-columns: 1fr 36px 36px;
+    cursor: default;
+}
+.detalle-container .dc-material-item:hover {
+    background: transparent;
+}
+.detalle-container .dc-material-nombre {
+    text-align: left;
+    font-size: 0.76rem;
+}
+.detalle-container .dc-material-col h5 {
+    font-size: 0.72rem;
+}
+
+/* Tag acero/desechable en termos */
+.detalle-termo-tag {
+    display: inline-block;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Fila de item de menú */
+.detalle-menu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-family: 'Roboto', sans-serif;
+}
+.detalle-menu-row:last-child { border-bottom: none; }
+
+.detalle-menu-nombre {
+    font-size: 0.8rem;
+    color: #131B23;
+}
+.detalle-menu-nombre.es-titulo {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #131B23;
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.detalle-menu-cantidad {
+    font-size: 0.75rem;
+    color: #475569;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+/* Fila de material logística */
+.log-seccion {
+    margin-bottom: 10px;
+}
+.log-seccion-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 6px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.78rem;
+    color: #131B23;
+}
+.log-item-sub {
+    padding-left: 18px;
+    font-size: 0.74rem;
+    color: #64748b;
+}
+.log-item-nombre { flex: 1; }
+.log-item-cantidad { color: #475569; white-space: nowrap; margin-left: 10px; }
+
+/* Mantener info-label/value para compatibilidad con código antiguo */
+.info-label {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+}
+.info-value {
+    font-family: 'Roboto', sans-serif;
+    color: #131B23;
+    font-size: 0.82rem;
+}
 .detalle-section {
-    margin-bottom: 25px;
-    padding: 15px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
     background: #f8fafc;
-    border-radius: 10px;
+    border-radius: 8px;
+}
+.detalle-section h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.detalle-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+.info-item { margin-bottom: 6px; }
+
+/* ===== ESTILOS PARA DESAYUNOS - DESPLEGABLE CON CHECKBOXES ===== */
+
+.desayuno-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 4px 6px;
+    margin-bottom: 5px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    transition: all 0.2s;
 }
 
-.detalle-section h4 {
+.desayuno-fila:hover {
+    border-color: #3b82f6;
+    background: #f8fafc;
+}
+
+.desayuno-info {
+    flex: 1;
+    min-width: 120px;
+}
+
+.desayuno-nombre {
+    font-weight: 600;
     color: #1e293b;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.desayuno-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* Dropdown de bollería */
+.dropdown-bolleria {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.dropdown-btn {
+    width: 100%;
+    padding: 5px 10px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.78rem;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.dropdown-btn:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.dropdown-arrow {
+    font-size: 0.65rem;
+    color: #64748b;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.dropdown-content {
+    display: none;
+    position: fixed;
+    min-width: 220px;
+    max-width: 280px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    z-index: 9999;
+    padding: 6px;
+}
+
+.bolleria-checkbox-group {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.checkbox-bolleria {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-transform: none;
+}
+
+.checkbox-bolleria:hover {
+    background: #f0f9ff;
+}
+
+.checkbox-bolleria input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Select de sandwiches */
+.sandwich-select {
+    margin-top: 5px;
+    width: 100%;
+}
+
+.select-sandwich {
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.78rem;
+    background: white;
+    color: #475569;
+    text-transform: none;
+}
+
+.select-sandwich:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Cantidad */
+.desayuno-cantidad {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+    min-width: 50px;
+    justify-content: flex-end;
+}
+
+.cantidad-input-compact {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.cantidad-input-compact:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.select-termo {
+    width: 110px !important; /* Ancho fijo */
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: white;
+    color: #475569;
+}
+
+.desayuno-unidad {
+    font-size: 0.8rem;
+    color: #64748b;
+    min-width: 30px;
+}
+
+/* ===== ESTILOS MEJORADOS PARA DESAYUNOS ===== */
+
+.leche-especial-header {
+    background: #f0f9ff !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.desayuno-fila.leche-especial {
+    background: #f0f9ff;
+    border-color: #93c5fd;
+}
+
+.termo-selector {
+    margin-top: 8px;
+}
+
+.select-termo {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+    color: #475569;
+}
+
+.select-termo:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== ESTILOS PARA FOODBOX LUNCH ===== */
+
+.foodbox-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.foodbox-option-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.foodbox-option-label:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.foodbox-option-label input[type="radio"]:checked + span {
+    font-weight: 600;
+}
+
+.foodbox-adicional-item {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.foodbox-adicional-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    color: #475569;
+}
+
+.foodbox-adicional-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-add-foodbox {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-add-foodbox:hover {
+    background: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+
+/* ============================================================
+   SISTEMA DE CAMPOS COMPACTO — IDENTIDAD CORPORATIVA DECUATRO
+   Oswald (títulos) · Roboto (cuerpo)
+   Acento: --dc-rojo #E1342E
+   ============================================================ */
+
+/* ── Sección wrapper ── */
+.dc-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(19,27,35,0.06);
+    margin-bottom: 14px;
+}
+
+/* ── Header de sección ── */
+.dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: #131B23;
+    border-bottom: 3px solid #E1342E;
+}
+
+.dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.dc-section-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* Variante logística: acento verde oscuro en la línea inferior */
+.dc-section--logistics .dc-section-header {
+    border-bottom-color: #10b981;
+}
+
+/* ── Grid de campos genérico ── */
+.dc-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 14px;
+    padding: 12px 14px 14px;
+    background: #ffffff;
+}
+
+/* Grid de 2 columnas iguales */
+.dc-fields-grid--2col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* ── Modificadores de ancho ── */
+.dc-field--wide {
+    grid-column: span 2;
+}
+
+.dc-field--full {
+    grid-column: 1 / -1;
+}
+
+/* ── Fila inline: 3 campos en una sola línea ── */
+.dc-inline-group {
+    display: grid;
+    grid-template-columns: 100px 1fr 120px;
+    gap: 10px 14px;
+}
+
+/* ── Grid específico de Información Básica ──
+   Fila 1: Empresa (flexible) │ PAX (90px)
+   Fila 2: Responsable (flex) │ Fecha (160px) │ Hora (120px)
+*/
+.dc-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 90px 160px 120px;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+        "empresa  empresa  pax      pax"
+        "resp     resp     fecha    hora";
+    gap: 6px 10px;
+    padding: 10px 12px 12px;
+    background: #ffffff;
+}
+
+.dc-info-empresa    { grid-area: empresa; }
+.dc-info-pax        { grid-area: pax; }
+.dc-info-responsable{ grid-area: resp; }
+.dc-info-fecha      { grid-area: fecha; }
+.dc-info-hora       { grid-area: hora; }
+
+@media (max-width: 600px) {
+    .dc-info-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "empresa  empresa"
+            "pax      pax"
+            "resp     resp"
+            "fecha    hora";
+    }
+}
+
+/* ── Campo individual ── */
+.dc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Label ── */
+.dc-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin: 0;
+}
+
+.dc-label.required::after {
+    content: " *";
+    color: #E1342E;
+}
+
+/* ── Input / select / textarea ── */
+.dc-input {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+    color: #131B23;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 3px 7px;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.dc-input:focus {
+    outline: none;
+    border-color: #E1342E;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(225,52,46,0.08);
+}
+
+.dc-input::placeholder {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+textarea.dc-input {
+    resize: vertical;
+    min-height: 40px;
+}
+
+/* ── Mensaje de error bajo campo ── */
+.dc-field-error {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    color: #dc2626;
+    min-height: 14px;
+    display: block;
+}
+
+/* ── Responsive: 2 cols en tablet, 1 col en móvil ── */
+@media (max-width: 700px) {
+    .dc-fields-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dc-field--wide,
+    .dc-field--full {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .dc-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Grid específico de Datos de Logística ──
+   Fila 1: Nombre contacto (flex) │ Teléfono (150px) │ Hora entrega (120px)
+   Fila 2: Dirección (flex)       │ CP (110px)        │ Hora evento  (120px)
+   Fila 3: Notas (full width)
+*/
+.dc-log-grid {
+    display: grid;
+    grid-template-columns: 1fr 150px 120px;
+    grid-template-areas:
+        "contacto   telefono   hora-entrega"
+        "direccion  cp         hora-evento";
+    gap: 6px 10px;
+    padding: 10px 12px 12px;
+    background: #ffffff;
+}
+
+.dc-log-contacto     { grid-area: contacto; }
+.dc-log-telefono     { grid-area: telefono; }
+.dc-log-hora-entrega { grid-area: hora-entrega; }
+.dc-log-direccion    { grid-area: direccion; }
+.dc-log-cp           { grid-area: cp; }
+.dc-log-hora-evento  { grid-area: hora-evento; }
+
+@media (max-width: 600px) {
+    .dc-log-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "contacto    contacto"
+            "telefono    hora-entrega"
+            "direccion   direccion"
+            "cp          hora-evento";
+    }
+}
+
+/* ============================================================
+   MATERIAL DE LOGÍSTICA - Tabla de 3 columnas con checkboxes
+   ============================================================ */
+
+.dc-material-section {
+    margin-top: 16px;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 12px;
+}
+
+.dc-material-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #131B23;
+    margin: 0 0 10px 0;
+}
+
+.dc-material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.dc-material-col {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px;
+}
+
+.dc-material-col h5 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin: 0 0 8px 0;
+    padding-bottom: 6px;
     border-bottom: 1px solid #cbd5e1;
 }
 
-.detalle-info {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+.dc-material-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.info-item {
+.dc-material-item {
+    display: grid;
+    grid-template-columns: 20px 1fr 50px 50px;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.8rem;
+}
+
+.dc-material-item:hover {
+    background: #ffffff;
+}
+
+.dc-material-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.dc-material-nombre {
+    color: #1e293b;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    text-transform: none;
+    font-family: 'Roboto', sans-serif;
+}
+
+.dc-material-subtitulo {
+    display: block;
+    font-size: 0.65rem;
+    font-style: italic;
+    color: #94a3b8;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+.dc-material-cantidad {
+    width: 50px;
+    padding: 2px 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+}
+
+.dc-material-cantidad:focus {
+    outline: none;
+    border-color: #10b981;
+}
+
+.dc-material-unidad {
+    color: #64748b;
+    font-size: 0.7rem;
+    text-align: right;
+}
+
+.dc-material-empty {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-style: italic;
+    text-align: center;
+    padding: 8px;
+}
+
+@media (max-width: 900px) {
+    .dc-material-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   SUBITEMS DESPLEGABLES EN MATERIAL DE LOGÍSTICA
+   ============================================================ */
+
+.dc-material-item-expandable {
+    margin-bottom: 4px;
+}
+
+.dc-material-expand-btn {
+    background: transparent;
+    border: none;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    color: #64748b;
+    transition: color 0.15s;
+}
+
+.dc-material-expand-btn:hover {
+    color: #10b981;
+}
+
+.dc-material-subitems {
+    margin-left: 24px;
+    margin-top: 4px;
+    padding-left: 8px;
+    border-left: 2px solid #e2e8f0;
+}
+
+.dc-material-subitem {
+    display: grid;
+    grid-template-columns: 16px 1fr 45px 45px;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+
+.dc-material-subitem:hover {
+    background: #f0fdf4;
+}
+
+.dc-material-subitem input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+}
+
+.dc-material-subitem .dc-material-nombre {
+    font-size: 0.75rem;
+    color: #475569;
+}
+
+.dc-material-subitem .dc-material-cantidad {
+    width: 45px;
+    padding: 2px 3px;
+    font-size: 0.7rem;
+}
+
+.dc-material-subitem .dc-material-unidad {
+    font-size: 0.65rem;
+    color: #64748b;
+}
+
+.btn-material-admin {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #64748b;
+}
+
+.btn-material-admin:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* ============================================================
+   SELECTORES EXPANDIBLES EN DESAYUNOS (estilo logística)
+   ============================================================ */
+
+.desayuno-selector-expandable {
+    margin-top: 6px;
+}
+
+.desayuno-expand-btn {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.desayuno-expand-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.desayuno-subitems {
+    margin-top: 4px;
+    padding: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.desayuno-subitem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+
+.desayuno-subitem:hover {
+    background: #f0fdf4;
+}
+
+.desayuno-subitem input[type="checkbox"],
+.desayuno-subitem input[type="radio"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+/* ============================================================
+   FUENTES CORPORATIVAS GLOBALES - Oswald + Roboto
+   ============================================================ */
+
+/* Importar fuentes de Google */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Aplicar Roboto como base global */
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Oswald para títulos y headers */
+h1, h2, h3, h4, h5, h6,
+.dc-section-header,
+.form-section h3,
+.modal-content h2,
+.desayuno-nombre,
+button.primary,
+.btn-guardar {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Roboto para todo el texto del cuerpo */
+body,
+input,
+select,
+textarea,
+label,
+p,
+span,
+.dc-label,
+.dc-input,
+.desayuno-proporcion,
+.dc-material-nombre,
+.dc-material-unidad {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Ajustar pesos específicos */
+label,
+.dc-label {
+    font-weight: 500;
+}
+
+input,
+select,
+textarea {
+    font-weight: 400;
+}
+
+/* Títulos de secciones más prominentes */
+h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.dc-section-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ============================================================
+   HEADERS DELGADOS Y COMPACTOS - SIN LÍNEAS BAJO TEXTO
+   ============================================================ */
+
+/* Headers principales - Barra negra delgada sin línea bajo texto */
+.dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #131B23;
+    border-bottom: 3px solid #E1342E;
     margin-bottom: 10px;
 }
 
-.info-label {
-    font-weight: 600;
-    color: #475569;
-    font-size: 0.9rem;
-    margin-bottom: 5px;
+.dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    border: none;
 }
 
-.info-value {
-    color: #1e293b;
-    font-size: 1rem;
+/* Headers de logística - Barra negra con línea VERDE */
+.dc-section--logistics .dc-section-header {
+    border-bottom: 3px solid #10b981;
+}
+
+/* Sub-headers (Bebidas, Menaje, Extras) - MÁS PEQUEÑOS */
+.dc-material-col h5 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #475569;
+    margin: 0 0 6px 0;
+    padding: 0;
+}
+
+/* Títulos de secciones generales - compactos */
+.form-section h3,
+h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Labels - pequeñas y discretas */
+label,
+.dc-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #64748b;
+}
+
+/* Inputs - tamaño normal */
+input,
+select,
+textarea,
+.dc-input {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+/* Textos pequeños */
+.desayuno-proporcion,
+.dc-material-unidad,
+p {
+    font-size: 0.7rem;
+}
+
+/* Quitar bordes innecesarios de los h3 dentro de secciones */
+.form-section h3:not(.dc-section-header h3) {
+    border: none;
+    background: none;
+    color: #131B23;
+    padding: 6px 12px;
+}
+
+/* Asegurar que NO haya líneas bajo los h3 que no están en dc-section-header */
+h3 {
+    border-bottom: none !important;
+}
+
+/* Solo los dc-section-header tienen la línea de color */
+.dc-section-header {
+    border-bottom: 3px solid #E1342E;
+}
+
+.dc-section--logistics .dc-section-header {
+    border-bottom: 3px solid #10b981 !important;
+}
+
+/* ============================================================
+   FOODBOX LUNCH - ESTILOS COMPACTOS
+   ============================================================ */
+
+/* Cajitas más pequeñas y compactas */
+.foodbox-item-con-cantidad {
+    padding: 6px 10px !important;
+    min-height: auto !important;
+}
+
+/* Nombre de la opción - tamaño pequeño */
+.foodbox-nombre {
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
+    margin-bottom: 4px !important;
+}
+
+/* Controles de cantidad más compactos */
+.foodbox-cantidad-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Botones + y - más pequeños */
+.foodbox-btn {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    font-size: 0.85rem !important;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.foodbox-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+/* Input de cantidad compacto */
+.foodbox-item-con-cantidad .cantidad-input {
+    width: 45px !important;
+    height: 24px !important;
+    padding: 2px 4px !important;
+    font-size: 0.8rem !important;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+/* Grid de opciones más compacto */
+#foodboxEnsaladasGrid,
+#foodboxSandwichesGrid,
+#foodboxPostresGrid {
+    gap: 8px !important;
+}
+
+/* Secciones de opciones más compactas */
+.foodbox-opcion-principal,
+.foodbox-postres {
+    margin-bottom: 15px !important;
+}
+
+/* ============================================================
+   FOODBOX LUNCH - DISEÑO COMPACTO Y LIMPIO
+   ============================================================ */
+
+/* Subtítulos de sección */
+.foodbox-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin: 0 0 6px 0;
+    padding: 0;
+}
+
+/* Item individual - MUY COMPACTO */
+.foodbox-item-compacto {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.foodbox-item-compacto:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Nombre de la opción - PEQUEÑO */
+.foodbox-nombre-compacto {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+}
+
+/* Controles de cantidad */
+.foodbox-controles {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Botones +/- MINI */
+.foodbox-btn-mini {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.foodbox-btn-mini:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.foodbox-btn-mini:active {
+    transform: scale(0.95);
+}
+
+/* Input de cantidad MINI */
+.foodbox-input-mini {
+    width: 40px !important;
+    height: 22px !important;
+    padding: 2px 4px !important;
+    font-size: 0.75rem !important;
+    text-align: center;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px;
+    background: white;
+}
+
+/* Grid de referencias para foodbox */
+#foodboxEnsaladasGrid,
+#foodboxSandwichesGrid,
+#foodboxPostresGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 6px;
+}
+
+@media (max-width: 768px) {
+    #foodboxEnsaladasGrid,
+    #foodboxSandwichesGrid,
+    #foodboxPostresGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   FOODBOX LUNCH - ESTILOS COMPACTOS
+   ============================================================ */
+
+.foodbox-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+.foodbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+}
+
+.foodbox-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.foodbox-item:hover {
+    background: #f1f5f9;
+}
+/* ============================================================
+   DISEÑO UNIFICADO - DECUATRO BUBBLES
+   Sistema de tarjetas compactas para todos los módulos
+   ============================================================ */
+
+/* --- CONTAINER GRID --- */
+.dc-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+/* --- ITEM INDIVIDUAL --- */
+.dc-item-bubble {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    transition: all 0.15s;
+    overflow: visible;
+    position: relative;
+}
+
+.dc-item-bubble:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* --- NOMBRE DEL ITEM --- */
+.dc-item-nombre {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+    margin-right: 8px;
+}
+
+/* --- CONTROLES (botones + input) --- */
+.dc-item-controles {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* --- BOTONES +/- --- */
+.dc-btn-qty {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    color: #64748b;
+}
+
+.dc-btn-qty:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #475569;
+}
+
+.dc-btn-qty:active {
+    transform: scale(0.95);
+}
+
+.dc-btn-qty:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- INPUT DE CANTIDAD --- */
+.dc-input-qty {
+    width: 45px;
+    height: 24px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: white;
+    color: #131B23;
+}
+
+.dc-input-qty:focus {
+    outline: none;
+    border-color: #E1342E;
+    box-shadow: 0 0 0 2px rgba(225, 52, 46, 0.1);
+}
+
+/* --- TÍTULOS DE SECCIÓN --- */
+.dc-section-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- VARIANTE: Item seleccionado/destacado --- */
+.dc-item-bubble.selected {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.dc-item-bubble.selected .dc-item-nombre {
+    color: #166534;
+    font-weight: 500;
+}
+
+/* --- VARIANTE: Item con checkbox --- */
+.dc-item-bubble.with-checkbox {
+    cursor: pointer;
+}
+
+.dc-item-bubble.with-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    .dc-items-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- COMPATIBILIDAD CON CLASES ANTERIORES --- */
+/* Para que los módulos existentes sigan funcionando */
+.foodbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+}
+
+.foodbox-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.foodbox-item:hover {
+    background: #f1f5f9;
+}
+
+.foodbox-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+/* Grid de 2 columnas para Desayunos */
+#referenciasDesayunoGrid.dc-items-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+    #referenciasDesayunoGrid.dc-items-grid {
+        grid-template-columns: 1fr;
+    }
 }

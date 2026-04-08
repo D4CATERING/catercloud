@@ -1,193 +1,444 @@
-/* ===== ESTILOS GLOBALES ===== */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+/* =====================================
+   IDENTIDAD CORPORATIVA DECUATRO
+===================================== */
+
+:root{
+  /* Colores corporativos */
+  --dc-rojo: #E1342E;
+  --dc-negro: #131B23;
+  --dc-blanco: #FFFFFF;
+
+  /* Neutros UI */
+  --dc-text: var(--dc-negro);
+  --dc-muted: #64748b;
+  --dc-border: #e2e8f0;
+  --dc-bg: #f8fafc;
+
+  /* Sombras */
+  --dc-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
+
+  /* Tipografías */
+  --font-title: 'Oswald', sans-serif;
+  --font-body: 'Roboto', sans-serif;
 }
 
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+/* ===== RESET + BASE ===== */
+*{
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body{
+  height: 100%;
+}
+
+body{
+  font-family: var(--font-body);
+  color: var(--dc-text);
+  background: var(--dc-bg);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Titulares */
+h1, h2, h3, h4{
+  font-family: var(--font-title);
+  letter-spacing: 0.4px;
+  color: var(--dc-negro);
+  margin-top: 0;
+}
+
+/* Links */
+a{
+  color: var(--dc-rojo);
+  text-decoration: none;
+}
+a:hover{
+  text-decoration: underline;
 }
 
 /* ===== LOADER Y MENSAJES ===== */
-.loader {
-    display: inline-block;
-    width: 20px;
-    height: 20px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.loader{
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid var(--dc-rojo);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+@keyframes spin{
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-.message {
-    padding: 12px;
-    border-radius: 6px;
-    margin-top: 15px;
-    display: none;
-    font-size: 0.9rem;
+.message{
+  padding: 12px;
+  border-radius: 10px;
+  margin-top: 15px;
+  display: none;
+  font-size: 0.9rem;
+  border: 1px solid var(--dc-border);
+  background: var(--dc-blanco);
 }
 
-.message-success {
-    background: #d1fae5;
-    color: #065f46;
-    display: block;
+.message-success{
+  background: #d1fae5;
+  color: #065f46;
+  display: block;
+  border-color: #a7f3d0;
 }
 
-.message-error {
-    background: #fee2e2;
-    color: #991b1b;
-    display: block;
+.message-error{
+  background: #fee2e2;
+  color: #991b1b;
+  display: block;
+  border-color: #fecaca;
 }
 
-/* ===== BOTONES GLOBALES ===== */
-.button-group {
-    display: flex;
-    gap: 12px;
-    margin-top: 25px;
+/* ===== SECCIONES / TARJETAS ===== */
+.form-section{
+  background: var(--dc-blanco);
+  border: 1px solid var(--dc-border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: var(--dc-shadow);
 }
 
-button {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s;
+/* ===== BOTONES ===== */
+.button-group{
+  display: flex;
+  gap: 12px;
+  margin-top: 25px;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-    color: white;
+/* Botón base */
+button{
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
 }
 
-.btn-secondary {
-    background: #e2e8f0;
-    color: #475569;
+/* Botón principal corporativo */
+.btn-primary,
+button.primary{
+  background: var(--dc-rojo);
+  color: var(--dc-blanco);
+  border-color: var(--dc-rojo);
+  font-family: var(--font-title);
+  letter-spacing: 0.6px;
 }
 
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+.btn-primary:hover,
+button.primary:hover{
+  opacity: 0.92;
 }
 
-.back-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    background: #e2e8f0;
-    color: #475569;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    margin-bottom: 20px;
-    transition: all 0.2s;
+.btn-secondary{
+  background: #e2e8f0;
+  color: #475569;
+  border-color: #cbd5e1;
 }
 
-.back-button:hover {
-    background: #cbd5e1;
+button:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(0,0,0,0.08);
+}
+
+button:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Botón volver */
+.back-button{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #e2e8f0;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  margin-bottom: 20px;
+  transition: all 0.2s;
+}
+
+.back-button:hover{
+  background: #cbd5e1;
 }
 
 /* ===== MODAL ===== */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0,0,0,0.5);
-    overflow-y: auto;
+.modal{
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  overflow-y: auto;
 }
 
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    width: 90%;
-    max-width: 800px;
-    border-radius: 12px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-    animation: modalFade 0.3s;
+.modal-content{
+  background-color: var(--dc-blanco);
+  margin: 5% auto;
+  width: 90%;
+  max-width: 800px;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  animation: modalFade 0.3s;
+  border: 1px solid var(--dc-border);
 }
 
-@keyframes modalFade {
-    from { opacity: 0; transform: translateY(-50px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes modalFade{
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    border-radius: 12px 12px 0 0;
+.modal-header{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  background: var(--dc-negro);
+  color: var(--dc-blanco);
+  border-radius: 12px 12px 0 0;
 }
 
-.modal-header h3 {
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.modal-header h3{
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  letter-spacing: 0.5px;
 }
 
-.close-modal {
-    font-size: 2rem;
-    cursor: pointer;
-    transition: all 0.3s;
+.close-modal{
+  font-size: 2rem;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.close-modal:hover {
-    transform: scale(1.1);
+.close-modal:hover{
+  transform: scale(1.06);
 }
 
-.modal-body {
-    padding: 20px;
-    max-height: 60vh;
-    overflow-y: auto;
+.modal-body{
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
-.modal-footer {
-    padding: 20px;
-    border-top: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: flex-end;
-    gap: 15px;
+.modal-footer{
+  padding: 20px;
+  border-top: 1px solid var(--dc-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
 }
 
 /* ===== IMPRESIÓN ===== */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    
-    #detalleComanda, #detalleComanda * {
-        visibility: visible;
-    }
-    
-    #detalleComanda {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    
-    .no-print {
-        display: none !important;
-    }
+@media print{
+  body *{
+    visibility: hidden;
+  }
+
+  #detalleComanda, #detalleComanda *{
+    visibility: visible;
+  }
+
+  #detalleComanda{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  .no-print{
+    display: none !important;
+  }
+}
+
+/* ===== PAGINADOR SUTIL ===== */
+.pager-sutil{
+  grid-column: 1 / -1; /* ocupa toda la fila si el container es grid */
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+  margin-top:10px;
+  padding-top:6px;
+  border-top:1px solid var(--dc-border);
+  color:#94a3b8;
+  font-size:0.8rem;
+}
+
+.pager-btn{
+  border:1px solid var(--dc-border);
+  background:transparent;
+  color:#64748b;
+  border-radius:6px;
+  padding:2px 8px;
+  cursor:pointer;
+  line-height:1;
+}
+
+.pager-btn:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.pager-text{
+  user-select:none;
+}
+
+/* ===== BUSCADOR (REFERENCIAS / BANDEJAS) ===== */
+.referencias-search{
+  position: relative;
+  display:flex;
+  align-items:center;
+  margin: 10px 0;
+}
+
+.referencias-search input{
+  width: 100%;
+  padding: 8px 34px 8px 10px;
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+}
+
+.referencias-search .search-clear{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  padding: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.referencias-search .search-clear:hover{
+  color: #64748b;
+}
+
+.referencias-search .hidden{
+  display: none;
+}
+
+/* ===== Foodbox Lunch (si aún lo usas aquí) ===== */
+.foodbox-option{
+  background: var(--dc-blanco);
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  padding: 4px 6px;
+  font-size: 0.9rem;
+  color: var(--dc-text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.foodbox-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+@media (max-width: 640px){
+  .foodbox-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===============================
+   HEADER CORPORATIVO DECUATRO
+================================ */
+
+.dc-header{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  background: var(--dc-negro);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.dc-header-left{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dc-logo{
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.dc-brand{
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  color: var(--dc-blanco);
+  letter-spacing: 0.6px;
+}
+
+.dc-header-right{
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.dc-user{
+  color: #e5e7eb;
+  font-size: 0.9rem;
+}
+
+.dc-logout{
+  background: var(--dc-rojo);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  color: white;
+  font-family: var(--font-title);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.dc-logout:hover{
+  opacity: 0.9;
+}
+
+/* Ajuste para que el contenido no quede debajo del header */
+body{
+  padding-top: 84px;
 }
