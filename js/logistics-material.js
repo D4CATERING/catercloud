@@ -150,13 +150,6 @@
             </div>
         `;
 
-            // Re-añadir zumos preservados
-            _zumosActuales.forEach(zumo => {
-                if (!window.materialLogistica.bebidas.some(i => i._zumoId === zumo._zumoId)) {
-                    window.materialLogistica.bebidas.push(zumo);
-                }
-            });
-        }
 
         renderizarMaterial(containerId);
     };
@@ -207,7 +200,6 @@
                         subitems_selected: []
                     }));
             });
-        }
 
             // Re-añadir zumos preservados
             _zumosActuales.forEach(zumo => {
@@ -426,13 +418,6 @@
             }
         } else {
             parent.subitems_selected = parent.subitems_selected.filter(s => s.id !== subitemId);
-        }
-            // Re-añadir zumos preservados
-            _zumosActuales.forEach(zumo => {
-                if (!window.materialLogistica.bebidas.some(i => i._zumoId === zumo._zumoId)) {
-                    window.materialLogistica.bebidas.push(zumo);
-                }
-            });
         }
 
         renderizarMaterial(containerId);

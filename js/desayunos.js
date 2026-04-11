@@ -223,19 +223,16 @@ function renderizarZumoEnLogistica(ref, cantidadTotal) {
     if (!window.materialLogistica) window.materialLogistica = { bebidas: [], menaje: [], extras: [] };
     if (!window.materialLogistica.bebidas) window.materialLogistica.bebidas = [];
 
-    const existing = window.materialLogistica.bebidas.find(i => i._zumoId === ref.id);
-    if (existing) {
-        existing.cantidad = cantidadTotal;
-        if (typeof window.renderizarMaterial === 'function') window.renderizarMaterial('materialLogisticaInline');
-        return;
-    }
+    // Limpiar zumos de menús anteriores — cada selección de menú reemplaza el zumo
+    window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
 
+    // Añadir el zumo del menú actual
     window.materialLogistica.bebidas.push({
         _zumoId: ref.id,
         item_id: ref.id,
         nombre: ref.nombre,
         cantidad: cantidadTotal,
-        unidad: ref.unidad || 'botellas',
+        unidad: ref.unidad || 'litros',
         checked: true,
         tipo: 'bebidas',
         tiene_subitems: false,
