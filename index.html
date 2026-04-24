@@ -153,7 +153,7 @@
                             <div class="dc-field dc-info-pax">
                                 <label for="pax" class="dc-label required">Nº PAX</label>
                                 <input type="number" id="pax" class="dc-input" placeholder="0" min="1" required
-                                       onchange="actualizarCantidades(); actualizarCantidadesDesayuno();">
+                                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
                             </div>
                             <!-- Fila 2: Responsable (ancho) + Fecha + Hora -->
                             <div class="dc-field dc-info-responsable">
@@ -231,7 +231,7 @@
                                     <span class="multiplicador-label">Multiplicador:</span>
                                     <input type="number" id="multiplicadorSaladas" class="multiplicador-input"
                                            value="1.5" step="0.1" min="0.1" max="10"
-                                           onchange="actualizarMultiplicador('saladas', this.value)">
+                                           oninput="actualizarMultiplicador('saladas', this.value)">
                                 </div>
                                 <div class="info-cantidad" id="infoCantidadSaladas">
                                     <strong>Cálculo:</strong> <span id="paxValue">0</span> PAX ×
@@ -246,7 +246,7 @@
                                     <span class="multiplicador-label">Multiplicador:</span>
                                     <input type="number" id="multiplicadorPostres" class="multiplicador-input"
                                            value="1" step="0.1" min="0.1" max="10"
-                                           onchange="actualizarMultiplicador('postres', this.value)">
+                                           oninput="actualizarMultiplicador('postres', this.value)">
                                 </div>
                                 <div class="info-cantidad" id="infoCantidadPostres">
                                     <strong>Cálculo:</strong> <span id="paxValue2">0</span> PAX ×

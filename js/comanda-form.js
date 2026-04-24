@@ -314,12 +314,10 @@ async function seleccionarMenu(menuId, element) {
             window.menuSeleccionado.items_postres_max = _rule.postres;
         }
 
+        // Multiplicador desactivado para cat 2 y 3
+        document.getElementById('multiplicadorSection').style.display = 'none';
+
         if (window.pax > 0) {
-            document.getElementById('multiplicadorSection').style.display = 'block';
-
-            const hasPostres = (window.menuSeleccionado.items_postres_min || 0) > 0;
-            document.getElementById('multiplicadorPostresSection').style.display = hasPostres ? 'block' : 'none';
-
             if (typeof actualizarCantidades === 'function') {
                 actualizarCantidades();
             }

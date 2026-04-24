@@ -20,29 +20,29 @@
 
   window.supabaseClient = supabaseClient;
 
+  // ── Helper interno para emitir el evento de forma centralizada ──
+  function emitUserChanged(user) {
+    window.currentUser = user || null;
+    document.dispatchEvent(new CustomEvent("user:changed", { detail: user || null }));
+  }
+
   window.Auth = {
     async signIn(email, password) {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ 
-        email, 
-        password 
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
       });
       if (error) throw error;
-      
-      // 🔥 FORZAR actualización del usuario inmediatamente
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      window.currentUser = user;
-      document.dispatchEvent(new CustomEvent("user:changed", { detail: user }));
-      
+      // NO emitimos aquí — onAuthStateChange lo hará automáticamente
       return data;
     },
-    
+
     async signOut() {
       const { error } = await supabaseClient.auth.signOut();
       if (error) throw error;
-      window.currentUser = null;
-      document.dispatchEvent(new CustomEvent("user:changed", { detail: null }));
+      // NO emitimos aquí — onAuthStateChange lo hará automáticamente
     },
-    
+
     async getUser() {
       try {
         const { data } = await supabaseClient.auth.getUser();
@@ -56,24 +56,19 @@
   // Estado inicial
   window.currentUser = null;
 
-  // Cargar usuario al inicio
+  // Cargar usuario al inicio (solo actualiza estado, sin emitir evento)
+  // onAuthStateChange se disparará solo con INITIAL_SESSION si hay sesión activa
   (async () => {
     const { data } = await supabaseClient.auth.getUser();
-    window.currentUser = data.user;
-    if (data.user) {
-      document.dispatchEvent(new CustomEvent("user:changed", { detail: data.user }));
+    if (data.user && !window.currentUser) {
+      window.currentUser = data.user;
     }
   })();
 
-  // Escuchar cambios de autenticación
+  // Fuente de verdad única para todos los cambios de sesión
   supabaseClient.auth.onAuthStateChange((event, session) => {
     console.log("Auth state changed:", event, session?.user?.email);
-    if (session?.user) {
-      window.currentUser = session.user;
-      document.dispatchEvent(new CustomEvent("user:changed", { detail: session.user }));
-    } else {
-      window.currentUser = null;
-      document.dispatchEvent(new CustomEvent("user:changed", { detail: null }));
-    }
+    emitUserChanged(session?.user || null);
   });
+
 })();

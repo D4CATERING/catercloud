@@ -128,12 +128,18 @@ function toggleLogisticaInline(categoriaId) {
     seccion.style.display = mostrar ? 'block' : 'none';
 
     if (mostrar) {
-        // Inicializar material de logística
-        if (typeof inicializarMaterialLogisticaInline === 'function') {
-            inicializarMaterialLogisticaInline(categoriaId);
+        // Limpiar zumos de desayuno al cambiar a otra categoría
+        if (categoriaId !== 1 && window.materialLogistica?.bebidas) {
+            window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+        }
+        // La inicialización del material la gestiona comanda-form.js al seleccionar menú.
+        // Aquí solo mostramos el contenedor si ya existe el material.
+        const matContainer = document.getElementById('materialLogisticaInline');
+        if (matContainer && matContainer.innerHTML.trim()) {
+            matContainer.style.display = 'block';
         }
     } else {
-        // Limpiar
+        // Limpiar todo al ocultar
         limpiarCamposLogisticaInline();
         const matContainer = document.getElementById('materialLogisticaInline');
         if (matContainer) matContainer.style.display = 'none';
