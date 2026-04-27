@@ -24,6 +24,14 @@ function cargarReferenciasDesayuno(menu) {
         'Mini Pecaditos'
     ];
     
+    const opcionesPulguitas = [
+        'Paleta ibérica con tomate',
+        'Tortilla española',
+        'Ensaladilla rusa',
+        'Vegetal',
+        'Pollo al curry'
+    ];
+
     const opcionesSandwiches = [
         'Puerro & Manzana',
         'Verduras asadas',
@@ -53,18 +61,20 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
                 { id: 'healthy_leche_sin_lactosa', nombre: 'Termo leche sin lactosa', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
-		{ id: 'healthy_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
+                { id: 'healthy_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
                 { id: 'healthy_infusion', nombre: 'Termo de infusión', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'healthy_yogurt', nombre: 'Vasito Yogurt con Muesly', tipo: 'simple', 
+                { id: 'healthy_tostada', nombre: 'Tostada de aguacate y tomate', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-		{ id: 'healthy_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
-                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesBolleria },
-                { id: 'healthy_sandwich', nombre: 'Sandwich', tipo: 'sandwich', 
-                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches },
+                { id: 'healthy_fruta', nombre: 'Vaso de fruta natural preparada', tipo: 'simple', 
+                  cantidadPorPax: 1, unidad: 'uds' },
                 { id: 'healthy_zumo', nombre: 'Zumo natural', tipo: 'zumo', 
-                  cantidadPorPax: 1/5, unidad: 'litro' }
+                  cantidadPorPax: 1/5, unidad: 'litro' },
+                { id: 'healthy_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesBolleria },
+                { id: 'healthy_sandwich', nombre: 'Mini sándwich', tipo: 'sandwich', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches }
             ]
         },
         2: { // CLASSIC
@@ -99,21 +109,20 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
                 { id: 'premium_leche_sin_lactosa', nombre: 'Termo leche sin lactosa', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
-		{ id: 'premium_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
+                { id: 'premium_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
                 { id: 'premium_infusion', nombre: 'Termo de infusión', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'premium_cookies', nombre: 'Cookies', tipo: 'simple', 
+                { id: 'premium_cookie', nombre: 'Cookie o muffin', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'premium_popdots', nombre: 'Pop dots', tipo: 'simple', 
-                  cantidadPorPax: 2, unidad: 'uds' },
-                { id: 'premium_sandwich', nombre: 'Sandwiches', tipo: 'sandwich_multiple', 
-                  cantidadPorPax: 2, unidad: 'uds', opciones: opcionesSandwiches, cantidadSandwiches: 2 },
-                { id: 'premium_yogurt', nombre: 'Vasito yogurt con granola y miel', tipo: 'simple', 
+                { id: 'premium_fruta', nombre: 'Vaso de fruta natural preparada o yogur con granola y miel', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'premium_smoothie', nombre: 'Smoothie', tipo: 'simple', 
+                { id: 'premium_smoothie', nombre: 'Smoothie "true fruit"', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-
+                { id: 'premium_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
+                  cantidadPorPax: 2, unidad: 'uds', opciones: opcionesBolleria },
+                { id: 'premium_sandwich_o_pulguita', nombre: '2 Sándwiches ó 1 Pulguita', tipo: 'sandwich_o_pulguita', 
+                  cantidadPorPax: 2, unidad: 'uds', opciones: opcionesSandwiches, pulguitas: opcionesPulguitas }
             ]
         },
         4: { // VEGGIE
@@ -121,26 +130,47 @@ function cargarReferenciasDesayuno(menu) {
             referencias: [
                 { id: 'veggie_cafe', nombre: 'Termo de café', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-		{ id: 'veggie_leche', nombre: 'Termo de leche', tipo: 'termo', 
+                { id: 'veggie_leche', nombre: 'Termo de leche', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'premium_leche_sin_lactosa', nombre: 'Termo leche sin lactosa', tipo: 'leche_especial', 
+                { id: 'veggie_leche_sin_lactosa', nombre: 'Termo leche sin lactosa', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
-		{ id: 'veggie_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
+                { id: 'veggie_leche_veg', nombre: 'Termo bebida vegetal', tipo: 'leche_especial', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
                 { id: 'veggie_infusion', nombre: 'Termo de infusión', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'veggie_cookies', nombre: 'Cookies', tipo: 'simple', 
+                { id: 'veggie_cookie', nombre: 'Cookie vegana', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'veggie_tostada', nombre: 'Tostada aguacate', tipo: 'simple', 
+                { id: 'veggie_fruta', nombre: 'Vaso de fruta natural preparada', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'veggie_yogurt', nombre: 'Vasito yogurt vegetal con granola y miel', tipo: 'simple', 
+                { id: 'veggie_zumo', nombre: 'Zumo de naranja natural', tipo: 'zumo', 
+                  cantidadPorPax: 1/5, unidad: 'litro' },
+                { id: 'veggie_sandwich_vegetal', nombre: 'Mini sándwich vegetal', tipo: 'sandwich_fijo',
+                  cantidadPorPax: 1, unidad: 'uds', sabor: 'Vegetal' },
+                { id: 'veggie_sandwich_aguacate', nombre: 'Mini sándwich aguacate-tomate', tipo: 'sandwich_fijo',
+                  cantidadPorPax: 1, unidad: 'uds', sabor: 'Crema de aguacate con tomate' }
+            ]
+        },
+        17: { // WELCOME COFFEE & COFFEE BREAK
+            nombre: 'WELCOME COFFEE & COFFEE BREAK',
+            referencias: [
+                { id: 'welcome_cafe', nombre: 'Termo de café', tipo: 'termo', 
+                  cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
+                { id: 'welcome_leche', nombre: 'Termo de leche', tipo: 'termo', 
+                  cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
+                { id: 'welcome_leche_sin_lactosa', nombre: 'Termo leche sin lactosa', tipo: 'leche_especial', 
+                  cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
+                { id: 'welcome_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
+                  cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
+                { id: 'welcome_cookies', nombre: '2 mini cookies o pastas de té', tipo: 'simple', 
+                  cantidadPorPax: 2, unidad: 'uds' },
+                { id: 'welcome_bolleria', nombre: 'Mini bollería', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'veggie_zumo', nombre: 'Zumo natural', tipo: 'zumo', 
+                { id: 'welcome_agua', nombre: 'Agua mineral', tipo: 'zumo', 
                   cantidadPorPax: 1/5, unidad: 'litro' }
             ]
         }
     };
-    
+
     const config = configuracionesDesayunos[menu.id];
     if (!config) return;
     
@@ -292,6 +322,8 @@ function generarHTMLReferenciaDesayuno(ref, cantidadTotal, pax) {
         html += generarHTMLSandwichSimple(ref);
     } else if (ref.tipo === 'sandwich_multiple' && ref.opciones) {
         html += generarHTMLSandwichMultiple(ref, pax);
+    } else if (ref.tipo === 'sandwich_o_pulguita' && ref.opciones) {
+        html += generarHTMLSandwichOPulguita(ref, pax);
     } else if (ref.tipo === 'sandwich_fijo') {
         html += `<div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">${ref.sabor}</div>`;
     }
@@ -395,6 +427,76 @@ function generarHTMLSandwichMultiple(ref, pax) {
     return html;
 }
 
+// Generar HTML para selector sandwich O pulguita (PREMIUM)
+function generarHTMLSandwichOPulguita(ref, pax) {
+    return `
+        <div class="sandwich-o-pulguita-container" style="margin-top: 6px; width: 100%;">
+            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+                <label style="font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <input type="radio" name="tipo_${ref.id}" value="sandwich"
+                        onchange="toggleSandwichOPulguita('${ref.id}', 'sandwich')" checked>
+                    2 Sándwiches
+                </label>
+                <label style="font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <input type="radio" name="tipo_${ref.id}" value="pulguita"
+                        onchange="toggleSandwichOPulguita('${ref.id}', 'pulguita')">
+                    1 Pulguita
+                </label>
+            </div>
+            <div id="container_sandwich_${ref.id}">
+                <div class="sandwich-multiple-item" style="margin-bottom: 5px;">
+                    <select class="select-sandwich"
+                        onchange="actualizarSandwichMultipleSeleccion('${ref.id}', 1, this.value)">
+                        <option value="">Elegir sabor 1...</option>
+                        ${ref.opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="sandwich-multiple-item">
+                    <select class="select-sandwich"
+                        onchange="actualizarSandwichMultipleSeleccion('${ref.id}', 2, this.value)">
+                        <option value="">Elegir sabor 2...</option>
+                        ${ref.opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div id="container_pulguita_${ref.id}" style="display:none;">
+                <select class="select-sandwich"
+                    onchange="actualizarPulguitaSeleccion('${ref.id}', this.value)">
+                    <option value="">Elegir pulguita...</option>
+                    ${(ref.pulguitas||[]).map(o => `<option value="${o}">${o}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+    `;
+}
+
+function toggleSandwichOPulguita(refId, tipo) {
+    const contSandwich = document.getElementById('container_sandwich_' + refId);
+    const contPulguita = document.getElementById('container_pulguita_' + refId);
+    if (!contSandwich || !contPulguita) return;
+
+    if (tipo === 'sandwich') {
+        contSandwich.style.display = 'block';
+        contPulguita.style.display = 'none';
+        if (window.referenciasDesayuno && window.referenciasDesayuno[refId]) {
+            window.referenciasDesayuno[refId].modo = 'sandwich';
+            window.referenciasDesayuno[refId].pulguita = '';
+        }
+    } else {
+        contSandwich.style.display = 'none';
+        contPulguita.style.display = 'block';
+        if (window.referenciasDesayuno && window.referenciasDesayuno[refId]) {
+            window.referenciasDesayuno[refId].modo = 'pulguita';
+            window.referenciasDesayuno[refId].sandwiches = [];
+        }
+    }
+}
+
+function actualizarPulguitaSeleccion(refId, sabor) {
+    if (!window.referenciasDesayuno || !window.referenciasDesayuno[refId]) return;
+    window.referenciasDesayuno[refId].pulguita = sabor;
+}
+
 // Inicializar datos de referencia en window.referenciasDesayuno
 function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
     if (ref.tipo === 'bolleria') {
@@ -437,6 +539,20 @@ function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
             tipoTermo: 'desechable',
             sabor: '',
             opcionesDisponibles: ref.opciones || [],
+            cantidadPorPax: ref.cantidadPorPax
+        };
+    } else if (ref.tipo === 'sandwich_o_pulguita') {
+        window.referenciasDesayuno[ref.id] = {
+            nombre: ref.nombre,
+            cantidad: cantidadTotal,
+            unidad: ref.unidad,
+            tipo: ref.tipo,
+            modo: 'sandwich', // 'sandwich' o 'pulguita'
+            sandwiches: [
+                { id: ref.id + '_1', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) },
+                { id: ref.id + '_2', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) }
+            ],
+            pulguita: '',
             cantidadPorPax: ref.cantidadPorPax
         };
     } else if (ref.tipo === 'sandwich_fijo') {
@@ -1361,44 +1477,6 @@ function actualizarPaxMenuAdicional(index, valor) {
 
 // ========== FUNCIÓN PARA ACTUALIZAR CANTIDADES DE DESAYUNO ==========
 
-function actualizarCantidadesDesayuno() {
-    if (!window.menuSeleccionado || parseInt(document.getElementById('categoria').value) !== 1) return;
-    
-    const pax = window.pax || 0;
-    const container = document.getElementById('referenciasDesayunoGrid');
-    
-    if (!container) return;
-    
-    const termosPorPersona = 1/10;
-    const zumoPorPersona = 1/5;
-    
-    container.querySelectorAll('.desayuno-item').forEach(item => {
-        const refId = item.dataset.id;
-        const tipo = item.dataset.tipo;
-        const input = item.querySelector('.cantidad-input-compact');
-        
-        if (!input) return;
-        
-        const baseCantidad = parseFloat(input.dataset.base) || 0;
-        let nuevaCantidad;
-
-        if (tipo === 'leche_especial') {
-            return; // Siempre manual, nunca recalcular
-        } else if (tipo === 'termo') {
-            nuevaCantidad = Math.ceil(pax * termosPorPersona);
-        } else if (tipo === 'zumo') {
-            nuevaCantidad = Math.ceil(pax * zumoPorPersona);
-        } else {
-            nuevaCantidad = Math.ceil(pax * baseCantidad);
-        }
-        
-        input.value = nuevaCantidad;
-        
-        if (window.referenciasDesayuno && window.referenciasDesayuno[refId]) {
-            window.referenciasDesayuno[refId].cantidad = nuevaCantidad;
-        }
-    });
-}
 
 
 
@@ -1652,6 +1730,19 @@ async function seleccionarMenu(menuId, element) {
             cargarReferenciasDesayuno(window.menuSeleccionado);
         } else {
             console.error('No existe cargarReferenciasDesayuno(). Falta importar/definir el módulo de desayunos.');
+        }
+
+        // Mostrar y inicializar logística
+        const logisticaSection = document.getElementById('logisticaInlineSection');
+        if (logisticaSection) logisticaSection.style.display = 'block';
+        const materialInline = document.getElementById('materialLogisticaInline');
+        if (materialInline) materialInline.style.display = 'block';
+
+        if (typeof inicializarMaterialLogistica === 'function') {
+            await inicializarMaterialLogistica('materialLogisticaInline');
+            if (typeof autocompletarMaterialPorCategoria === 'function') {
+                await autocompletarMaterialPorCategoria(1, 'materialLogisticaInline');
+            }
         }
 
         return;

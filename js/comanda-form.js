@@ -132,10 +132,11 @@ async function cargarMenus() {
     
     if (categoriaId == 1) {
         menus = [
-            { id: 1, nombre: 'HEALTHY', descripcion: 'Termo café + leche + infusión + mini bollería + sandwich jamón/tomate + yogurt con muesli + zumo naranja' },
-            { id: 2, nombre: 'CLASSIC', descripcion: 'Termo café + leche + infusión + 2 mini bollerías + 2 sandwiches + fruta preparada + zumo naranja' },
-            { id: 3, nombre: 'PREMIUM', descripcion: 'Termo café + leche + infusión + cookies + pop dots + 2 sandwiches + yogurt con granola + smoothie' },
-            { id: 4, nombre: 'VEGGIE', descripcion: 'Termo café + leche vegetal + infusión + cookies + tostada aguacate + yogurt vegetal + zumo naranja' }
+            { id: 17, nombre: 'WELCOME COFFEE & COFFEE BREAK', descripcion: 'Termo café + leche + 2 mini cookies o pastas de té + 1 mini bolleríía + agua mineral' },
+            { id: 1, nombre: 'HEALTHY', descripcion: 'Termo café + leche + infusión + tostada aguacate y tomate + fruta + bolleríía + mini sándwich + zumo naranja' },
+            { id: 2, nombre: 'CLASSIC', descripcion: 'Termo café + leche + infusión + 2 mini bollerías + 2 sándwiches + fruta preparada + zumo naranja' },
+            { id: 3, nombre: 'PREMIUM', descripcion: 'Termo café + leche + infusión + cookie/muffin + bolleríía + 2 sándwiches ó 1 pulguita + fruta/yogur + smoothie' },
+            { id: 4, nombre: 'VEGGIE', descripcion: 'Termo café + leche vegetal + infusión + cookie vegana + sándwich vegetal + sándwich aguacate-tomate + fruta + zumo naranja' }
         ];
     }
     else if (categoriaId == 2) {
@@ -267,6 +268,12 @@ async function seleccionarMenu(menuId, element) {
         if (selectMenaje && !selectMenaje.value) {
             selectMenaje.value = 'desechable';
         }
+
+        // Mostrar secciones de logística
+        const logisticaSection = document.getElementById('logisticaInlineSection');
+        if (logisticaSection) logisticaSection.style.display = 'block';
+        const materialInline = document.getElementById('materialLogisticaInline');
+        if (materialInline) materialInline.style.display = 'block';
 
         // Inicializar logística para desayunos (crea materialLogisticaInline_bebidas)
         if (typeof inicializarMaterialLogistica === 'function') {
