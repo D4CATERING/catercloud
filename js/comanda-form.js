@@ -141,10 +141,11 @@ async function cargarMenus() {
     }
     else if (categoriaId == 2) {
         menus = [
-            { id: 5, nombre: 'ELECONÓMICO', descripcion: '7 salados + 1 postre', items_salados_min: 7, items_salados_max: 7, items_postres_min: 1, items_postres_max: 1 },
-            { id: 6, nombre: 'ELDEENMEDIO', descripcion: '10 salados + 3 postres', items_salados_min: 10, items_salados_max: 10, items_postres_min: 3, items_postres_max: 3 },
-            { id: 7, nombre: 'ELMUYTOP', descripcion: '12 salados + 3 postres', items_salados_min: 12, items_salados_max: 12, items_postres_min: 3, items_postres_max: 3 },
-            { id: 8, nombre: 'VEGGIE', descripcion: '6 items vegetarianos', items_salados_min: 6, items_salados_max: 6 }
+            { id: 18, nombre: 'BASIC', descripcion: '5 ref. grises + 1 ref. roja', items_gris_max: 5, items_rojo_max: 1, items_postres_min: 0, items_postres_max: 0, mult_postres: 1 },
+            { id: 5,  nombre: 'ECONÓMICO', descripcion: '5 ref. grises + 2 ref. rojas + 1 postre', items_gris_max: 5, items_rojo_max: 2, items_postres_min: 1, items_postres_max: 1, mult_postres: 1 },
+            { id: 6,  nombre: 'MEDIO', descripcion: '6 ref. grises + 4 ref. rojas + 2 postres', items_gris_max: 6, items_rojo_max: 4, items_postres_min: 2, items_postres_max: 2, mult_postres: 1 },
+            { id: 7,  nombre: 'MUYTOP', descripcion: '8 ref. grises + 7 ref. rojas + 3 postres', items_gris_max: 8, items_rojo_max: 7, items_postres_min: 3, items_postres_max: 3, mult_postres: 0.75 },
+            { id: 8,  nombre: 'VEGGIE', descripcion: '6 ref. grises sin rojas', items_gris_max: 6, items_rojo_max: 0, items_postres_min: 0, items_postres_max: 0, mult_postres: 1 }
         ];
     }
     else if (categoriaId == 3) {
@@ -339,10 +340,22 @@ async function seleccionarMenu(menuId, element) {
             return;
         }
 
-        document.getElementById('minSaladas').textContent = window.menuSeleccionado.items_salados_min || 0;
-        document.getElementById('maxSaladas').textContent = window.menuSeleccionado.items_salados_max || 0;
+        // Compatibilidad con campos de UI existentes
+        const _grisMax = window.menuSeleccionado.items_gris_max || window.menuSeleccionado.items_salados_max || 0;
+        const _rojoMax = window.menuSeleccionado.items_rojo_max || 0;
+        document.getElementById('minSaladas').textContent = _grisMax;
+        document.getElementById('maxSaladas').textContent = _grisMax;
+        window.menuSeleccionado.items_salados_max = _grisMax;
+        window.menuSeleccionado.items_salados_min = _grisMax;
 
-        if (window.menuSeleccionado.items_postres_min > 0) {
+        // Mostrar/ocultar sección de rojas
+        const _rojasGroup = document.getElementById('referenciasRojasGroup');
+        if (_rojasGroup) {
+            _rojasGroup.style.display = (window.menuSeleccionado.items_rojo_max || 0) > 0 ? 'block' : 'none';
+        }
+
+        // Mostrar/ocultar sección de postres
+        if ((window.menuSeleccionado.items_postres_min || 0) > 0) {
             document.getElementById('referenciasPostresGroup').style.display = 'block';
             document.getElementById('minPostres').textContent = window.menuSeleccionado.items_postres_min;
             document.getElementById('maxPostres').textContent = window.menuSeleccionado.items_postres_max;
