@@ -351,14 +351,20 @@ async function seleccionarMenu(menuId, element) {
         }
 
         // Inicializar logística para Foodbox/Comida (2) y Servicios (3)
-        if (typeof inicializarMaterialLogistica === 'function') {
-            await inicializarMaterialLogistica('materialLogisticaInline');
-            if (typeof autocompletarMaterialPorCategoria === 'function') {
-                await autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
+        // setTimeout para asegurar que el DOM esté listo antes de renderizar
+        const _catId = categoriaId;
+        setTimeout(async () => {
+            const logSec = document.getElementById('logisticaInlineSection');
+            const matInline = document.getElementById('materialLogisticaInline');
+            if (logSec) logSec.style.display = 'block';
+            if (matInline) matInline.style.display = 'block';
+            if (typeof inicializarMaterialLogistica === 'function') {
+                await inicializarMaterialLogistica('materialLogisticaInline');
+                if (typeof autocompletarMaterialPorCategoria === 'function') {
+                    await autocompletarMaterialPorCategoria(_catId, 'materialLogisticaInline');
+                }
             }
-        }
-
-        // Menaje y extras vienen de Supabase (logistics-material.js)
+        }, 100);
 
         return;
     }

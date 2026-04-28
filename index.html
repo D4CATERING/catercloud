@@ -265,14 +265,41 @@
                             <h3>Selección de Referencias</h3>
                         </div>
                         <div style="padding: 12px 14px;">
-                            <div id="referenciasSaladasGroup">
-                                <label>Selecciona <span id="minSaladas">X</span>-<span id="maxSaladas">Y</span> referencias saladas:</label>
-                                <div id="referenciasSaladasGrid" class="referencias-grid"></div>
+
+                            <!-- Referencias Grises -->
+                            <div id="referenciasSaladasGroup" style="margin-bottom: 20px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                    <label style="font-weight:500;">⬜ Referencias Grises</label>
+                                    <span id="contadorGris" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                                </div>
+                                <!-- compatibilidad con código antiguo -->
+                                <span id="minSaladas" style="display:none;">0</span>
+                                <span id="maxSaladas" style="display:none;">0</span>
+                                <div id="referenciasGrisGrid" class="referencias-grid"></div>
+                                <!-- alias para código antiguo -->
+                                <div id="referenciasSaladasGrid" style="display:none;"></div>
                             </div>
+
+                            <!-- Referencias Rojas -->
+                            <div id="referenciasRojasGroup" style="margin-bottom: 20px; display:none;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                    <label style="font-weight:500; color:#c0392b;">🔴 Referencias Rojas</label>
+                                    <span id="contadorRojo" style="font-size:0.8rem; color:#c0392b; background:#fef2f2; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                                </div>
+                                <div id="referenciasRojoGrid" class="referencias-grid"></div>
+                            </div>
+
+                            <!-- Postres -->
                             <div id="referenciasPostresGroup" style="display: none; margin-top: 15px;">
-                                <label>Selecciona <span id="minPostres">A</span>-<span id="maxPostres">B</span> referencias de postres:</label>
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                    <label style="font-weight:500;">🍰 Postres</label>
+                                    <span id="contadorPostres" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                                </div>
+                                <span id="minPostres" style="display:none;">0</span>
+                                <span id="maxPostres" style="display:none;">0</span>
                                 <div id="referenciasPostresGrid" class="referencias-grid"></div>
                             </div>
+
                         </div>
                     </div>
                     
