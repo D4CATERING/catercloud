@@ -1608,41 +1608,6 @@ function mostrarMenusPrincipales(menus) {
 /**
  * Limpia todas las secciones de configuracion de menu
  */
-function limpiarSeccionesMenu() {
-    const desayunoSection = document.getElementById('desayunoReferencesSection');
-    if (desayunoSection) {
-        desayunoSection.style.display = 'none';
-        const grid = document.getElementById('referenciasDesayunoGrid');
-        if (grid) grid.innerHTML = '';
-    }
-
-    const multiplicadorSection = document.getElementById('multiplicadorSection');
-    if (multiplicadorSection) multiplicadorSection.style.display = 'none';
-
-    const referenciasSection = document.getElementById('referenciasSection');
-    if (referenciasSection) referenciasSection.style.display = 'none';
-
-    const foodboxSection = document.getElementById('foodboxLunchSection');
-    if (foodboxSection) foodboxSection.remove();
-
-    const bandejasSection = document.getElementById('bandejasPreparadasSection');
-    if (bandejasSection) bandejasSection.style.display = 'none';
-
-    window.referenciasSeleccionadas = { saladas: [], postres: [] };
-    window.referenciasDesayuno = {};
-    if (window.BandejasState) {
-        window.BandejasState.saladas.selected = [];
-        window.BandejasState.dulces.selected = [];
-    }
-
-    // Limpiar items de zumo/agua y menaje inyectados por desayunos
-    document.querySelectorAll('[data-zumo-id], [data-menaje-desayuno], [data-extras-desayuno], [data-menaje-foodbox], [data-extras-foodbox]').forEach(el => el.remove());
-
-    // Limpiar zumos del estado de logística
-    if (window.materialLogistica && window.materialLogistica.bebidas) {
-        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
-    }
-}
 
 /**
  * Aniade el menu como adicional sin reemplazar el menu principal

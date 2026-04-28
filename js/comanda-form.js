@@ -5,7 +5,7 @@ if (!window.menuSeleccionado) window.menuSeleccionado = null;
 if (!window.menusAdicionales) window.menusAdicionales = [];
 if (!window.multiplicadores) window.multiplicadores = { saladas: 1, postres: 1 };
 if (!window.pax) window.pax = 0;
-if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { saladas: [], postres: [] };
+if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
 if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
 
 // ========== NUEVO: AÑADIR VARIABLE FOODBOX ==========
@@ -124,7 +124,31 @@ async function cargarMenus() {
     document.getElementById('multiplicadorSection').style.display = 'none';
     document.getElementById('referenciasSection').style.display = 'none';
     window.menuSeleccionado = null;
-    window.referenciasSeleccionadas = { saladas: [], postres: [] };
+    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+    // Limpiar paginación de referencias
+    if (window.referenciasPaginacion) {
+        ['gris', 'rojo', 'postres'].forEach(tipo => {
+            if (window.referenciasPaginacion[tipo]) {
+                window.referenciasPaginacion[tipo].page = 1;
+                window.referenciasPaginacion[tipo].query = '';
+                window.referenciasPaginacion[tipo].items = [];
+            }
+            const containerId = tipo === 'gris' ? 'referenciasGrisGrid'
+                              : tipo === 'rojo' ? 'referenciasRojoGrid'
+                              : 'referenciasPostresGrid';
+            const grid = document.getElementById(containerId);
+            if (grid) grid.innerHTML = '';
+        });
+    }
+    // Limpiar buscadores
+    ['referenciasGrisGrid__search','referenciasRojoGrid__search','referenciasPostresGrid__search'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    // Limpiar zumos de logística
+    if (window.materialLogistica?.bebidas) {
+        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    }
     
     if (!categoriaId) return;
     
@@ -446,5 +470,38 @@ if (categoriaId === 5) {
 
 }
 
+function limpiarSeccionesMenu() {
+    const desayunoSection = document.getElementById('desayunoReferencesSection');
+    if (desayunoSection) {
+        desayunoSection.style.display = 'none';
+        const grid = document.getElementById('referenciasDesayunoGrid');
+        if (grid) grid.innerHTML = '';
+    }
 
+    const multiplicadorSection = document.getElementById('multiplicadorSection');
+    if (multiplicadorSection) multiplicadorSection.style.display = 'none';
 
+    const referenciasSection = document.getElementById('referenciasSection');
+    if (referenciasSection) referenciasSection.style.display = 'none';
+
+    const foodboxSection = document.getElementById('foodboxLunchSection');
+    if (foodboxSection) foodboxSection.remove();
+
+    const bandejasSection = document.getElementById('bandejasPreparadasSection');
+    if (bandejasSection) bandejasSection.style.display = 'none';
+
+    window.referenciasSeleccionadas = { saladas: [], postres: [] };
+    window.referenciasDesayuno = {};
+    if (window.BandejasState) {
+        window.BandejasState.saladas.selected = [];
+        window.BandejasState.dulces.selected = [];
+    }
+
+    // Limpiar items de zumo/agua y menaje inyectados por desayunos
+    document.querySelectorAll('[data-zumo-id], [data-menaje-desayuno], [data-extras-desayuno], [data-menaje-foodbox], [data-extras-foodbox]').forEach(el => el.remove());
+
+    // Limpiar zumos del estado de logística
+    if (window.materialLogistica && window.materialLogistica.bebidas) {
+        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    }
+}

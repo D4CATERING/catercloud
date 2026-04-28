@@ -15,8 +15,35 @@ function mostrarComandaCocina() {
         document.getElementById('comandaCocinaForm').reset();
         window.menuSeleccionado = null;
         window.menusAdicionales = [];
-        window.referenciasSeleccionadas = { saladas: [], postres: [] };
+        window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
         window.multiplicadores = { saladas: 1, postres: 1 };
+        window.pax = 0;
+        // Limpiar grids visuales, paginación e items
+        if (window.referenciasPaginacion) {
+            ['gris', 'rojo', 'postres'].forEach(tipo => {
+                if (window.referenciasPaginacion[tipo]) {
+                    window.referenciasPaginacion[tipo].page = 1;
+                    window.referenciasPaginacion[tipo].query = '';
+                    window.referenciasPaginacion[tipo].items = [];
+                }
+                const containerId = tipo === 'gris' ? 'referenciasGrisGrid'
+                                  : tipo === 'rojo' ? 'referenciasRojoGrid'
+                                  : 'referenciasPostresGrid';
+                const grid = document.getElementById(containerId);
+                if (grid) grid.innerHTML = '';
+            });
+        }
+        // Limpiar buscadores
+        ['referenciasGrisGrid__search','referenciasRojoGrid__search','referenciasPostresGrid__search'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        // Limpiar selección visual de menús
+        document.querySelectorAll('.menu-option.selected').forEach(el => el.classList.remove('selected'));
+        // Limpiar zumos de logística
+        if (window.materialLogistica?.bebidas) {
+            window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+        }
         if (typeof actualizarListaMenusAdicionales === 'function') {
             actualizarListaMenusAdicionales();
         }
@@ -58,7 +85,14 @@ function volverAlDashboard() {
     if (clientesPanel) clientesPanel.style.display = 'none';
     
     window.comandaEditando = null;
-    
+    window.menuSeleccionado = null;
+    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+    window.pax = 0;
+    // Limpiar zumos de logística
+    if (window.materialLogistica?.bebidas) {
+        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    }
+
     if (typeof cargarCalendario === 'function') {
         cargarCalendario();
     }
