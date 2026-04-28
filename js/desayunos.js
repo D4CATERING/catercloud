@@ -17,11 +17,14 @@ function cargarReferenciasDesayuno(menu) {
     
     const opcionesBolleria = [
         'Mini bollería variada',
-        'Mini donuts',
-        'Mini malla de fruta',
         'Mini croissant',
-        'Mini napolitana de chocolate',
-        'Mini Pecaditos'
+        'Mini cinnamon roll',
+        'Mini trenza de chocolate',
+        'Mini envoltini chocolate',
+        'Mini envoltini crema',
+        'Mini envoltini frambuesa',
+        'Mini dots rellenos',
+        'Mini berlinas'
     ];
     
     const opcionesPulguitas = [
@@ -33,21 +36,14 @@ function cargarReferenciasDesayuno(menu) {
     ];
 
     const opcionesSandwiches = [
-        'Puerro & Manzana',
-        'Verduras asadas',
-        'Tortilla de Patata',
-        'Tortilla francesa',
-        'Roastbeef',
-        'Pastrami',
-        'Salmon & Quesocrema',
-        'Salmon & Aguacate',
-        'Mortadela',
-        'Atún',
-        'Mixto',
-        'Pollo asado',
-        'Pavo & Queso',
-        'Paletilla & Tomate',
-        'Ensaladilla rusa'
+        'Paleta ibérica con tomate',
+        'Tortilla de patata',
+        'Nuestra ensaladilla rusa',
+        'Vegetal',
+        'Pollo al curry',
+        'Pechuga de pavo y queso edam',
+        'Atún, aceituna negra, lechuga y mahonesa',
+        'Crema de aguacate y tomate'
     ];
     
     // Configuraciones por tipo de desayuno
@@ -67,14 +63,14 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
                 { id: 'healthy_tostada', nombre: 'Tostada de aguacate y tomate', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'healthy_fruta', nombre: 'Vaso de fruta natural preparada', tipo: 'simple', 
-                  cantidadPorPax: 1, unidad: 'uds' },
                 { id: 'healthy_zumo', nombre: 'Zumo natural', tipo: 'zumo', 
                   cantidadPorPax: 1/5, unidad: 'litro' },
                 { id: 'healthy_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
                   cantidadPorPax: 1, unidad: 'uds', opciones: opcionesBolleria },
                 { id: 'healthy_sandwich', nombre: 'Mini sándwich', tipo: 'sandwich', 
-                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches }
+                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches },
+                { id: 'healthy_fruta', nombre: 'Vaso de fruta natural preparada', tipo: 'simple', 
+                  cantidadPorPax: 1, unidad: 'uds' }
             ]
         },
         2: { // CLASSIC
@@ -113,12 +109,12 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
                 { id: 'premium_infusion', nombre: 'Termo de infusión', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'premium_cookie', nombre: 'Cookie o muffin', tipo: 'simple', 
-                  cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'premium_fruta', nombre: 'Vaso de fruta natural preparada o yogur con granola y miel', tipo: 'simple', 
-                  cantidadPorPax: 1, unidad: 'uds' },
                 { id: 'premium_smoothie', nombre: 'Smoothie "true fruit"', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' },
+                { id: 'premium_cookie', nombre: 'Cookie o Muffin', tipo: 'sandwich', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: ['Cookie', 'Muffin'] },
+                { id: 'premium_fruta', nombre: 'Fruta o Yogur', tipo: 'sandwich', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: ['Vaso de fruta natural preparada', 'Yogur con granola y miel'] },
                 { id: 'premium_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
                   cantidadPorPax: 2, unidad: 'uds', opciones: opcionesBolleria },
                 { id: 'premium_sandwich_o_pulguita', nombre: '2 Sándwiches ó 1 Pulguita', tipo: 'sandwich_o_pulguita', 
@@ -161,12 +157,10 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
                 { id: 'welcome_leche_veg', nombre: 'Termo leche vegetal', tipo: 'leche_especial', 
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
-                { id: 'welcome_cookies', nombre: '2 mini cookies o pastas de té', tipo: 'simple', 
-                  cantidadPorPax: 2, unidad: 'uds' },
-                { id: 'welcome_bolleria', nombre: 'Mini bollería', tipo: 'simple', 
-                  cantidadPorPax: 1, unidad: 'uds' },
-                { id: 'welcome_agua', nombre: 'Agua mineral', tipo: 'zumo', 
-                  cantidadPorPax: 1/5, unidad: 'litro' }
+                { id: 'welcome_cookies', nombre: 'Cookies o Pastas de té', tipo: 'sandwich', 
+                  cantidadPorPax: 2, unidad: 'uds', opciones: ['Mini cookies', 'Pastas de té'] },
+                { id: 'welcome_bolleria', nombre: 'Mini bollería', tipo: 'bolleria', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesBolleria },
             ]
         }
     };
@@ -1643,6 +1637,11 @@ function limpiarSeccionesMenu() {
 
     // Limpiar items de zumo/agua y menaje inyectados por desayunos
     document.querySelectorAll('[data-zumo-id], [data-menaje-desayuno], [data-extras-desayuno], [data-menaje-foodbox], [data-extras-foodbox]').forEach(el => el.remove());
+
+    // Limpiar zumos del estado de logística
+    if (window.materialLogistica && window.materialLogistica.bebidas) {
+        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    }
 }
 
 /**

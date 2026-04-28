@@ -192,13 +192,24 @@
                         if (item.parent_id) return false;
                         return true;
                     })
-                    .map(item => ({
-                        ...item,
-                        cantidad: tipo === 'menaje' && (window.pax || 0) > 0 ? (window.pax || 0) : 0,
-                        checked: tipo === 'menaje',
-                        subitems_expanded: false,
-                        subitems_selected: []
-                    }));
+                    .map(item => {
+                        // Agua en Welcome Coffee (id 17) multiplica por PAX
+                        const esAgua = /agua/i.test(item.nombre || '');
+                        const esWelcomeCoffee = window.menuSeleccionado?.id === 17;
+                        let cantidad = 0;
+                        if (tipo === 'menaje' && (window.pax || 0) > 0) {
+                            cantidad = window.pax || 0;
+                        } else if (esAgua && esWelcomeCoffee) {
+                            cantidad = window.pax || 0;
+                        }
+                        return {
+                            ...item,
+                            cantidad,
+                            checked: tipo === 'menaje',
+                            subitems_expanded: false,
+                            subitems_selected: []
+                        };
+                    });
             });
 
             // Re-añadir zumos preservados
