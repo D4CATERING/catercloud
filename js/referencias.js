@@ -122,9 +122,9 @@ Object.defineProperty(window.referenciasSeleccionadas, 'saladas', {
 // =================== HELPERS ===================
 
 function calcularCantidad(ref, pax) {
-    if (ref.tipo === 'fijo')     return ref.cantidad;
-    if (ref.tipo === 'porPax')   return pax * ref.cantidad;
-    if (ref.tipo === 'cadaXpax') return Math.ceil(pax / (ref.divisor || 10));
+    if (ref.tipo === 'fijo')     return ref.cantidad * pax;       // ej: 2 uds × 20 pax = 40
+    if (ref.tipo === 'porPax')   return pax * ref.cantidad;       // ej: 15 grs × 20 pax = 300 grs
+    if (ref.tipo === 'cadaXpax') return Math.ceil(pax / (ref.divisor || 10)); // ej: ceil(20/10) = 2
     if (ref.tipo === 'postre') {
         const mult = window.menuSeleccionado?.mult_postres ?? 1;
         return Math.ceil(pax * mult);
@@ -236,11 +236,11 @@ function renderReferenciasPagina(tipo) {
         div.dataset.tipo = tipo;
         if (selected) div.classList.add('selected');
 
-        // Badge visual según tipo de cálculo
+        // Badge fijo (cantidad base de la carta, no cambia con PAX)
         let badgeLabel = '';
-        if (ref.tipo === 'porPax')        badgeLabel = `${cantMostrar} grs`;
-        else if (ref.tipo === 'cadaXpax') badgeLabel = `${cantMostrar} c/${ref.divisor}pax`;
-        else                              badgeLabel = `${cantMostrar} ${ref.unidad}`;
+        if (ref.tipo === 'porPax')        badgeLabel = `${ref.cantidad} grs/pax`;
+        else if (ref.tipo === 'cadaXpax') badgeLabel = `1 c/${ref.divisor}pax`;
+        else                              badgeLabel = `${ref.cantidad} ${ref.unidad}`;
 
         div.innerHTML = `
             <span style="flex:1; font-size:0.82rem;">${ref.nombre}</span>
@@ -330,7 +330,23 @@ function actualizarCantidadReferencia(refId, tipo, cantidad) {
 
 // Compatibilidad con código antiguo
 function actualizarCantidadesReferencias() {
-    ['gris', 'rojo', 'postres'].forEach(tipo => renderReferenciasPagina(tipo));
+    const pax = window.pax || 0;
+
+    // Recalcular cantidades de referencias ya seleccionadas según nuevo PAX
+    ['gris', 'rojo', 'postres'].forEach(tipo => {
+        const catalogo = tipo === 'gris' ? CATALOGO_GRIS
+                       : tipo === 'rojo' ? CATALOGO_ROJO
+                       : CATALOGO_POSTRES;
+
+        (window.referenciasSeleccionadas[tipo] || []).forEach(sel => {
+            const ref = catalogo.find(r => String(r.id) === String(sel.id));
+            if (ref && ref.tipo !== 'fijo') {
+                sel.cantidad = calcularCantidad(ref, pax);
+            }
+        });
+
+        renderReferenciasPagina(tipo);
+    });
 }
 
 function actualizarUnidadReferencia() {}  // ya no se usa, unidad viene del catálogo

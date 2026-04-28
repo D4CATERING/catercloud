@@ -13,12 +13,9 @@ function actualizarMultiplicador(tipo, valor) {
     if (window.setText) setText('multPostresValue', window.multiplicadores.postres);
     if (window.setText) setText('totalPostresValue', Math.ceil(pax * window.multiplicadores.postres));
   }
-  if (typeof actualizarCantidadesReferencias === 'function') actualizarCantidadesReferencias();
-
-  // Re-renderizar las referencias visibles para reflejar nuevas cantidades
-  if (typeof renderReferenciasPage === 'function') {
-    renderReferenciasPagina('saladas');
-    renderReferenciasPagina('postres');
+  // Re-renderizar referencias visibles
+  if (typeof actualizarCantidadesReferencias === 'function') {
+    actualizarCantidadesReferencias();
   }
 }
 
