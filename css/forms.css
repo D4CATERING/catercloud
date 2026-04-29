@@ -1090,7 +1090,8 @@ input:focus, select:focus, textarea:focus {
 
 .foodbox-grid {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
 }
 
 .foodbox-option-label {
@@ -2012,8 +2013,22 @@ h3 {
 
 .foodbox-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+}
+
+/* Cards dentro de foodbox no deben desbordar */
+.foodbox-grid .referencia-option {
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.foodbox-grid .referencia-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
 }
 
 .foodbox-item {
@@ -2175,12 +2190,6 @@ h3 {
 
 /* --- COMPATIBILIDAD CON CLASES ANTERIORES --- */
 /* Para que los módulos existentes sigan funcionando */
-.foodbox-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 8px;
-}
-
 .foodbox-item {
     display: flex;
     justify-content: space-between;

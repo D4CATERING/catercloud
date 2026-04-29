@@ -35,19 +35,34 @@ async function cargarOpcionesDesdeSupabase() {
         // Fallback a opciones hardcodeadas
         return {
             ensaladas: [
-                { id: 'ens1', nombre: 'Poke bowl de salmón' },
-                { id: 'ens2', nombre: 'Ensalada caprese' },
-                { id: 'ens3', nombre: 'Ensalada de pasta & pesto con bacon crujiente' }
+                { id: 'ens1', nombre: 'Poke bowl pollo teriyaki' },
+                { id: 'ens2', nombre: 'Poke bowl de salmón' },
+                { id: 'ens3', nombre: 'Ensalada César' },
+                { id: 'ens4', nombre: 'Ensalada toscana' },
+                { id: 'ens5', nombre: 'Ensalada de pasta y pesto con bacon y mozzarela' },
+                { id: 'ens6', nombre: 'Ensalada L.A.' },
+                { id: 'ens7', nombre: 'Taboulé de cuscús y garbanzos' },
+                { id: 'ens8', nombre: 'Ensalada griega' }
             ],
             sandwiches: [
-                { id: 'san1', nombre: 'Sandwich x3' },
-                { id: 'san2', nombre: 'Fajitas de pollo y verdura' },
-                { id: 'san3', nombre: 'Bagel pastrami' }
+                { id: 'san1', nombre: 'Sándwich club X3' },
+                { id: 'san2', nombre: 'Sándwich X3 de pastrami' },
+                { id: 'san3', nombre: 'Philadelphia steak' },
+                { id: 'san4', nombre: 'Burrito de tinga de pollo' },
+                { id: 'san5', nombre: 'Focaccia de bacon, queso y tomate' },
+                { id: 'san6', nombre: 'Bagel de salmón ahumado' },
+                { id: 'san7', nombre: 'Bagel de Pulled pork' },
+                { id: 'san8', nombre: 'Bocadillo de jamón con tomate' }
             ],
             postres: [
-                { id: 'pos1', nombre: 'Vaso de fruta natural' },
-                { id: 'pos2', nombre: 'Cremoso de cheese cake' },
-                { id: 'pos3', nombre: 'Brownie con natillas' }
+                { id: 'pos1', nombre: 'Vaso de fruta' },
+                { id: 'pos2', nombre: 'Cheesecake' },
+                { id: 'pos3', nombre: 'Brownie con crema inglesa' },
+                { id: 'pos4', nombre: 'Arroz con leche' },
+                { id: 'pos5', nombre: 'Natillas con galleta' },
+                { id: 'pos6', nombre: 'Oreo sweet' },
+                { id: 'pos7', nombre: 'Kitkat shot' },
+                { id: 'pos8', nombre: 'Tiramisú' }
             ]
         };
     }
@@ -78,15 +93,15 @@ function cargarOpcionesFoodboxLunch() {
     ref.insertAdjacentHTML('afterend', `
         <div class="form-section dc-section" id="foodboxLunchSection">
             <div class="dc-section-header"><h3>🥗 Foodbox Lunch</h3></div>
-            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 15px;">Selecciona las opciones</p>
+            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 20px;">Selecciona las opciones para cada categoría</p>
             
             <div style="margin-bottom: 15px;">
-                <h4 class="foodbox-titulo">🥗 Ensaladas</h4>
+                <h4 class="foodbox-titulo">🥗 Ensaladas y Bowls</h4>
                 <div id="foodboxEnsaladasGrid" class="foodbox-grid"></div>
             </div>
             
             <div style="margin-bottom: 15px;">
-                <h4 class="foodbox-titulo">🥪 Sandwiches</h4>
+                <h4 class="foodbox-titulo">🥪 Sándwiches y Bocadillos</h4>
                 <div id="foodboxSandwichesGrid" class="foodbox-grid"></div>
             </div>
             
@@ -111,6 +126,12 @@ function cargarOpcionesFoodboxLunch() {
         renderFB(eg, opciones.ensaladas, 'ensaladas');
         renderFB(sg, opciones.sandwiches, 'sandwiches');
         renderFB(pg, opciones.postres, 'postres');
+
+        // Forzar 2 columnas después de renderizar
+        [eg, sg, pg].forEach(g => {
+            g.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            g.style.display = 'grid';
+        });
         
         console.log('✅ Foodbox cargado con', 
             opciones.ensaladas.length, 'ensaladas,',
@@ -123,12 +144,14 @@ function renderFB(cont, lista, tipo) {
     let h = '';
     lista.forEach(o => {
         const itemId = o.id || o.nombre.toLowerCase().replace(/\s+/g, '_').substring(0, 50);
-        h += `<div class="foodbox-item" data-id="${itemId}">
-            <span style="font-size:0.75rem;">${o.nombre}</span>
-            <div style="display:flex;gap:4px;">
-                <button type="button" onclick="fbChg('${itemId}','${tipo}',-1)" style="width:24px;height:24px;padding:0;">−</button>
-                <input type="number" id="fb_${itemId}" value="0" min="0" onchange="fbUpd('${itemId}','${tipo}',this.value)" style="width:45px;height:24px;text-align:center;font-size:0.75rem;">
-                <button type="button" onclick="fbChg('${itemId}','${tipo}',1)" style="width:24px;height:24px;padding:0;">+</button>
+        h += `<div class="referencia-option" data-id="${itemId}">
+            <span style="flex:1; font-size:0.82rem;">${o.nombre}</span>
+            <div class="cantidad-control" style="gap:4px; align-items:center;">
+                <button type="button" onclick="fbChg('${itemId}','${tipo}',-1)" class="pager-btn" style="width:24px;height:24px;padding:0;">−</button>
+                <input type="number" id="fb_${itemId}" value="0" min="0"
+                    oninput="fbUpd('${itemId}','${tipo}',this.value)"
+                    class="cantidad-input" style="width:52px;">
+                <button type="button" onclick="fbChg('${itemId}','${tipo}',1)" class="pager-btn" style="width:24px;height:24px;padding:0;">+</button>
             </div>
         </div>`;
     });
