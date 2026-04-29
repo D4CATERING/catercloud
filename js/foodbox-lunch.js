@@ -109,6 +109,7 @@ function cargarOpcionesFoodboxLunch() {
                 <h4 class="foodbox-titulo">🍰 Postres</h4>
                 <div id="foodboxPostresGrid" class="foodbox-grid"></div>
             </div>
+
         </div>
     `);
     
@@ -137,6 +138,27 @@ function cargarOpcionesFoodboxLunch() {
             opciones.ensaladas.length, 'ensaladas,',
             opciones.sandwiches.length, 'sandwiches,',
             opciones.postres.length, 'postres');
+
+        // ── Mostrar secciones de logística estáticas (igual que cat 2/3) ──
+        const logSec = document.getElementById('logisticaInlineSection');
+        const matInline = document.getElementById('materialLogisticaInline');
+        if (logSec) logSec.style.display = 'block';
+        if (matInline) matInline.style.display = 'block';
+
+        if (typeof window.inicializarMaterialLogistica === 'function') {
+            await window.inicializarMaterialLogistica('materialLogisticaInline');
+            console.log('✅ Material logística inicializado para Lunch');
+        } else {
+            console.warn('⚠️ inicializarMaterialLogistica no está disponible');
+        }
+
+        if (typeof window.autocompletarMaterialPorCategoria === 'function') {
+            await window.autocompletarMaterialPorCategoria(4, 'materialLogisticaInline');
+            console.log('✅ Material autocompletado para categoría Lunch');
+        } else {
+            console.warn('⚠️ autocompletarMaterialPorCategoria no está disponible');
+        }
+
     }, 100);
 }
 
@@ -192,7 +214,21 @@ function obtenerSeleccionesFoodboxLunch() {
     return window.foodboxSelecciones || { ensaladas: [], sandwiches: [], postres: [] };
 }
 
-window.cargarOpcionesFoodboxLunch = cargarOpcionesFoodboxLunch;
+/**
+ * Devuelve tanto las selecciones de platos como el material de logística,
+ * igual que hace Foodbox/Comida al construir el payload de la comanda.
+ */
+function obtenerDatosFoodboxLunch() {
+    return {
+        selecciones: obtenerSeleccionesFoodboxLunch(),
+        materialLogistica: typeof window.obtenerMaterialSeleccionado === 'function'
+            ? window.obtenerMaterialSeleccionado()
+            : { bebidas: [], menaje: [], extras: [] }
+    };
+}
+
+window.cargarOpcionesFoodboxLunch   = cargarOpcionesFoodboxLunch;
 window.obtenerSeleccionesFoodboxLunch = obtenerSeleccionesFoodboxLunch;
+window.obtenerDatosFoodboxLunch     = obtenerDatosFoodboxLunch;
 
 console.log('✅ Módulo Foodbox Lunch listo');

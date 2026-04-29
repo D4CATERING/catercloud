@@ -417,21 +417,10 @@ async function seleccionarMenu(menuId, element) {
         
         if (typeof cargarOpcionesFoodboxLunch === 'function') {
             cargarOpcionesFoodboxLunch();
+            // La logística (logisticaInlineSection + materialLogisticaInline)
+            // la muestra e inicializa foodbox-lunch.js en su propio setTimeout
         } else {
             console.error('No existe cargarOpcionesFoodboxLunch()');
-        }
-        
-        // Mostrar y inicializar logística para Foodbox Lunch
-        const logisticaContainer = document.getElementById('materialLogisticaInline');
-        if (logisticaContainer) {
-            logisticaContainer.style.display = 'block';
-            
-            if (typeof inicializarMaterialLogistica === 'function') {
-                await inicializarMaterialLogistica('materialLogisticaInline');
-                if (typeof autocompletarMaterialPorCategoria === 'function') {
-                    await autocompletarMaterialPorCategoria(4, 'materialLogisticaInline');
-                }
-            }
         }
 
         return;
