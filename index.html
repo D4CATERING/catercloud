@@ -137,7 +137,7 @@
             </div>
             
             <div class="form-container">
-                <form id="comandaCocinaForm">
+                <form id="comandaCocinaForm" novalidate>
                     <!-- Sección 1: Información básica -->
                     <div class="form-section dc-section">
                         <div class="dc-section-header">
@@ -145,15 +145,10 @@
                             <h3>Información Básica</h3>
                         </div>
                         <div class="dc-info-grid">
-                            <!-- Fila 1: Empresa (ancha) + PAX (estrecho) -->
+                            <!-- Fila 1: Empresa (ancha) -->
                             <div class="dc-field dc-info-empresa">
                                 <label for="empresa" class="dc-label required">Empresa</label>
                                 <input type="text" id="empresa" class="dc-input" placeholder="Nombre de la empresa" required>
-                            </div>
-                            <div class="dc-field dc-info-pax">
-                                <label for="pax" class="dc-label required">Nº PAX</label>
-                                <input type="number" id="pax" class="dc-input" placeholder="0" min="1" required
-                                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
                             </div>
                             <!-- Fila 2: Responsable (ancho) + Fecha + Hora -->
                             <div class="dc-field dc-info-responsable">
@@ -196,17 +191,23 @@
                                 </select>
                             </div>
                         </div>
-                        
-                        <div id="menusContainer" class="menu-selection"></div>
-                        <input type="hidden" id="menu_id" name="menu_id">
 
-                        <!-- Botón añadir + resumen de menús añadidos -->
-                        <div id="btnAnadirMenuWrap" style="display:none; margin-top:12px;">
-                            <button type="button" onclick="anadirMenuAComanda()"
-                                style="background:#E1342E; color:#fff; border:none; border-radius:8px; padding:10px 20px; font-size:0.9rem; cursor:pointer; font-weight:600;">
-                                ➕ Añadir este menú a la comanda
+                        <!-- PAX por menú + botón añadir (aparece al seleccionar categoría) -->
+                        <div id="btnAnadirMenuWrap" style="display:none; margin-top:10px; align-items:center; gap:10px; flex-wrap:wrap;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <label for="pax" style="font-size:0.82rem; color:#64748b; white-space:nowrap; margin:0;">PAX este menú</label>
+                                <input type="number" id="pax" class="dc-input" placeholder="0" min="1"
+                                       style="width:72px; padding:6px 10px; font-size:0.9rem;"
+                                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
+                            </div>
+                            <button type="button" id="btnAnadirMenu" onclick="anadirMenuAComanda()"
+                                style="background:transparent; color:#64748b; border:1px dashed #cbd5e1; border-radius:6px; padding:7px 16px; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:color .15s, border-color .15s; white-space:nowrap;">
+                                + Añadir a la comanda
                             </button>
                         </div>
+
+                        <div id="menusContainer" class="menu-selection"></div>
+                        <input type="hidden" id="menu_id" name="menu_id">
 
                         <!-- Lista de menús añadidos -->
                         <div id="menusAnadidosList" style="margin-top:12px;"></div>
@@ -321,7 +322,7 @@
                     </div>
                     
                     <!-- Sección Logística inline (Desayuno / Foodbox / Lunch / Bandejas) -->
-                    <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics" style="display: none;">
+                    <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
                         <div class="dc-section-header">
                             <span class="dc-section-icon">🚚</span>
                             <h3>Datos de Logística</h3>

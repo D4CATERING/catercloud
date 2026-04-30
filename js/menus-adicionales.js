@@ -494,19 +494,218 @@
     const nuevoPax = parseInt(valor) || 1;
     item.pax_adicional = nuevoPax;
 
-    // Recalcular cantidades en referencias si existen
     if (item.multiplicadores && item.referencias) {
       const ms = item.multiplicadores.saladas || 1;
       const mp = item.multiplicadores.postres || 1;
-
-      const cantSal = Math.max(1, Math.ceil(nuevoPax * ms));
-      const cantPos = Math.max(1, Math.ceil(nuevoPax * mp));
-
-      item.referencias.saladas?.forEach(r => { r.cantidad = cantSal; });
-      item.referencias.postres?.forEach(r => { r.cantidad = cantPos; });
+      item.referencias.saladas?.forEach(r => { r.cantidad = Math.max(1, Math.ceil(nuevoPax * ms)); });
+      item.referencias.postres?.forEach(r => { r.cantidad = Math.max(1, Math.ceil(nuevoPax * mp)); });
     }
 
     actualizarListaMenusAdicionalesCompleta();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // Capturar snapshot del material del DOM en el momento actual
+  // ─────────────────────────────────────────────────────────────
+  function capturarMaterialDOM() {
+    function leerTipo(tipo) {
+      const cont = document.getElementById('materialLogisticaInline_' + tipo);
+      if (!cont) return [];
+      const items = [];
+      cont.querySelectorAll('label.dc-material-item').forEach(label => {
+        const chk = label.querySelector('input[type="checkbox"]');
+        if (!chk?.checked) return;
+        const nombre = (label.querySelector('.dc-material-nombre')?.firstChild?.textContent
+                     || label.querySelector('.dc-material-nombre')?.textContent || '').trim();
+        if (!nombre) return;
+        const cantEl = label.querySelector('input[type="number"]');
+        const cant   = cantEl ? Number(cantEl.value) : 0;
+        if (tipo !== 'menaje' && cant <= 0) return;
+        const unidad = (label.querySelector('.dc-material-unidad')?.textContent || 'uds').trim();
+        const subitems = [];
+        label.closest('[data-extra-wrap]')?.querySelectorAll('.dc-material-subitem').forEach(sub => {
+          const sChk = sub.querySelector('input[type="checkbox"]');
+          if (!sChk?.checked) return;
+          const sNom = sub.querySelector('.dc-material-nombre')?.textContent?.trim() || '';
+          const sCnt = Number(sub.querySelector('input[type="number"]')?.value ?? 0);
+          const sUnd = sub.querySelector('.dc-material-unidad')?.textContent?.trim() || 'uds';
+          if (sNom) subitems.push({ nombre: sNom, cantidad: sCnt, unidad: sUnd });
+        });
+        items.push({ nombre, cantidad: cant, unidad, checked: true, subitems_selected: subitems });
+      });
+      return items;
+    }
+    return {
+      bebidas: leerTipo('bebidas'),
+      menaje:  leerTipo('menaje'),
+      extras:  leerTipo('extras'),
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Sumar dos objetos de material (acumular entre menús)
+  // ─────────────────────────────────────────────────────────────
+  function sumarMaterial(base, nuevo) {
+    const result = {
+      bebidas: [...(base.bebidas || [])],
+      menaje:  [...(base.menaje  || [])],
+      extras:  [...(base.extras  || [])],
+    };
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+      (nuevo[tipo] || []).forEach(item => {
+        const exist = result[tipo].find(i => i.nombre === item.nombre);
+        if (exist) {
+          exist.cantidad = (exist.cantidad || 0) + (item.cantidad || 0);
+        } else {
+          result[tipo].push({ ...item });
+        }
+      });
+    });
+    return result;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Toast de error discreto (sin alert)
+  // ─────────────────────────────────────────────────────────────
+  function mostrarToastError(msg) {
+    let toast = document.getElementById('_toastMenuError');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = '_toastMenuError';
+      toast.style.cssText = [
+        'position:fixed', 'bottom:24px', 'left:50%', 'transform:translateX(-50%)',
+        'background:#1e293b', 'color:#f8fafc', 'padding:10px 20px', 'border-radius:8px',
+        'font-size:0.85rem', 'z-index:9999', 'opacity:0', 'transition:opacity .2s',
+        'pointer-events:none', 'white-space:nowrap',
+      ].join(';');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PÚBLICA: Añadir el menú configurado actualmente a la comanda
+  // ─────────────────────────────────────────────────────────────
+  window.anadirMenuAComanda = function () {
+    const st = window.MenusAdicionalesState;
+
+    if (!window.menuSeleccionado) {
+      mostrarToastError('Selecciona un menú antes de añadir');
+      return;
+    }
+
+    const paxEl = document.getElementById('pax');
+    const pax = parseInt(paxEl?.value) || 0;
+    if (pax <= 0) {
+      mostrarToastError('Introduce el número de PAX para este menú');
+      paxEl?.focus();
+      return;
+    }
+
+    const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
+    const materialSnapshot = capturarMaterialDOM();
+
+    // Construir objeto del menú
+    const item = {
+      id:          window.menuSeleccionado.id || '',
+      nombre:      window.menuSeleccionado.nombre || '',
+      categoriaId,
+      categoria:   document.getElementById('categoria')?.selectedOptions[0]?.text || '',
+      pax,
+      tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
+      material:    materialSnapshot,
+    };
+
+    if (categoriaId === 1 && window.referenciasDesayuno) {
+      item.referencias_desayuno = { ...window.referenciasDesayuno };
+    }
+    if ([2, 3].includes(categoriaId)) {
+      item.multiplicadores = { ...(window.multiplicadores || { saladas: 1, postres: 1 }) };
+      item.referencias = {
+        saladas: [...(window.referenciasSeleccionadas?.saladas || [])],
+        postres: [...(window.referenciasSeleccionadas?.postres || [])],
+      };
+    }
+    if (categoriaId === 4 && typeof obtenerDatosFoodboxLunch === 'function') {
+      item.foodbox_lunch = obtenerDatosFoodboxLunch();
+    }
+    if (categoriaId === 5 && window.BandejasState) {
+      item.bandejas = {
+        saladas: [...(window.BandejasState?.saladas?.selected || [])],
+        dulces:  [...(window.BandejasState?.dulces?.selected  || [])],
+      };
+    }
+
+    // Acumular material global
+    if (!window._materialAcumulado) window._materialAcumulado = { bebidas: [], menaje: [], extras: [] };
+    window._materialAcumulado = sumarMaterial(window._materialAcumulado, materialSnapshot);
+
+    // Guardar
+    st.menusAdicionales.push(item);
+
+    // Actualizar PAX total visible
+    const paxTotal = st.menusAdicionales.reduce((s, m) => s + (m.pax || 0), 0);
+    const paxTotalEl = document.getElementById('paxTotalValor');
+    if (paxTotalEl) paxTotalEl.textContent = paxTotal;
+    const paxWrap = document.getElementById('paxTotalWrap');
+    if (paxWrap) paxWrap.style.display = 'block';
+
+    // Feedback discreto en el botón
+    const btn = document.getElementById('btnAnadirMenu');
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓';
+      btn.style.color = '#16a34a';
+      btn.style.borderColor = '#16a34a';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 1200);
+    }
+
+    // Limpiar formulario para el siguiente menú
+    if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
+    if (typeof window.limpiarMaterialLogistica === 'function') window.limpiarMaterialLogistica();
+
+    // Resetear campos del menú principal
+    const catSelect = document.getElementById('categoria');
+    if (catSelect) catSelect.value = '';
+    const menuIdInput = document.getElementById('menu_id');
+    if (menuIdInput) menuIdInput.value = '';
+    if (paxEl) paxEl.value = '';
+    const menusContainer = document.getElementById('menusContainer');
+    if (menusContainer) menusContainer.innerHTML = '';
+    window.menuSeleccionado = null;
+
+    // Ocultar botón hasta próxima selección de categoría
+    const btnWrap = document.getElementById('btnAnadirMenuWrap');
+    if (btnWrap) btnWrap.style.display = 'none';
+
+    // Limpiar solo el material (el formulario de logística permanece visible)
+    const matInline = document.getElementById('materialLogisticaInline');
+    if (matInline) { matInline.style.display = 'none'; matInline.innerHTML = ''; }
+
+    console.log(`✅ Menú añadido: ${item.nombre} (${pax} pax). Total: ${st.menusAdicionales.length} menús, ${paxTotal} PAX`);
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // PÚBLICA: Para el submit — obtener todos los menús acumulados
+  // ─────────────────────────────────────────────────────────────
+  window.obtenerMenusAcumulados = function () {
+    return window.MenusAdicionalesState.menusAdicionales;
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // PÚBLICA: Resetear todo al limpiar el formulario principal
+  // ─────────────────────────────────────────────────────────────
+  window.resetearMenusAcumulados = function () {
+    window.MenusAdicionalesState.menusAdicionales = [];
+    window.menusAdicionales = window.MenusAdicionalesState.menusAdicionales;
+    window._materialAcumulado = { bebidas: [], menaje: [], extras: [] };
+    const paxWrap = document.getElementById('paxTotalWrap');
+    if (paxWrap) paxWrap.style.display = 'none';
+    const paxTotalEl = document.getElementById('paxTotalValor');
+    if (paxTotalEl) paxTotalEl.textContent = '0';
   };
 
 })();

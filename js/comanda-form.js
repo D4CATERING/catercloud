@@ -125,6 +125,10 @@ async function cargarMenus() {
     document.getElementById('referenciasSection').style.display = 'none';
     window.menuSeleccionado = null;
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+
+    // PAX + botón: visible si hay categoría, oculto si se deselecciona
+    const btnWrap = document.getElementById('btnAnadirMenuWrap');
+    if (btnWrap) btnWrap.style.display = categoriaId ? 'flex' : 'none';
     // Limpiar paginación de referencias
     if (window.referenciasPaginacion) {
         ['gris', 'rojo', 'postres'].forEach(tipo => {
@@ -294,9 +298,7 @@ async function seleccionarMenu(menuId, element) {
             selectMenaje.value = 'desechable';
         }
 
-        // Mostrar secciones de logística
-        const logisticaSection = document.getElementById('logisticaInlineSection');
-        if (logisticaSection) logisticaSection.style.display = 'block';
+        // Mostrar solo el material (logística siempre visible)
         const materialInline = document.getElementById('materialLogisticaInline');
         if (materialInline) materialInline.style.display = 'block';
 
@@ -391,9 +393,8 @@ async function seleccionarMenu(menuId, element) {
         // setTimeout para asegurar que el DOM esté listo antes de renderizar
         const _catId = categoriaId;
         setTimeout(async () => {
-            const logSec = document.getElementById('logisticaInlineSection');
+            // Solo mostrar el material (logística siempre visible)
             const matInline = document.getElementById('materialLogisticaInline');
-            if (logSec) logSec.style.display = 'block';
             if (matInline) matInline.style.display = 'block';
             if (typeof inicializarMaterialLogistica === 'function') {
                 await inicializarMaterialLogistica('materialLogisticaInline');

@@ -139,10 +139,8 @@ function cargarOpcionesFoodboxLunch() {
             opciones.sandwiches.length, 'sandwiches,',
             opciones.postres.length, 'postres');
 
-        // ── Mostrar secciones de logística estáticas (igual que cat 2/3) ──
-        const logSec = document.getElementById('logisticaInlineSection');
+        // ── Mostrar solo el material (logística siempre visible) ──
         const matInline = document.getElementById('materialLogisticaInline');
-        if (logSec) logSec.style.display = 'block';
         if (matInline) matInline.style.display = 'block';
 
         if (typeof window.inicializarMaterialLogistica === 'function') {

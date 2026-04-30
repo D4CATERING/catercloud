@@ -117,36 +117,26 @@ function configurarValidacionesEnTiempoReal() {
 }
 
 /**
- * Muestra u oculta la sección de logística inline.
- * Visible para: Desayuno (1), Foodbox/Comida (2), Foodbox Lunch (4), Bandejas (5)
- * Oculta para:  Servicios/Cocteles (3) — esos usan el flujo de página separada
+ * Gestiona el material al cambiar categoría.
+ * logisticaInlineSection siempre visible.
+ * Solo se limpia el material para Servicios (3) que usa flujo separado.
  */
 function toggleLogisticaInline(categoriaId) {
-    const seccion = document.getElementById('logisticaInlineSection');
-    if (!seccion) return;
-    const mostrar = [1, 2, 4, 5].includes(categoriaId);
-    seccion.style.display = mostrar ? 'block' : 'none';
+    // Limpiar zumos de desayuno al cambiar a otra categoría
+    if (categoriaId !== 1 && window.materialLogistica?.bebidas) {
+        window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    }
 
-    if (mostrar) {
-        // Limpiar zumos de desayuno al cambiar a otra categoría
-        if (categoriaId !== 1 && window.materialLogistica?.bebidas) {
-            window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
-        }
-        // La inicialización del material la gestiona comanda-form.js al seleccionar menú.
-        // Aquí solo mostramos el contenedor si ya existe el material.
-        const matContainer = document.getElementById('materialLogisticaInline');
-        if (matContainer && matContainer.innerHTML.trim()) {
-            matContainer.style.display = 'block';
-        }
-    } else {
-        // Limpiar todo al ocultar
-        limpiarCamposLogisticaInline();
-        const matContainer = document.getElementById('materialLogisticaInline');
+    const matContainer = document.getElementById('materialLogisticaInline');
+
+    if (categoriaId === 3) {
+        // Servicios: ocultar solo el material, la sección de datos siempre visible
         if (matContainer) matContainer.style.display = 'none';
         if (typeof window.limpiarMaterialLogistica === 'function') {
             window.limpiarMaterialLogistica();
         }
     }
+    // Para el resto: el material lo mostrará comanda-form.js al seleccionar menú
 }
 
 /**
@@ -340,19 +330,19 @@ function validarFormularioCompleto() {
     const validacionesIndividuales = [
         validarEmpresa(),
         validarResponsable(),
-        validarPax(),
+        // PAX se gestiona por menú individual — no se valida globalmente
         validarFechaEvento(),
         validarHoraSalida()
     ];
     
-    // Verificar que todas las validaciones pasaron
     const todasValidas = validacionesIndividuales.every(v => v === true);
     
-    // Validar menú principal seleccionado
-    if (!window.menuSeleccionado) {
-        mostrarMensaje('❌ Por favor, selecciona un menú principal', 'error');
-        
-        // Resaltar la sección de menús
+    // Verificar que hay al menos un menú acumulado
+    const menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+        ? window.obtenerMenusAcumulados() : [];
+
+    if (menusAcumulados.length === 0) {
+        mostrarMensaje('❌ Por favor, añade al menos un menú a la comanda', 'error');
         const menusContainer = document.getElementById('menusContainer');
         if (menusContainer) {
             menusContainer.style.border = '2px solid #dc2626';
@@ -471,55 +461,56 @@ if (categoriaId == 4) { // FOODBOX LUNCH
     submitBtn.innerHTML = '<div class="loader"></div>';
     submitBtn.disabled = true;
     
-    // Preparar datos de la comanda
+    // ── Recoger menús acumulados ──────────────────────────────────────────────
+    const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+        ? window.obtenerMenusAcumulados() : [];
+
+    const _menuPrincipal  = _menusAcumulados[0] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
+    const _menusAdicionales = _menusAcumulados.slice(1);
+    const _catPrincipal   = _menuPrincipal.categoriaId || categoriaId;
+    const _paxTotal       = _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0)
+                            || parseInt(document.getElementById('pax').value) || 0;
+
+    // ── Preparar datos de la comanda ─────────────────────────────────────────
     const comandaData = {
-        empresa: document.getElementById('empresa').value,
-        responsable: document.getElementById('responsable').value,
-        pax: parseInt(document.getElementById('pax').value),
-        hora_salida: document.getElementById('hora_salida').value,
+        empresa:      document.getElementById('empresa').value,
+        responsable:  document.getElementById('responsable').value,
+        pax:          _paxTotal,
+        hora_salida:  document.getElementById('hora_salida').value,
         fecha_evento: document.getElementById('fecha_evento').value,
-        menu_principal: {
-            id: document.getElementById('menu_id').value,
-            ...window.menuSeleccionado
-        },
-        
-        // ===== INCLUIR REFERENCIAS DE DESAYUNO COMPLETAS =====
-        ...(categoriaId == 1 && window.referenciasDesayuno ? {
-            referencias_desayuno: window.referenciasDesayuno
+        menu_principal:    _menuPrincipal,
+        menus_adicionales: _menusAdicionales,
+
+        // Referencias según categoría del menú principal
+        ...(_catPrincipal == 1 && (_menuPrincipal.referencias_desayuno || window.referenciasDesayuno) ? {
+            referencias_desayuno: _menuPrincipal.referencias_desayuno || window.referenciasDesayuno
         } : {}),
-        
-        // ===== INCLUIR FOODBOX LUNCH SI APLICA =====
-        ...(categoriaId == 4 && typeof obtenerDatosFoodboxLunch === 'function' ? {
-            foodbox_lunch: obtenerDatosFoodboxLunch()
+
+        ...(_catPrincipal == 4 && (_menuPrincipal.foodbox_lunch || typeof obtenerDatosFoodboxLunch === 'function') ? {
+            foodbox_lunch: _menuPrincipal.foodbox_lunch || obtenerDatosFoodboxLunch()
         } : {}),
-        
-        // Multiplicadores solo para Foodbox/Comida
-        ...([2, 3].includes(categoriaId) ? {
-            multiplicadores: window.multiplicadores || { saladas: 1, postres: 1 }
-        } : { multiplicadores: null }),
-        
-        // Referencias solo para Foodbox/Comida
-        ...([2, 3].includes(categoriaId) ? {
-            referencias: window.referenciasSeleccionadas || { saladas: [], postres: [] }
-        } : { referencias: null }),
-        
-        // Notas (si tienes el textarea de notas)
+
+        ...([2, 3].includes(_catPrincipal) ? {
+            multiplicadores: _menuPrincipal.multiplicadores || window.multiplicadores || { saladas: 1, postres: 1 },
+            referencias:     _menuPrincipal.referencias     || window.referenciasSeleccionadas || { saladas: [], postres: [] }
+        } : { multiplicadores: null, referencias: null }),
+
+        // Notas
         ...(document.getElementById('alergias_notas') ? {
-            alergias: {
-                notas: document.getElementById('alergias_notas').value
-            }
+            alergias: { notas: document.getElementById('alergias_notas').value }
         } : {}),
 
-        // Tipo de menaje seleccionado
         tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
+        logistica:   obtenerDatosLogisticaInline(),
 
-        // Logística inline (Desayuno / Foodbox / Lunch / Bandejas)
-        logistica: obtenerDatosLogisticaInline(),
-        
-        // Material de logística (si está seleccionado)
-        material_logistica: typeof obtenerMaterialSeleccionado === 'function' ? 
-            obtenerMaterialSeleccionado() : null,
-        
+        // Material acumulado de todos los menús
+        material_logistica: window._materialAcumulado && (
+            window._materialAcumulado.bebidas?.length ||
+            window._materialAcumulado.menaje?.length  ||
+            window._materialAcumulado.extras?.length
+        )   ? window._materialAcumulado
+            : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado() : null),
+
         fecha_creacion: new Date().toISOString(),
         estado: 'creada',
         version: '1.0'
@@ -861,6 +852,11 @@ function limpiarFormularioComanda() {
     window.multiplicadores = { saladas: 1, postres: 1 };
     window.referenciasSeleccionadas = { saladas: [], postres: [] };
     window.referenciasDesayuno = {};
+
+    // Resetear menús acumulados y material acumulado
+    if (typeof window.resetearMenusAcumulados === 'function') {
+        window.resetearMenusAcumulados();
+    }
     
     // CORRECCIÓN: Limpiar selecciones de Foodbox Lunch correctamente
     if (window.seleccionesFoodbox) {
@@ -925,9 +921,7 @@ function limpiarFormularioComanda() {
         responsableInput.value = obtenerNombreUsuarioActual();
     }
 
-    // Ocultar y limpiar sección de logística inline
-    const logInline = document.getElementById('logisticaInlineSection');
-    if (logInline) logInline.style.display = 'none';
+    // Limpiar campos de logística (sección siempre visible)
     if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
 
     // Limpiar material de logística: estado interno y DOM
