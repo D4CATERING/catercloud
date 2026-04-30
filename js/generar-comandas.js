@@ -64,10 +64,9 @@ window.generarBlobsComandasDocx = async function(datos) {
 
     function bloqueMenu(menu, pax, esAdicional) {
         const paras = [];
-        const label = esAdicional
-            ? `+ ${menu.nombre||""} (${menu.pax||pax} pax)`
-            : `${menu.nombre||""} \u2014 ${pax} pax`;
-        paras.push(para([txt(label,{ bold:true, size:19, color:NEGRO })],{ spacing:{ before:60, after:30 } }));
+        const paxFinal = menu.pax || pax || 0;
+        const label = `${menu.nombre || ""} — ${paxFinal} pax`;
+        paras.push(para([txt(label, { bold:true, size:19, color:NEGRO })], { spacing:{ before:60, after:30 } }));
 
         if (menu.referencias_desayuno) {
             Object.values(menu.referencias_desayuno).forEach(ref => {
@@ -161,6 +160,17 @@ window.generarBlobsComandasDocx = async function(datos) {
     const propsPagina = { page: { size:{ width:11906, height:16838 }, margin:{ top:720, right:720, bottom:720, left:720 } } };
     const estilos = { default: { document: { run: { font:"Roboto", size:18 } } } };
 
+    // Todos los menús: principal + adicionales, todos al mismo nivel con su PAX
+    const todosMenus = [
+        { ...datos.menu_principal,
+          referencias_desayuno: datos.referencias_desayuno,
+          referencias:          datos.referencias,
+          foodbox_lunch:        datos.foodbox_lunch,
+          pax:                  datos.menu_principal?.pax || datos.pax
+        },
+        ...(datos.menus_adicionales || [])
+    ];
+
     // ── COCINA ──
     const cc = [
         para([txt("CATERCLOUD",{ bold:true, size:28, color:NEGRO, font:"Oswald", allCaps:true }),
@@ -169,13 +179,12 @@ window.generarBlobsComandasDocx = async function(datos) {
         separador(), espacio(80),
         headerBanda("\ud83d\udccb Informaci\xf3n del evento"), espacio(60),
         tablaInfo(infoBasica), espacio(100), separador(),
-        headerBanda("\ud83c\udf7d\ufe0f Men\xfa seleccionado"), espacio(60),
-        ...bloqueMenu({ ...datos.menu_principal, referencias_desayuno:datos.referencias_desayuno, referencias:datos.referencias, foodbox_lunch:datos.foodbox_lunch }, datos.pax, false),
+        headerBanda("\ud83c\udf7d\ufe0f Men\xfas"), espacio(60),
     ];
-    if (datos.menus_adicionales?.length) {
-        cc.push(espacio(60), headerBanda("\u2795 Men\xfas adicionales"), espacio(60));
-        datos.menus_adicionales.forEach(m => { bloqueMenu(m,datos.pax,true).forEach(p=>cc.push(p)); cc.push(espacio(40)); });
-    }
+    todosMenus.forEach((m, i) => {
+        bloqueMenu(m, m.pax, false).forEach(p => cc.push(p));
+        if (i < todosMenus.length - 1) cc.push(espacio(40));
+    });
 
     // ── LOGÍSTICA ──
     const material = extraerMaterial(datos.material_logistica || datos.logistica);
@@ -186,13 +195,12 @@ window.generarBlobsComandasDocx = async function(datos) {
         separador(), espacio(80),
         headerBanda("\ud83d\udccb Informaci\xf3n del evento"), espacio(60),
         tablaInfo(infoBasica), espacio(100), separador(),
-        headerBanda("\ud83c\udf7d\ufe0f Men\xfa seleccionado"), espacio(60),
-        ...bloqueMenu({ ...datos.menu_principal, referencias_desayuno:datos.referencias_desayuno, referencias:datos.referencias, foodbox_lunch:datos.foodbox_lunch }, datos.pax, false),
+        headerBanda("\ud83c\udf7d\ufe0f Men\xfas"), espacio(60),
     ];
-    if (datos.menus_adicionales?.length) {
-        cl.push(espacio(60), headerBanda("\u2795 Men\xfas adicionales"), espacio(60));
-        datos.menus_adicionales.forEach(m => { bloqueMenu(m,datos.pax,true).forEach(p=>cl.push(p)); cl.push(espacio(40)); });
-    }
+    todosMenus.forEach((m, i) => {
+        bloqueMenu(m, m.pax, false).forEach(p => cl.push(p));
+        if (i < todosMenus.length - 1) cl.push(espacio(40));
+    });
     if (material.bebidas.length || material.menaje.length || material.extras.length) {
         cl.push(espacio(100), separador(), headerBanda("\ud83d\udce6 Material necesario"), espacio(60));
         tablaMaterial("\ud83e\udd64 Bebidas", material.bebidas).forEach(e=>cl.push(e));

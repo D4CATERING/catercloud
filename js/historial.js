@@ -161,13 +161,35 @@ function _renderMenuDetalle(comanda, pax) {
     // Foodbox Lunch
     if (comanda.foodbox_lunch) {
         const fl = comanda.foodbox_lunch;
-        if (fl.ensalada_principal) html += fila('🥗 ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
-        if (fl.sandwich_principal) html += fila('🥪 ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
-        if (fl.postre_principal)   html += fila('🍰 ' + (fl.postre_principal.nombre   || fl.postre_principal),   '', '', false);
-        if (fl.adicionales?.length) {
-            fl.adicionales.forEach(a => {
-                html += fila('➕ ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
+
+        // Formato nuevo: arrays de selecciones con cantidad
+        const ensaladas = fl.ensaladas || fl.selecciones?.ensaladas || [];
+        const sandwiches = fl.sandwiches || fl.selecciones?.sandwiches || [];
+        const postres = fl.postres || fl.selecciones?.postres || [];
+
+        if (ensaladas.length || sandwiches.length || postres.length) {
+            ensaladas.forEach(e => {
+                if ((e.cantidad || 1) > 0)
+                    html += fila('🥗 ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
             });
+            sandwiches.forEach(s => {
+                if ((s.cantidad || 1) > 0)
+                    html += fila('🥪 ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
+            });
+            postres.forEach(p => {
+                if ((p.cantidad || 1) > 0)
+                    html += fila('🍰 ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
+            });
+        } else {
+            // Formato antiguo: campos planos
+            if (fl.ensalada_principal) html += fila('🥗 ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
+            if (fl.sandwich_principal) html += fila('🥪 ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
+            if (fl.postre_principal)   html += fila('🍰 ' + (fl.postre_principal.nombre   || fl.postre_principal),   '', '', false);
+            if (fl.adicionales?.length) {
+                fl.adicionales.forEach(a => {
+                    html += fila('➕ ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
+                });
+            }
         }
     }
 
@@ -234,12 +256,27 @@ function _renderDetalleComanda(comanda) {
     if (comanda.menus_adicionales?.length > 0) {
         if (secAdi) secAdi.style.display = '';
         if (contAdi) {
-            contAdi.innerHTML = comanda.menus_adicionales.map(m =>
-                `<div class="detalle-menu-row">
-                    <span class="detalle-menu-nombre es-titulo">+ ${m.nombre || ''}</span>
-                    <span class="detalle-menu-cantidad">${m.pax_adicional || m.pax || ''} pax</span>
-                </div>`
-            ).join('');
+            contAdi.innerHTML = comanda.menus_adicionales.map(m => {
+                const paxM = m.pax_adicional || m.pax || '';
+                // Construir una comanda temporal con los datos de este menú adicional
+                const comandaM = {
+                    ...m,
+                    menu_principal: { nombre: m.nombre },
+                    referencias_desayuno: m.referencias_desayuno || null,
+                    referencias:          m.referencias || null,
+                    foodbox_lunch:        m.foodbox_lunch || null,
+                };
+                const detalle = typeof _renderMenuDetalle === 'function'
+                    ? _renderMenuDetalle(comandaM, paxM)
+                    : '';
+                return `<div class="detalle-menu-adicional" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid #f1f5f9;">
+                    <div class="detalle-menu-row" style="margin-bottom:6px;">
+                        <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${m.nombre || ''}</span>
+                        <span class="detalle-menu-cantidad">${paxM} pax</span>
+                    </div>
+                    ${detalle}
+                </div>`;
+            }).join('');
         }
     } else {
         if (secAdi) secAdi.style.display = 'none';

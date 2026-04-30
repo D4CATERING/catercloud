@@ -633,24 +633,18 @@ const _domBebidas = _leerContainerTipo('bebidas', []);
 const _domMenaje  = _leerContainerTipo('menaje',  []);
 const _domExtras  = _leerContainerTipo('extras',  []);
 
-let _materialCompleto;
-if (typeof obtenerMaterialSeleccionado === 'function') {
-    const _seleccionado = obtenerMaterialSeleccionado();
-    _materialCompleto = {
-        bebidas: _seleccionado.bebidas || [],
-        menaje:  _seleccionado.menaje  || [],
-        extras:  _seleccionado.extras  || []
-    };
-} else {
-    const _domBebidas = _leerContainerTipo('bebidas', []);
-    const _domMenaje  = _leerContainerTipo('menaje',  []);
-    const _domExtras  = _leerContainerTipo('extras',  []);
-    _materialCompleto = { bebidas: _domBebidas, menaje: _domMenaje, extras: _domExtras };
-}
+// Usar el material acumulado de todos los menús añadidos
+// (capturado por anadirMenuAComanda en window._materialAcumulado)
+const _materialCompleto = (
+    window._materialAcumulado &&
+    (window._materialAcumulado.bebidas?.length ||
+     window._materialAcumulado.menaje?.length  ||
+     window._materialAcumulado.extras?.length)
+)   ? window._materialAcumulado
+    : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado() : { bebidas: [], menaje: [], extras: [] });
 
 // Enriquecer comandaData con material y tipo_menaje antes de guardar
 comandaData.material_logistica = _materialCompleto;
-// tipo_menaje ya se añadió arriba, pero por si acaso:
 if (!comandaData.tipo_menaje) {
     comandaData.tipo_menaje = document.getElementById('tipo_menaje')?.value || null;
 }

@@ -606,7 +606,12 @@
     }
 
     const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
-    const materialSnapshot = capturarMaterialDOM();
+
+    // Capturar material usando la fuente de verdad (window.materialLogistica)
+    // ANTES de que limpiarMaterialLogistica() lo vacíe
+    const materialSnapshot = typeof window.obtenerMaterialSeleccionado === 'function'
+      ? window.obtenerMaterialSeleccionado()
+      : capturarMaterialDOM();
 
     // Construir objeto del menú
     const item = {
@@ -629,8 +634,16 @@
         postres: [...(window.referenciasSeleccionadas?.postres || [])],
       };
     }
-    if (categoriaId === 4 && typeof obtenerDatosFoodboxLunch === 'function') {
-      item.foodbox_lunch = obtenerDatosFoodboxLunch();
+    if (categoriaId === 4 && typeof obtenerSeleccionesFoodboxLunch === 'function') {
+      const sel = obtenerSeleccionesFoodboxLunch();
+      // Guardar las selecciones completas (arrays con cantidades)
+      item.foodbox_lunch = {
+        selecciones: sel,
+        // También en formato plano para compatibilidad con _renderMenuDetalle
+        ensaladas: sel.ensaladas || [],
+        sandwiches: sel.sandwiches || [],
+        postres: sel.postres || [],
+      };
     }
     if (categoriaId === 5 && window.BandejasState) {
       item.bandejas = {
