@@ -1021,7 +1021,13 @@ window.actualizarTipoMenajeGlobal = function() {
     // Actualizar todos los selectores de termo visibles
     document.querySelectorAll('.select-termo').forEach(select => {
         select.value = tipoTermo;
-        const refId = select.closest('[data-id]')?.dataset.id;
+
+        // Extraer refId del atributo onchange: actualizarTipoTermo('refId', this.value)
+        // (cambiar select.value no dispara onchange, hay que llamarlo explícitamente)
+        const onchangeAttr = select.getAttribute('onchange') || '';
+        const match = onchangeAttr.match(/actualizarTipoTermo\('([^']+)'/);
+        const refId = match ? match[1] : select.closest('[data-id]')?.dataset.id;
+
         if (refId && typeof actualizarTipoTermo === 'function') {
             actualizarTipoTermo(refId, tipoTermo);
         }

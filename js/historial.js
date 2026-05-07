@@ -142,18 +142,16 @@ function _renderMenuDetalle(comanda, pax) {
 
     // Desayuno
     if (comanda.referencias_desayuno && Object.keys(comanda.referencias_desayuno).length) {
-        Object.values(comanda.referencias_desayuno).forEach(ref => {
-            if (!ref || !ref.cantidad || ref.cantidad === 0) return;
+        const refs = Object.values(comanda.referencias_desayuno).filter(r => r && r.cantidad > 0);
+
+        // Termos se muestran solo en el total — aquí solo el resto
+        refs.filter(r => r.tipo !== 'termo' && r.tipo !== 'leche_especial').forEach(ref => {
             let extra = '';
             if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length)
                 extra = ' (' + ref.opcionesSeleccionadas.join(', ') + ')';
             if (ref.tipo === 'sandwich' && ref.sabor) extra = ' — ' + ref.sabor;
-            if ((ref.tipo === 'sandwich_multiple') && ref.sandwiches?.length)
+            if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length)
                 extra = ': ' + ref.sandwiches.filter(s=>s.sabor).map(s=>`${s.sabor} ×${s.cantidad||''}`).join(', ');
-            // Etiqueta acero/desechable en termos y leches
-            if ((ref.tipo === 'termo' || ref.tipo === 'leche_especial') && ref.tipoTermo) {
-                extra += ' <span class="detalle-termo-tag">' + ref.tipoTermo.toUpperCase() + '</span>';
-            }
             html += fila(ref.nombre + extra, ref.cantidad, ref.unidad || 'uds', false);
         });
     }
@@ -248,6 +246,11 @@ function _renderDetalleComanda(comanda) {
     }
     if (el('detalleMenuPrincipal')) {
         el('detalleMenuPrincipal').innerHTML = _renderMenuDetalle(comanda, comanda.pax);
+
+        // Termos totales del menú principal (se suman con adicionales más abajo si los hay)
+        const _refsPpal = comanda.referencias_desayuno ? Object.values(comanda.referencias_desayuno) : [];
+        const _termosPpal = _refsPpal.filter(r => r && (r.tipo === 'termo' || r.tipo === 'leche_especial') && r.cantidad > 0);
+        window._termosPrincipal = _termosPpal; // guardar para sumar con adicionales
     }
 
     // ── Menús adicionales ───────────────────────────────────
@@ -258,7 +261,6 @@ function _renderDetalleComanda(comanda) {
         if (contAdi) {
             contAdi.innerHTML = comanda.menus_adicionales.map(m => {
                 const paxM = m.pax_adicional || m.pax || '';
-                // Construir una comanda temporal con los datos de este menú adicional
                 const comandaM = {
                     ...m,
                     menu_principal: { nombre: m.nombre },
@@ -277,9 +279,51 @@ function _renderDetalleComanda(comanda) {
                     ${detalle}
                 </div>`;
             }).join('');
+
+            // Sumar termos de todos los menús (principal + adicionales)
+            const todosMenusDetalle = [comanda, ...(comanda.menus_adicionales || [])];
+            const termosTotales = {};
+            todosMenusDetalle.forEach(m => {
+                const refs = m.referencias_desayuno || {};
+                Object.values(refs).forEach(r => {
+                    if (!r || (r.tipo !== 'termo' && r.tipo !== 'leche_especial') || !r.cantidad || r.cantidad <= 0) return;
+                    if (!termosTotales[r.nombre]) termosTotales[r.nombre] = { ...r, cantidad: 0 };
+                    termosTotales[r.nombre].cantidad += r.cantidad;
+                });
+            });
+            const termosList = Object.values(termosTotales);
+            if (termosList.length >= 1) {
+                // Solo mostrar suma si hay más de un menú con termos
+                const tipoTermo = termosList[0]?.tipoTermo || '';
+                const tag = tipoTermo ? ` <span class="detalle-termo-tag">${tipoTermo.toUpperCase()}</span>` : '';
+                const partes = termosList.map(r => {
+                    const nombreCorto = r.nombre.replace(/^Termo de?\s*/i, '').replace(/^Termo\s*/i, '');
+                    return `${nombreCorto} ×${r.cantidad}`;
+                }).join('  ·  ');
+                contAdi.innerHTML += `<div class="detalle-menu-adicional" style="margin-top:8px; padding-top:8px; border-top:2px solid #e2e8f0;">
+                    <div class="detalle-menu-row">
+                        <span class="detalle-menu-nombre" style="font-weight:600;">☕ Total termos: ${partes}${tag}</span>
+                    </div>
+                </div>`;
+            }
         }
     } else {
         if (secAdi) secAdi.style.display = 'none';
+
+        // Sin adicionales: mostrar termos del menú principal igualmente
+        const _refsSolo = comanda.referencias_desayuno ? Object.values(comanda.referencias_desayuno) : [];
+        const _termosSolo = _refsSolo.filter(r => r && (r.tipo === 'termo' || r.tipo === 'leche_especial') && r.cantidad > 0);
+        if (_termosSolo.length && el('detalleMenuPrincipal')) {
+            const tipoTermo = _termosSolo[0]?.tipoTermo || '';
+            const tag = tipoTermo ? ` <span class="detalle-termo-tag">${tipoTermo.toUpperCase()}</span>` : '';
+            const partes = _termosSolo.map(r => {
+                const nombreCorto = r.nombre.replace(/^Termo de?\s*/i, '').replace(/^Termo\s*/i, '');
+                return `${nombreCorto} ×${r.cantidad}`;
+            }).join('  ·  ');
+            el('detalleMenuPrincipal').innerHTML += `<div class="detalle-menu-row" style="margin-top:6px; padding-top:6px; border-top:1px solid #f1f5f9;">
+                <span class="detalle-menu-nombre" style="font-weight:600;">☕ Termos: ${partes}${tag}</span>
+            </div>`;
+        }
     }
 
     // ── Referencias Foodbox/Comida — ocultar (ya en _renderMenuDetalle) ─

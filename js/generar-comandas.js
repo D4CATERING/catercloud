@@ -3,6 +3,7 @@
 // Genera dos DOCX (Cocina + Logística) y los sube a Supabase Storage
 // ============================================================
 
+
 window.generarBlobsComandasDocx = async function(datos) {
     const docx = window.docx;
     if (!docx) { console.error("Librería docx no cargada."); return null; }
@@ -69,13 +70,22 @@ window.generarBlobsComandasDocx = async function(datos) {
         paras.push(para([txt(label, { bold:true, size:19, color:NEGRO })], { spacing:{ before:60, after:30 } }));
 
         if (menu.referencias_desayuno) {
+            // Los termos se muestran sumados en bloque separado — aquí solo el resto
             Object.values(menu.referencias_desayuno).forEach(ref => {
-                if (!ref || (ref.cantidad===0 && ref.tipo!=="leche_especial")) return;
+                if (!ref || ref.tipo === 'termo' || ref.tipo === 'leche_especial') return;
+                if (!ref.cantidad || ref.cantidad === 0) return;
+                let detalle = '';
+                if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length)
+                    detalle = ' (' + ref.opcionesSeleccionadas.join(', ') + ')';
+                if (ref.tipo === 'sandwich' && ref.sabor)
+                    detalle = ' — ' + ref.sabor;
+                if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length)
+                    detalle = ': ' + ref.sandwiches.filter(s=>s.sabor).map(s=>`${s.sabor} ×${s.cantidad||''}`).join(', ');
                 paras.push(para([
-                    txt("    "+ref.nombre+": ",{ bold:true, size:16, color:GRIS }),
-                    txt(String(ref.cantidad),{ size:16, color:NEGRO }),
-                    txt(" "+(ref.unidad||""),{ size:16, color:GRIS })
-                ],{ spacing:{ before:0, after:30 } }));
+                    txt("    " + ref.nombre + detalle + ": ", { bold:true, size:16, color:GRIS }),
+                    txt(String(ref.cantidad), { size:16, color:NEGRO }),
+                    txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                ], { spacing:{ before:0, after:30 } }));
             });
         }
         if (menu.referencias) {
@@ -163,13 +173,30 @@ window.generarBlobsComandasDocx = async function(datos) {
     // Todos los menús: principal + adicionales, todos al mismo nivel con su PAX
     const todosMenus = [
         { ...datos.menu_principal,
-          referencias_desayuno: datos.referencias_desayuno,
-          referencias:          datos.referencias,
-          foodbox_lunch:        datos.foodbox_lunch,
+          // Preferir los datos propios del menú principal; caer a nivel raíz solo como fallback
+          referencias_desayuno: datos.menu_principal?.referencias_desayuno || datos.referencias_desayuno,
+          referencias:          datos.menu_principal?.referencias          || datos.referencias,
+          foodbox_lunch:        datos.menu_principal?.foodbox_lunch        || datos.foodbox_lunch,
           pax:                  datos.menu_principal?.pax || datos.pax
         },
         ...(datos.menus_adicionales || [])
     ];
+
+    // ── Sumar termos de desayuno entre todos los menús ──────────────────────
+    // Si hay varios menús de desayuno, los termos del mismo nombre se acumulan
+    // y se muestran en un bloque único al final en lugar de repetirse por menú.
+    const termosTotales = {}; // { "Termo de café": { nombre, cantidad, tipoTermo, unidad } }
+    todosMenus.forEach(m => {
+        if (!m.referencias_desayuno) return;
+        Object.values(m.referencias_desayuno).forEach(ref => {
+            if (!ref || (ref.tipo !== 'termo' && ref.tipo !== 'leche_especial')) return;
+            if (!ref.cantidad || ref.cantidad <= 0) return;
+            if (!termosTotales[ref.nombre]) {
+                termosTotales[ref.nombre] = { ...ref, cantidad: 0 };
+            }
+            termosTotales[ref.nombre].cantidad += ref.cantidad;
+        });
+    });
 
     // ── COCINA ──
     const cc = [
@@ -186,6 +213,22 @@ window.generarBlobsComandasDocx = async function(datos) {
         if (i < todosMenus.length - 1) cc.push(espacio(40));
     });
 
+    // Termos sumados de todos los menús de desayuno
+    const termosList = Object.values(termosTotales);
+    if (termosList.length) {
+        cc.push(espacio(40));
+        const tipoTermo = termosList[0]?.tipoTermo || '';
+        const partes = termosList.map(r => {
+            const nombreCorto = r.nombre.replace(/^Termo de?\s*/i, '').replace(/^Termo\s*/i, '');
+            return `${nombreCorto} ×${r.cantidad}`;
+        });
+        cc.push(para([
+            txt("    Termos: ", { bold:true, size:16, color:GRIS }),
+            txt(partes.join('  ·  '), { size:16, color:NEGRO }),
+            txt(tipoTermo ? `  (${tipoTermo})` : '', { size:15, color:GRIS, italics:true })
+        ], { spacing:{ before:0, after:30 } }));
+    }
+
     // ── LOGÍSTICA ──
     const material = extraerMaterial(datos.material_logistica || datos.logistica);
     const cl = [
@@ -201,6 +244,21 @@ window.generarBlobsComandasDocx = async function(datos) {
         bloqueMenu(m, m.pax, false).forEach(p => cl.push(p));
         if (i < todosMenus.length - 1) cl.push(espacio(40));
     });
+
+    // Termos sumados (mismos que en cocina)
+    if (termosList.length) {
+        cl.push(espacio(40));
+        const tipoTermo = termosList[0]?.tipoTermo || '';
+        const partes = termosList.map(r => {
+            const nombreCorto = r.nombre.replace(/^Termo de?\s*/i, '').replace(/^Termo\s*/i, '');
+            return `${nombreCorto} ×${r.cantidad}`;
+        });
+        cl.push(para([
+            txt("    Termos: ", { bold:true, size:16, color:GRIS }),
+            txt(partes.join('  ·  '), { size:16, color:NEGRO }),
+            txt(tipoTermo ? `  (${tipoTermo})` : '', { size:15, color:GRIS, italics:true })
+        ], { spacing:{ before:0, after:30 } }));
+    }
     if (material.bebidas.length || material.menaje.length || material.extras.length) {
         cl.push(espacio(100), separador(), headerBanda("\ud83d\udce6 Material necesario"), espacio(60));
         tablaMaterial("\ud83e\udd64 Bebidas", material.bebidas).forEach(e=>cl.push(e));
