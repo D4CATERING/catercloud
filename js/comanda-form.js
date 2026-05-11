@@ -260,6 +260,11 @@ async function seleccionarMenu(menuId, element) {
     document.getElementById('menu_id').value = menuId;
     window.pax = parseInt(document.getElementById('pax').value) || 0;
 
+    // Aplicar tipo de menaje ya seleccionado a los termos y material
+    if (typeof window.actualizarTipoMenajeGlobal === 'function') {
+        setTimeout(() => window.actualizarTipoMenajeGlobal(), 200);
+    }
+
     // Obtener categoría
     const categoriaId = parseInt(document.getElementById('categoria').value);
 
