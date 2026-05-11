@@ -630,7 +630,10 @@
     if ([2, 3].includes(categoriaId)) {
       item.multiplicadores = { ...(window.multiplicadores || { saladas: 1, postres: 1 }) };
       item.referencias = {
-        saladas: [...(window.referenciasSeleccionadas?.saladas || [])],
+        saladas: [
+          ...(window.referenciasSeleccionadas?.gris  || []),
+          ...(window.referenciasSeleccionadas?.rojo  || []),
+        ],
         postres: [...(window.referenciasSeleccionadas?.postres || [])],
       };
     }

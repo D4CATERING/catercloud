@@ -2,12 +2,57 @@
    DASHBOARD — Lista de comandas
 ══════════════════════════════════════ */
 
-/* Layout dashboard: lista + sidebar calendario */
+/* Layout dashboard: calendario amplio + panel eventos */
 .dashboard-layout {
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 20px;
   align-items: start;
+}
+
+/* Layout variante: calendario ~mitad + panel eventos */
+.dashboard-layout--calendar {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Header del dashboard con botón */
+.dash-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Panel lateral de eventos */
+.dash-events-panel {
+  position: sticky;
+  top: 20px;
+  background: white;
+  border: 1px solid var(--dc-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--dc-shadow);
+}
+
+.dash-events-panel .event-details {
+  padding: 14px;
+  border-top: none;
+}
+
+.dash-events-panel .event-details h4 {
+  font-family: var(--font-title);
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--dc-negro);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--dc-border);
+}
+
+.dash-events-panel .event-list {
+  max-height: calc(100vh - 220px);
+  gap: 8px;
 }
 
 /* ── Header de sección ── */

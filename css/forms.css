@@ -682,7 +682,7 @@ input:focus, select:focus, textarea:focus {
     background: #131B23;
     border-top: 3px solid #E1342E;
     border-bottom: 3px solid #E1342E;
-    padding: 6px 14px;
+    padding: 3px 14px;
 }
 
 .detalle-container .dc-section-header h3 {
@@ -2409,8 +2409,17 @@ h3 {
 #btnAnadirMenuWrap {
   background: var(--dc-crema);
   border: 1px solid var(--dc-border);
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: none; /* se activa con flex via JS */
+}
+
+#btnAnadirMenuWrap[style*="flex"] {
+  display: flex !important;
+}
+
+#btnAnadirMenu:hover {
+  opacity: .88;
 }
 
 /* ── PAX total chip ── */
@@ -2487,7 +2496,7 @@ h3 {
 
   /* Secciones */
   .dc-section {
-    margin-bottom: 4px !important;
+    margin-bottom: 2px !important;
     border: 0.5px solid #ccc !important;
     border-radius: 4px !important;
     page-break-inside: avoid;
@@ -2495,17 +2504,14 @@ h3 {
   }
 
   .dc-section-header {
-    padding: 4px 10px !important;
-    background: #131B23 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    border-bottom: 2px solid #E1342E !important;
+    padding: 2px 10px !important;
+    background: transparent !important;
+    border-bottom: 1px solid #ccc !important;
+    border-top: none !important;
   }
   .dc-section-header h3 {
     font-size: 7.5pt !important;
-    color: white !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    color: #131B23 !important;
   }
 
   /* Grid info básica */
@@ -2513,15 +2519,15 @@ h3 {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 0;
-    padding: 5px 10px 6px !important;
+    padding: 2px 10px 3px !important;
   }
-  .detalle-field { padding: 2px 4px; }
+  .detalle-field { padding: 1px 4px; }
   .detalle-field-label { font-size: 6.5pt; }
   .detalle-field-value { font-size: 8.5pt; }
 
   /* Cuerpo de sección */
   .detalle-body {
-    padding: 5px 10px 7px !important;
+    padding: 3px 10px 4px !important;
   }
 
   /* Filas de menú */
@@ -2571,11 +2577,16 @@ h3 {
   }
   .dc-material-unidad { font-size: 6.5pt !important; }
 
-  /* Datos logística */
+  /* Datos logística — una sola fila con 6 columnas */
   .dc-log-grid {
-    grid-template-columns: 1fr 120px 90px !important;
-    gap: 4px 8px !important;
-    padding: 5px 10px 6px !important;
+    display: grid !important;
+    grid-template-columns: 1.8fr 1.2fr 0.9fr 2.2fr 0.8fr 0.9fr !important;
+    grid-template-rows: 1fr !important;
+    gap: 0 8px !important;
+    padding: 2px 10px 3px !important;
+  }
+  .dc-log-grid > * {
+    min-width: 0 !important;
   }
   .dc-label { font-size: 6.5pt !important; }
   .dc-input, .log-readonly {

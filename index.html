@@ -76,57 +76,43 @@
 
     <!-- ══ DASHBOARD ══ -->
     <div id="dashboard">
-      <div class="dc-page-header">
-        <h1>Comandas</h1>
-        <p>Gestión de pedidos de catering</p>
+      <div class="dc-page-header dash-page-header">
+        <div>
+          <h1>Agenda</h1>
+          <p>Pedidos por fecha de evento</p>
+        </div>
+        <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()">
+          <span class="btn-plus">+</span> Nueva Comanda
+        </button>
       </div>
       <div class="dc-page-content">
-        <div class="dashboard-layout">
-          <!-- Columna principal: lista -->
-          <div>
-            <div class="dash-section-header">
-              <div>
-                <span class="dash-section-title">Todas las comandas</span>
-                <span class="dash-section-count" id="dashTotalCount"></span>
-              </div>
-              <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()">
-                <span class="btn-plus">+</span> Nueva Comanda
-              </button>
-            </div>
+        <div class="dashboard-layout dashboard-layout--calendar">
 
-            <div class="dash-search-wrap">
-              <span class="dash-search-icon">⌕</span>
-              <input type="text" id="filtroBusqueda" placeholder="Buscar por empresa o código..." onkeyup="filtrarComandas()">
-            </div>
-
-            <div class="dash-filters">
-              <span class="dash-filter-pill active" onclick="filtrarPorEstado('')">Todos</span>
-              <span class="dash-filter-pill" onclick="filtrarPorEstado('creada')">Creada</span>
-              <span class="dash-filter-pill" onclick="filtrarPorEstado('proceso')">En proceso</span>
-              <span class="dash-filter-pill" onclick="filtrarPorEstado('completada')">Completada</span>
-            </div>
-
-            <div id="comandasList" class="comandas-list"></div>
-          </div>
-
-          <!-- Columna calendario -->
+          <!-- Calendario compacto -->
           <div class="calendar-card">
             <div class="calendar-header">
-              <h3>📅 Agenda</h3>
+              <span id="calendarMonthTitle">—</span>
               <div class="calendar-nav">
                 <button onclick="cambiarMes(-1)">‹</button>
                 <button onclick="cambiarMes(1)">›</button>
               </div>
             </div>
-            <div class="calendar-weekdays">
-              <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+            <div class="calendar-body">
+              <div class="calendar-weekdays">
+                <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+              </div>
+              <div id="calendarDays" class="calendar-days"></div>
             </div>
-            <div id="calendarDays" class="calendar-days"></div>
+          </div>
+
+          <!-- Panel lateral de eventos del día -->
+          <div class="dash-events-panel">
             <div class="event-details">
               <h4 id="selectedDateTitle">Hoy</h4>
               <div id="eventList" class="event-list"></div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -794,7 +780,7 @@
         if (typeof filtrarComandas === 'function') filtrarComandas();
       }
 
-      // mostrarDashboard: carga historial en la vista principal
+      // mostrarDashboard: solo calendario
       function mostrarDashboard() {
         document.getElementById('dashboard').style.display = '';
         document.getElementById('comandaForm').style.display = 'none';
@@ -802,42 +788,12 @@
         document.getElementById('detalleComanda').style.display = 'none';
         setNavActive('nav-dashboard');
         if (typeof cargarCalendario === 'function') cargarCalendario();
-        if (typeof cargarHistorial === 'function') cargarHistorialEnDashboard();
       }
 
-      // Cargar historial en la lista del dashboard
-      function cargarHistorialEnDashboard() {
-        const lista = document.getElementById('comandasList');
-        if (!lista) return;
-        if (typeof window.cargarComandas === 'function') {
-          window.cargarComandas('comandasList');
-        } else if (typeof cargarHistorial === 'function') {
-          cargarHistorial();
-        }
-      }
-
-      // Override de mostrarHistorial para usar panel lateral del dashboard
-      const _origMostrarHistorial = window.mostrarHistorial;
-      window.mostrarHistorial = function() {
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('historialPage').style.display = '';
-        document.getElementById('comandaForm').style.display = 'none';
-        document.getElementById('detalleComanda').style.display = 'none';
-        setNavActive('nav-historial');
-        // Sincronizar filtroBusqueda con filtroBusquedaH
-        const fh = document.getElementById('filtroBusquedaH');
-        const fb = document.getElementById('filtroBusqueda');
-        if (fh && fb) { fb.value = fh.value; }
-        if (typeof cargarHistorial === 'function') cargarHistorial();
-      };
-
-      // Al cargar: setear nav activo
+      // Al cargar: setear nav activo y mostrar calendario
       document.addEventListener('DOMContentLoaded', () => {
         setNavActive('nav-dashboard');
-        // Redirigir cargarHistorial al contenedor del dashboard también
-        setTimeout(() => {
-          if (typeof cargarHistorial === 'function') cargarHistorialEnDashboard();
-        }, 300);
+        if (typeof cargarCalendario === 'function') cargarCalendario();
       });
     </script>
 

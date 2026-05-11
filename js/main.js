@@ -492,7 +492,13 @@ if (categoriaId == 4) { // FOODBOX LUNCH
 
         ...([2, 3].includes(_catPrincipal) ? {
             multiplicadores: _menuPrincipal.multiplicadores || window.multiplicadores || { saladas: 1, postres: 1 },
-            referencias:     _menuPrincipal.referencias     || window.referenciasSeleccionadas || { saladas: [], postres: [] }
+            referencias:     _menuPrincipal.referencias     || {
+                saladas: [
+                    ...(window.referenciasSeleccionadas?.gris  || []),
+                    ...(window.referenciasSeleccionadas?.rojo  || [])
+                ],
+                postres: window.referenciasSeleccionadas?.postres || []
+            }
         } : { multiplicadores: null, referencias: null }),
 
         // Notas

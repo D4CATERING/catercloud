@@ -1,175 +1,189 @@
 // ========== CALENDARIO ==========
-let currentYear = new Date().getFullYear();
+let currentYear  = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
 let selectedDate = new Date();
-let calendarioEventos = {};
 
-/**
- * Carga y muestra el calendario
- */
-function cargarCalendario() {
-    const calendarDays = document.getElementById('calendarDays');
-    calendarDays.innerHTML = '';
-    
-    const firstDay = new Date(currentYear, currentMonth, 1);
-    const lastDay = new Date(currentYear, currentMonth + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDay = firstDay.getDay();
-    const startOffset = startingDay === 0 ? 6 : startingDay - 1;
-    
-    // Días vacíos al inicio
-    for (let i = 0; i < startOffset; i++) {
-        const emptyDay = document.createElement('div');
-        emptyDay.className = 'calendar-day';
-        calendarDays.appendChild(emptyDay);
-    }
-    
-    const today = new Date();
-    const isCurrentMonth = currentYear === today.getFullYear() && currentMonth === today.getMonth();
-    
-    // Días del mes
-    for (let day = 1; day <= daysInMonth; day++) {
-        const dayElement = document.createElement('div');
-        dayElement.className = 'calendar-day';
-        const date = new Date(currentYear, currentMonth, day);
-        const dateStr = date.toISOString().split('T')[0];
-        
-        if (isCurrentMonth && day === today.getDate()) {
-            dayElement.classList.add('today');
-        }
-        
-        if (date.toDateString() === selectedDate.toDateString()) {
-            dayElement.classList.add('selected');
-        }
-        
-        if (calendarioEventos[dateStr]) {
-            dayElement.classList.add('has-events');
-            const eventCount = document.createElement('div');
-            eventCount.className = 'event-count';
-            eventCount.textContent = calendarioEventos[dateStr].length;
-            dayElement.appendChild(eventCount);
-        }
-        
-        const dayNumber = document.createElement('div');
-        dayNumber.className = 'day-number';
-        dayNumber.textContent = day;
-        dayElement.appendChild(dayNumber);
-        
-        dayElement.onclick = () => seleccionarDia(date);
-        calendarDays.appendChild(dayElement);
-    }
-    
-    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    
-    document.getElementById('selectedDateTitle').textContent = 
-        `Pedidos para ${selectedDate.getDate()} de ${monthNames[selectedDate.getMonth()]}`;
-    
-    cargarEventosDia();
+const MONTH_NAMES = [
+    'Enero','Febrero','Marzo','Abril','Mayo','Junio',
+    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
+];
+
+function formatoFechaLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
-/**
- * Cambia el mes del calendario
- * @param {number} delta - Número de meses a mover (-1 para anterior, 1 para siguiente)
- */
+// ── Fuente de verdad: lee siempre del localStorage ───────────────────────────
+function getEventosPorFecha() {
+    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const map = {};
+    historial.forEach(c => {
+        const fecha = (c.fecha_evento || '').split('T')[0];
+        if (!fecha) return;
+        if (!map[fecha]) map[fecha] = [];
+        map[fecha].push({
+            codigo:  c.codigo  || '',
+            empresa: c.empresa || '—',
+            pax:     c.pax     || 0,
+            menu:    c.menu_principal?.nombre || '—',
+            hora:    c.logistica_inline?.hora_entrega || c.hora_salida || '',
+            estado:  c.estado  || 'creada',
+        });
+    });
+    Object.values(map).forEach(arr =>
+        arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+    );
+    return map;
+}
+
+// ── Render principal ──────────────────────────────────────────────────────────
+function cargarCalendario() {
+    const calendarDays = document.getElementById('calendarDays');
+    if (!calendarDays) return;
+    calendarDays.innerHTML = '';
+
+    const eventos = getEventosPorFecha();
+
+    const firstDay    = new Date(currentYear, currentMonth, 1);
+    const lastDay     = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startOffset = (firstDay.getDay() + 6) % 7; // lunes = 0
+
+    const today = new Date();
+
+    const monthTitle = document.getElementById('calendarMonthTitle');
+    if (monthTitle) monthTitle.textContent = `${MONTH_NAMES[currentMonth]} ${currentYear}`;
+
+    // Días vacíos
+    for (let i = 0; i < startOffset; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'calendar-day empty';
+        calendarDays.appendChild(empty);
+    }
+
+    // Días del mes
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date    = new Date(currentYear, currentMonth, day);
+        const dateStr = formatoFechaLocal(date);
+        const evs     = eventos[dateStr] || [];
+
+        const el = document.createElement('div');
+        el.className = 'calendar-day';
+
+        const isToday    = today.getFullYear() === currentYear &&
+                           today.getMonth()    === currentMonth &&
+                           today.getDate()     === day;
+        const isSelected = date.toDateString() === selectedDate.toDateString();
+        const isPast     = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+        if (isToday)    el.classList.add('today');
+        if (isSelected) el.classList.add('selected');
+        if (isPast && !isToday) el.classList.add('past');
+        if (evs.length) el.classList.add('has-events');
+
+        el.innerHTML = `
+            <span class="day-number">${day}</span>
+            ${evs.length ? `<span class="day-badge">${evs.length}</span>` : ''}
+        `;
+
+        el.onclick = () => seleccionarDia(date);
+        calendarDays.appendChild(el);
+    }
+
+    _renderEventosDia(eventos);
+}
+
+// ── Cambiar mes ───────────────────────────────────────────────────────────────
 function cambiarMes(delta) {
     currentMonth += delta;
-    
-    if (currentMonth < 0) {
-        currentMonth = 11;
-        currentYear--;
-    } else if (currentMonth > 11) {
-        currentMonth = 0;
-        currentYear++;
-    }
-    
+    if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+    if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
     cargarCalendario();
 }
 
-/**
- * Selecciona un día en el calendario
- * @param {Date} date - Fecha a seleccionar
- */
+// ── Seleccionar día ───────────────────────────────────────────────────────────
 function seleccionarDia(date) {
     selectedDate = date;
     cargarCalendario();
 }
 
-/**
- * Carga eventos de ejemplo (puedes reemplazar con datos reales)
- */
-function cargarEventosEjemplo() {
-    const hoy = new Date();
-    const manana = new Date();
-    manana.setDate(hoy.getDate() + 1);
-    const pasado = new Date();
-    pasado.setDate(hoy.getDate() + 2);
-    
-    const eventos = {
-        [hoy.toISOString().split('T')[0]]: [
-            { hora: '10:00', empresa: 'TechCorp', pax: 25, menu: 'ELECONÓMICO', tipo: 'comanda' },
-            { hora: '14:00', empresa: 'MarketingPro', pax: 15, menu: 'AFTERWORK', tipo: 'comanda' }
-        ],
-        [manana.toISOString().split('T')[0]]: [
-            { hora: '09:00', empresa: 'StartUpXYZ', pax: 40, menu: 'DESAYUNO PREMIUM', tipo: 'comanda' },
-            { hora: '13:00', empresa: 'ConsultingCo', pax: 30, menu: 'ELMUYTOP', tipo: 'comanda' }
-        ],
-        [pasado.toISOString().split('T')[0]]: [
-            { hora: '12:00', empresa: 'University', pax: 150, menu: 'FOODBOX LUNCH', tipo: 'comanda' }
-        ]
-    };
-    
-    calendarioEventos = eventos;
-}
-
-/**
- * Carga los eventos del día seleccionado
- */
-function cargarEventosDia() {
+// ── Panel de eventos del día ──────────────────────────────────────────────────
+function _renderEventosDia(eventosPorFecha) {
     const eventList = document.getElementById('eventList');
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const eventos = calendarioEventos[dateStr] || [];
-    
-    if (eventos.length === 0) {
-        eventList.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem;">No hay pedidos para este día</p>';
+    const titleEl   = document.getElementById('selectedDateTitle');
+    if (!eventList) return;
+
+    const dateStr = formatoFechaLocal(selectedDate);
+    const evs     = eventosPorFecha[dateStr] || [];
+
+    const isToday = selectedDate.toDateString() === new Date().toDateString();
+    const label   = isToday
+        ? 'Hoy'
+        : `${selectedDate.getDate()} de ${MONTH_NAMES[selectedDate.getMonth()]}`;
+
+    if (titleEl) titleEl.textContent = label;
+
+    const estadoBadge = {
+        creada:     { cls: 'badge-creada',     label: 'Creada'     },
+        proceso:    { cls: 'badge-proceso',    label: 'En proceso' },
+        completada: { cls: 'badge-completada', label: 'Completada' },
+    };
+
+    // Botón nueva comanda siempre visible al pie del panel
+    const btnHtml = `
+        <button class="event-new-btn" onclick="nuevaComandaEnFecha('${dateStr}')">
+            + Nueva comanda para este día
+        </button>`;
+
+    if (!evs.length) {
+        eventList.innerHTML = `
+            <div class="event-empty">
+                <div class="event-empty-icon">📭</div>
+                <div>Sin pedidos este día</div>
+            </div>
+            ${btnHtml}`;
         return;
     }
-    
-    let html = '';
-    eventos.forEach(evento => {
-        html += `
-        <div class="event-item">
-            <div class="event-time">${evento.hora}</div>
-            <div class="event-info">
-                <strong>${evento.empresa}</strong><br>
-                ${evento.pax} PAX - ${evento.menu}<br>
-                <small style="font-size: 0.8rem;">Tipo: ${evento.tipo}</small>
+
+    const itemsHtml = evs.map(ev => {
+        const badge = estadoBadge[ev.estado] || estadoBadge.creada;
+        return `
+        <div class="event-item" onclick="verDetalleComandaPorCodigo('${ev.codigo}')">
+            <div class="event-header">
+                ${ev.hora ? `<span class="event-time">🕐 ${ev.hora}</span>` : ''}
+                <span class="event-badge ${badge.cls}">${badge.label}</span>
             </div>
-        </div>
-        `;
-    });
-    
-    eventList.innerHTML = html;
+            <div class="event-empresa">${ev.empresa}</div>
+            <div class="event-meta">
+                <span>🍽 ${ev.menu}</span>
+                <span class="event-sep">·</span>
+                <span>👥 ${ev.pax} pax</span>
+            </div>
+            <div class="event-codigo">${ev.codigo}</div>
+        </div>`;
+    }).join('');
+
+    eventList.innerHTML = itemsHtml + btnHtml;
 }
 
-/**
- * Agrega una comanda al calendario
- * @param {Object} comandaData - Datos de la comanda
- */
-function agregarAlCalendario(comandaData) {
-    const fecha = comandaData.fecha_evento;
-    
-    if (!calendarioEventos[fecha]) {
-        calendarioEventos[fecha] = [];
+// ── Nueva comanda con fecha preseleccionada ───────────────────────────────────
+function nuevaComandaEnFecha(dateStr) {
+    // Navegar al formulario
+    if (typeof mostrarComandaCocina === 'function') {
+        mostrarComandaCocina();
     }
-    
-    calendarioEventos[fecha].push({
-        hora: comandaData.hora_salida,
-        empresa: comandaData.empresa,
-        pax: comandaData.pax,
-        menu: comandaData.menu_principal.nombre,
-        tipo: 'comanda'
-    });
-    
-    calendarioEventos[fecha].sort((a, b) => a.hora.localeCompare(b.hora));
+    // Sobrescribir la fecha con la del día seleccionado
+    const fechaInput = document.getElementById('fecha_evento');
+    if (fechaInput) fechaInput.value = dateStr;
 }
+
+// ── Llamado desde main.js tras guardar ───────────────────────────────────────
+function agregarAlCalendario(comandaData) {
+    if (document.getElementById('calendarDays')) cargarCalendario();
+}
+
+// Stubs de compatibilidad
+function cargarEventosEjemplo() {}
+function cargarEventosDia() { cargarCalendario(); }

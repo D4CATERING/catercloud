@@ -5,7 +5,7 @@
  */
 function cargarHistorial() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    const container = document.getElementById('comandasList');
+    const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
 
     if (historial.length === 0) {
         container.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem; padding: 40px;">No hay comandas en el historial</p>';
@@ -53,7 +53,8 @@ function cargarHistorial() {
  */
 function filtrarComandas() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    const filtro = document.getElementById('filtroBusqueda').value.toLowerCase();
+    const busqEl = document.getElementById('filtroBusquedaH') || document.getElementById('filtroBusqueda');
+    const filtro = busqEl ? busqEl.value.toLowerCase() : '';
     const filtroFecha = document.getElementById('filtroFecha').value;
     const filtroEstado = document.getElementById('filtroEstado').value;
 
@@ -78,7 +79,7 @@ function filtrarComandas() {
     // Ordenar por fecha de creación descendente
     comandasFiltradas.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
 
-    const container = document.getElementById('comandasList');
+    const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
 
     if (comandasFiltradas.length === 0) {
         container.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem; padding: 40px;">No se encontraron comandas con los filtros seleccionados</p>';
@@ -383,35 +384,17 @@ function _renderDetalleComanda(comanda) {
             const tieneCP = li?.codigo_postal;
             const tieneNotas = li?.notas_logistica;
 
-            // Fila 1 — Contacto, Teléfono, Hora Entrega, Hora Evento  (tabla para control de anchos)
-            let html = `<table style="width:100%; border-collapse:collapse; padding: 6px 14px 0; display:block;">
-                <tr>`;
-            fila1.forEach(c => {
-                html += `<td style="padding: 4px 8px 6px; vertical-align:top; width:25%;">
-                    <div class="detalle-field-label">${c.label}</div>
-                    <div class="detalle-field-value" style="word-break:break-word;">${c.valor}</div>
-                </td>`;
-            });
-            html += `</tr></table>`;
-
-            // Fila 2 — Dirección (ancha) + Cód. Postal
-            if (tieneDireccion || tieneCP) {
-                html += `<table style="width:100%; border-collapse:collapse; padding: 0 14px 6px; display:block; border-top:1px solid #f1f5f9;">
-                    <tr>`;
-                if (tieneDireccion) {
-                    html += `<td style="padding: 4px 8px 4px; vertical-align:top;">
-                        <div class="detalle-field-label">Dirección</div>
-                        <div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div>
-                    </td>`;
-                }
-                if (tieneCP) {
-                    html += `<td style="padding: 4px 8px 4px; vertical-align:top; width:110px; white-space:nowrap;">
-                        <div class="detalle-field-label">Cód. Postal</div>
-                        <div class="detalle-field-value">${tieneCP}</div>
-                    </td>`;
-                }
-                html += `</tr></table>`;
-            }
+            // Una sola fila — todos los campos en línea, compacto
+            let html = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
+                <tr>
+                    ${li?.nombre_contacto   ? `<td style="padding:1px 8px 2px; vertical-align:top; width:22%;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value" style="word-break:break-word;">${li.nombre_contacto}</div></td>` : ''}
+                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Teléfono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
+                    ${li?.hora_entrega      ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${li.hora_entrega}</div></td>` : ''}
+                    ${li?.hora_evento       ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${li.hora_evento}</div></td>` : ''}
+                    ${tieneDireccion        ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Dirección</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
+                    ${tieneCP               ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cód. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
+                </tr>
+            </table>`;
 
             contEntrega.innerHTML = html;
         } else {
