@@ -36,108 +36,114 @@
 </head>
 <body>
 
-<header class="dc-header">
-  <div class="dc-header-left">
-    <img src="assets/images/logo.png" alt="Decuatro" class="dc-logo">
-    <span class="dc-brand">Decuatro Catering</span>
-  </div>
-  <div class="dc-header-right">
-    <span id="dcUserName" class="dc-user"></span>
-    <button id="btnLogout" type="button" class="dc-logout">Salir</button>
-  </div>
-</header>
-
-<div style="margin-top:10px; display:flex; gap:10px;">
-    <button id="btnLogin" type="button">Entrar</button>
-    <button id="btnLogout" type="button" style="display:none;">Salir</button>
+<!-- ══ SIDEBAR ══ -->
+<aside class="dc-sidebar">
+  <div class="dc-sidebar-brand">
+    <img src="assets/images/logo.png" alt="Decuatro" class="dc-sidebar-logo">
+    <div>
+      <div class="dc-sidebar-name">DeCuatro</div>
+      <div class="dc-sidebar-sub">Sistema de Comandas</div>
+    </div>
   </div>
 
-  <div id="loginMsg" style="margin-top:8px;color:#64748b;"></div>
-</div>
+  <nav class="dc-nav">
+    <div class="dc-nav-item" onclick="mostrarDashboard()" id="nav-dashboard">
+      <span class="nav-icon">⊞</span> Dashboard
+    </div>
+    <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda">
+      <span class="nav-icon">＋</span> Nueva Comanda
+    </div>
+    <div class="dc-nav-sep"></div>
+    <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
+      <span class="nav-icon">☰</span> Historial
+    </div>
+    <div class="dc-nav-item" onclick="mostrarLogistica()" id="nav-logistica">
+      <span class="nav-icon">◎</span> Logística
+    </div>
+  </nav>
 
-    <!-- MENÚ INICIAL -->
-    <div id="dashboard" class="dashboard-container">
-        <div class="dashboard-header">
-            <h1>🍽️ CaterCloud</h1>
-            <p>Sistema integral de gestión para catering</p>
-        </div>
-        
-        <div class="dashboard-content">
-            <div class="dashboard-grid">
-                <div class="dashboard-card card-comanda" onclick="mostrarComandaCocina()">
-                    <span class="card-icon">👨‍🍳</span>
-                    <h2 class="card-title">Crear Comanda</h2>
-                    <p class="card-description">Crea nuevas comandas de cocina, selecciona menús, ajusta cantidades por PAX y gestiona alérgenos.</p>
-                </div>
-                
-                <div class="dashboard-card card-logistica" onclick="mostrarLogistica()">
-                    <span class="card-icon">🚚</span>
-                    <h2 class="card-title">Logística</h2>
-                    <p class="card-description">Gestiona envíos, rutas de reparto, control de inventario móvil y seguimiento en tiempo real.</p>
-                </div>
-                
-                <div class="dashboard-card card-inventario">
-                    <span class="card-icon">📦</span>
-                    <h2 class="card-title">Inventario</h2>
-                    <p class="card-description">Control de stock, alertas de reposición, gestión de proveedores y costos.</p>
-                </div>
-                
-                <div class="dashboard-card card-historial" onclick="mostrarHistorial()">
-                    <span class="card-icon">📋</span>
-                    <h2 class="card-title">Historial de Comandas</h2>
-                    <p class="card-description">Consulta, modifica e imprime comandas anteriores.</p>
-                </div>
+  <div class="dc-sidebar-footer">
+    <div class="dc-user-avatar" id="dcUserInitial">—</div>
+    <div class="dc-user-info">
+      <div class="dc-user-name" id="dcUserName"></div>
+      <button class="dc-logout-btn" id="btnLogout">Cerrar sesión</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="dc-main" id="dcMain">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div id="dashboard">
+      <div class="dc-page-header">
+        <h1>Comandas</h1>
+        <p>Gestión de pedidos de catering</p>
+      </div>
+      <div class="dc-page-content">
+        <div class="dashboard-layout">
+          <!-- Columna principal: lista -->
+          <div>
+            <div class="dash-section-header">
+              <div>
+                <span class="dash-section-title">Todas las comandas</span>
+                <span class="dash-section-count" id="dashTotalCount"></span>
+              </div>
+              <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()">
+                <span class="btn-plus">+</span> Nueva Comanda
+              </button>
             </div>
-            
-            <!-- CALENDARIO DE PEDIDOS -->
-            <div class="calendar-container">
-                <div class="calendar-header">
-                    <h3>📅 Pedidos del Mes</h3>
-                    <div class="calendar-nav">
-                        <button onclick="cambiarMes(-1)">←</button>
-                        <button onclick="cambiarMes(1)">→</button>
-                    </div>
-                </div>
-                
-                <div class="calendar-weekdays">
-                    <div>Lun</div>
-                    <div>Mar</div>
-                    <div>Mié</div>
-                    <div>Jue</div>
-                    <div>Vie</div>
-                    <div>Sáb</div>
-                    <div>Dom</div>
-                </div>
-                
-                <div id="calendarDays" class="calendar-days"></div>
-                
-                <div class="event-details">
-                    <h4 id="selectedDateTitle">Hoy</h4>
-                    <div id="eventList" class="event-list">
-                        <!-- Eventos se cargarán aquí -->
-                    </div>
-                </div>
+
+            <div class="dash-search-wrap">
+              <span class="dash-search-icon">⌕</span>
+              <input type="text" id="filtroBusqueda" placeholder="Buscar por empresa o código..." onkeyup="filtrarComandas()">
             </div>
+
+            <div class="dash-filters">
+              <span class="dash-filter-pill active" onclick="filtrarPorEstado('')">Todos</span>
+              <span class="dash-filter-pill" onclick="filtrarPorEstado('creada')">Creada</span>
+              <span class="dash-filter-pill" onclick="filtrarPorEstado('proceso')">En proceso</span>
+              <span class="dash-filter-pill" onclick="filtrarPorEstado('completada')">Completada</span>
+            </div>
+
+            <div id="comandasList" class="comandas-list"></div>
+          </div>
+
+          <!-- Columna calendario -->
+          <div class="calendar-card">
+            <div class="calendar-header">
+              <h3>📅 Agenda</h3>
+              <div class="calendar-nav">
+                <button onclick="cambiarMes(-1)">‹</button>
+                <button onclick="cambiarMes(1)">›</button>
+              </div>
+            </div>
+            <div class="calendar-weekdays">
+              <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+            </div>
+            <div id="calendarDays" class="calendar-days"></div>
+            <div class="event-details">
+              <h4 id="selectedDateTitle">Hoy</h4>
+              <div id="eventList" class="event-list"></div>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
 
-    <!-- FORMULARIO DE COMANDA COCINA -->
+    <!-- ══ FORMULARIO DE COMANDA ══ -->
     <div id="comandaForm" style="display: none;">
-        <button class="back-button" onclick="volverAlDashboard()">
-            ← Volver al Inicio
-        </button>
-        
-        <div class="container">
-            <div class="header">
-                <h1>
-                    <span>👨‍🍳</span>
-                    Crear Comanda
-                </h1>
-                <p>Complete los datos para la comanda de cocina</p>
-            </div>
-            
-            <div class="form-container">
-                <form id="comandaCocinaForm" novalidate>
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Nueva Comanda</h1>
+        <p>Completa los datos del pedido de catering</p>
+      </div>
+      <div class="dc-page-content">
+        <div class="comanda-form-layout">
+
+          <!-- Columna principal -->
+          <div class="comanda-form-main">
+            <form id="comandaCocinaForm" novalidate>
                     <!-- Sección 1: Información básica -->
                     <div class="form-section dc-section">
                         <div class="dc-section-header">
@@ -212,10 +218,8 @@
                         <!-- Lista de menús añadidos -->
                         <div id="menusAnadidosList" style="margin-top:12px;"></div>
 
-                        <!-- PAX total -->
-                        <div id="paxTotalWrap" style="display:none; margin-top:8px; padding:8px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:0.9rem;">
-                            📊 PAX total: <strong id="paxTotalValor">0</strong>
-                        </div>
+                        <!-- PAX total (oculto — se muestra en el resumen lateral) -->
+                        <span id="paxTotalWrap" style="display:none;"><span id="paxTotalValor">0</span></span>
                     </div>
                     
                     <!-- Sección 3: Multiplicadores de Cantidades -->
@@ -368,19 +372,36 @@
                     <!-- Mensajes -->
                     <div id="message" class="message"></div>
                     
-                    <!-- Botones DENTRO DEL FORMULARIO -->
+                    <!-- Botones -->
                     <div class="button-group">
                         <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
-                            ← Volver al Inicio
+                            ← Volver
                         </button>
                         <button type="submit" class="btn-primary">
                             💾 Guardar Comanda
                         </button>
                     </div>
                 </form>
+          </div><!-- /comanda-form-main -->
+
+          <!-- Resumen lateral -->
+          <div class="comanda-form-aside">
+            <div class="comanda-resumen">
+              <div class="comanda-resumen-header">
+                <h4>Resumen de Comanda</h4>
+              </div>
+              <div class="comanda-resumen-body" id="resumenBody">
+                <div class="resumen-empty">
+                  <div>📋</div>
+                  <div>Añade menús a la comanda</div>
+                </div>
+              </div>
             </div>
-        </div>
-    </div>
+          </div><!-- /aside -->
+
+        </div><!-- /comanda-form-layout -->
+      </div><!-- /dc-page-content -->
+    </div><!-- /comandaForm -->
 
     <!-- MODAL para seleccionar menús adicionales -->
     <div id="modalMenus" class="modal">
@@ -485,19 +506,16 @@
         </div>
     </div>
 
-    <!-- PÁGINA DE HISTORIAL -->
+    <!-- ══ HISTORIAL ══ -->
     <div id="historialPage" style="display: none;">
-        <button class="back-button" onclick="volverAlDashboard()">
-            ← Volver al Inicio
-        </button>
-        
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Historial de Comandas</h1>
+      </div>
+      <div class="dc-page-content">
         <div class="historial-container">
-            <div class="historial-header">
-                <h1>📋 Historial de Comandas</h1>
-            </div>
-            
             <div class="historial-filters">
-                <input type="text" id="filtroBusqueda" placeholder="Buscar por empresa o código..." onkeyup="filtrarComandas()">
+                <input type="text" id="filtroBusquedaH" placeholder="Buscar por empresa o código..." onkeyup="filtrarComandas()">
                 <input type="date" id="filtroFecha" onchange="filtrarComandas()">
                 <select id="filtroEstado" onchange="filtrarComandas()">
                     <option value="">Todos los estados</option>
@@ -506,18 +524,17 @@
                     <option value="completada">Completada</option>
                 </select>
             </div>
-            
-            <div id="comandasList" class="comandas-list">
-                <!-- Comandas se cargarán aquí -->
-            </div>
+            <div id="comandasListHistorial" class="comandas-list"></div>
         </div>
+      </div>
     </div>
 
-    <!-- DETALLE DE COMANDA -->
+    <!-- ══ DETALLE DE COMANDA ══ -->
     <div id="detalleComanda" style="display: none;">
+      <div class="dc-page-header">
         <button class="back-button" onclick="volverAlHistorial()">← Volver al Historial</button>
-
-        <div class="detalle-container">
+      </div>
+      <div class="dc-page-content">
 
             <!-- ENCABEZADO -->
             <div class="detalle-header">
@@ -593,8 +610,8 @@
                 <div class="detalle-body" id="detalleLogisticaContent"></div>
             </div>
 
-        </div>
-    </div>
+      </div><!-- /dc-page-content -->
+    </div><!-- /detalleComanda -->
 
 
     <!-- FORMULARIO DE LOGÍSTICA -->
@@ -745,22 +762,85 @@
     <script src="js/logistics-material.js"></script>
     <script src="js/generar-comandas.js"></script>
 
-    <!-- Header: usuario + logout -->
+    <!-- Sidebar: usuario + logout + navegación activa -->
     <script>
-      function actualizarHeaderUsuario() {
-        const el = document.getElementById("dcUserName");
-        if (!el) return;
+      function actualizarSidebar() {
         const u = window.currentUser;
-        const name = u?.user_metadata?.full_name || u?.email || "";
-        el.textContent = name || "";
+        const name = u?.user_metadata?.full_name || u?.email || '';
+        const el = document.getElementById('dcUserName');
+        const av = document.getElementById('dcUserInitial');
+        if (el) el.textContent = name;
+        if (av) av.textContent = (name[0] || 'D').toUpperCase();
       }
-      document.addEventListener("user:changed", actualizarHeaderUsuario);
-      document.addEventListener("DOMContentLoaded", actualizarHeaderUsuario);
+      document.addEventListener('user:changed', actualizarSidebar);
+      document.addEventListener('DOMContentLoaded', actualizarSidebar);
 
-      document.getElementById("btnLogout")?.addEventListener("click", async () => {
-        try { await Auth.signOut(); } finally { window.location.href = "login.html"; }
+      document.getElementById('btnLogout')?.addEventListener('click', async () => {
+        try { await Auth.signOut(); } finally { window.location.href = 'login.html'; }
+      });
+
+      // Resaltar nav item activo
+      function setNavActive(id) {
+        document.querySelectorAll('.dc-nav-item').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      }
+
+      // Filtros pill del dashboard
+      function filtrarPorEstado(estado) {
+        document.querySelectorAll('.dash-filter-pill').forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('filtroEstado') && (document.getElementById('filtroEstado').value = estado);
+        if (typeof filtrarComandas === 'function') filtrarComandas();
+      }
+
+      // mostrarDashboard: carga historial en la vista principal
+      function mostrarDashboard() {
+        document.getElementById('dashboard').style.display = '';
+        document.getElementById('comandaForm').style.display = 'none';
+        document.getElementById('historialPage').style.display = 'none';
+        document.getElementById('detalleComanda').style.display = 'none';
+        setNavActive('nav-dashboard');
+        if (typeof cargarCalendario === 'function') cargarCalendario();
+        if (typeof cargarHistorial === 'function') cargarHistorialEnDashboard();
+      }
+
+      // Cargar historial en la lista del dashboard
+      function cargarHistorialEnDashboard() {
+        const lista = document.getElementById('comandasList');
+        if (!lista) return;
+        if (typeof window.cargarComandas === 'function') {
+          window.cargarComandas('comandasList');
+        } else if (typeof cargarHistorial === 'function') {
+          cargarHistorial();
+        }
+      }
+
+      // Override de mostrarHistorial para usar panel lateral del dashboard
+      const _origMostrarHistorial = window.mostrarHistorial;
+      window.mostrarHistorial = function() {
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('historialPage').style.display = '';
+        document.getElementById('comandaForm').style.display = 'none';
+        document.getElementById('detalleComanda').style.display = 'none';
+        setNavActive('nav-historial');
+        // Sincronizar filtroBusqueda con filtroBusquedaH
+        const fh = document.getElementById('filtroBusquedaH');
+        const fb = document.getElementById('filtroBusqueda');
+        if (fh && fb) { fb.value = fh.value; }
+        if (typeof cargarHistorial === 'function') cargarHistorial();
+      };
+
+      // Al cargar: setear nav activo
+      document.addEventListener('DOMContentLoaded', () => {
+        setNavActive('nav-dashboard');
+        // Redirigir cargarHistorial al contenedor del dashboard también
+        setTimeout(() => {
+          if (typeof cargarHistorial === 'function') cargarHistorialEnDashboard();
+        }, 300);
       });
     </script>
 
+</main><!-- /dc-main -->
 </body>
 </html>

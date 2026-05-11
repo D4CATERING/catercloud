@@ -666,6 +666,9 @@
     const paxWrap = document.getElementById('paxTotalWrap');
     if (paxWrap) paxWrap.style.display = 'block';
 
+    // Actualizar resumen lateral
+    actualizarResumenLateral();
+
     // Feedback discreto en el botón
     const btn = document.getElementById('btnAnadirMenu');
     if (btn) {
@@ -719,6 +722,80 @@
     if (paxWrap) paxWrap.style.display = 'none';
     const paxTotalEl = document.getElementById('paxTotalValor');
     if (paxTotalEl) paxTotalEl.textContent = '0';
+    actualizarResumenLateral();
+  };
+
+  // ─────────────────────────────────────────────────────────────
+  // INTERNA: Renderiza el resumen lateral de menús acumulados
+  // ─────────────────────────────────────────────────────────────
+  function actualizarResumenLateral() {
+    const body = document.getElementById('resumenBody');
+    if (!body) return;
+
+    const menus = window.MenusAdicionalesState.menusAdicionales;
+
+    if (!menus.length) {
+      body.innerHTML = `<div class="resumen-empty"><div style="font-size:1.5rem;margin-bottom:6px">📋</div><div>Añade menús a la comanda</div></div>`;
+      return;
+    }
+
+    const paxTotal = menus.reduce((s, m) => s + (m.pax || 0), 0);
+
+    let html = '';
+    menus.forEach((m, i) => {
+      html += `
+        <div class="resumen-menu-chip">
+          <span class="resumen-chip-nombre">${m.nombre || '—'}</span>
+          <span class="resumen-chip-pax">${m.pax} pax</span>
+          <button class="resumen-chip-x" onclick="eliminarMenuResumen(${i})" title="Eliminar">×</button>
+        </div>`;
+    });
+
+    html += `
+      <div class="resumen-totales">
+        <span class="resumen-totales-label">Total</span>
+        <span class="resumen-totales-val">${paxTotal} pax</span>
+        <span class="resumen-totales-sep">·</span>
+        <span class="resumen-totales-label">${menus.length} ${menus.length === 1 ? 'menú' : 'menús'}</span>
+      </div>`;
+
+    body.innerHTML = html;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // PÚBLICA: Eliminar un menú del resumen por índice
+  // ─────────────────────────────────────────────────────────────
+  window.eliminarMenuResumen = function(index) {
+    const st = window.MenusAdicionalesState;
+    if (index < 0 || index >= st.menusAdicionales.length) return;
+
+    // Restar el material de ese menú del acumulado
+    const materialEliminado = st.menusAdicionales[index].material;
+    if (materialEliminado && window._materialAcumulado) {
+      ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        (materialEliminado[tipo] || []).forEach(item => {
+          const exist = window._materialAcumulado[tipo]?.find(i => i.nombre === item.nombre);
+          if (exist) {
+            exist.cantidad = Math.max(0, (exist.cantidad || 0) - (item.cantidad || 0));
+            if (exist.cantidad === 0) {
+              window._materialAcumulado[tipo] = window._materialAcumulado[tipo].filter(i => i.nombre !== item.nombre);
+            }
+          }
+        });
+      });
+    }
+
+    st.menusAdicionales.splice(index, 1);
+
+    // Actualizar PAX total
+    const paxTotal = st.menusAdicionales.reduce((s, m) => s + (m.pax || 0), 0);
+    const paxTotalEl = document.getElementById('paxTotalValor');
+    if (paxTotalEl) paxTotalEl.textContent = paxTotal;
+    const paxWrap = document.getElementById('paxTotalWrap');
+    if (paxWrap) paxWrap.style.display = st.menusAdicionales.length ? 'block' : 'none';
+
+    actualizarResumenLateral();
+    console.log(`🗑️ Menú eliminado del resumen. Quedan: ${st.menusAdicionales.length}`);
   };
 
 })();
