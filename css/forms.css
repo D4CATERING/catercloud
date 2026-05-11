@@ -309,22 +309,25 @@ input:focus, select:focus, textarea:focus {
 
 /* ===== BOTÓN AÑADIR MENÚ ===== */
 .btn-add-menu {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: var(--dc-rojo);
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 12px 24px;
+    padding: 10px 20px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 1rem;
+    font-family: var(--font-title);
+    font-weight: 500;
+    font-size: .85rem;
+    letter-spacing: .3px;
     width: 100%;
     margin-top: 10px;
-    transition: all 0.3s;
+    transition: opacity .15s;
 }
 
 .btn-add-menu:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(139, 92, 246, 0.3);
+    opacity: .88;
+    transform: none;
+    box-shadow: none;
 }
 
 .menus-adicionales-container {
@@ -749,6 +752,19 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Badge menaje: ahora va DENTRO del banner — .detalle-menaje-inline arriba */
+
+/* Badge DESECHABLE/LOZA centrado bajo el header */
+.detalle-menaje-badge {
+    text-align: center;
+    padding: 6px 14px 4px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dc-rojo);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--dc-border);
+}
 
 /* Material en detalle — sin checkbox, texto al inicio */
 .detalle-container .dc-material-item {
@@ -2336,22 +2352,66 @@ h3 {
   background: #fef2f2; border-color: var(--dc-rojo); color: var(--dc-rojo);
   transform: none; box-shadow: none;
 }
-.resumen-totales {
-  padding: 8px 10px;
-  background: var(--dc-negro);
-  border-radius: 7px;
+/* ── Ítems del resumen ── */
+.resumen-item {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--dc-crema);
+  border-radius: 7px;
+  border-left: 3px solid var(--dc-rojo);
 }
-.resumen-totales-label { font-size: .72rem; color: #94a3b8; }
-.resumen-totales-val {
+.resumen-item-nombre {
   font-family: var(--font-title);
-  font-size: 1rem;
-  color: white;
+  font-size: .82rem;
   font-weight: 500;
+  color: var(--dc-negro);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  flex: 1;
 }
-.resumen-totales-sep { color: #475569; font-size: .72rem; }
+.resumen-item-pax {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--dc-rojo);
+  white-space: nowrap;
+}
+
+/* ── Total ── */
+.resumen-divider {
+  height: 1px;
+  background: var(--dc-border);
+  margin: 2px 0;
+}
+.resumen-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px;
+}
+.resumen-total-row span:first-child {
+  font-family: var(--font-title);
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--dc-muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.resumen-total-num {
+  font-family: var(--font-title);
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--dc-negro);
+}
+
+/* ── Footer guardar ── */
+.resumen-footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--dc-border);
+  margin-top: 4px;
+}
 
 .btn-guardar-comanda {
   width: 100%;
@@ -2407,15 +2467,56 @@ h3 {
 
 /* ── PAX + botón añadir ── */
 #btnAnadirMenuWrap {
+  margin-top: 10px;
   background: var(--dc-crema);
   border: 1px solid var(--dc-border);
   border-radius: 10px;
   padding: 10px 12px;
-  display: none; /* se activa con flex via JS */
+  display: none;
+  flex-direction: column;
+  gap: 8px;
 }
 
+/* El JS setea display:block o display:flex */
+#btnAnadirMenuWrap[style*="block"],
 #btnAnadirMenuWrap[style*="flex"] {
   display: flex !important;
+}
+
+.btn-anadir-pax-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-anadir-pax-row label {
+  font-size: .82rem;
+  color: var(--dc-muted);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.btn-anadir-pax-row input {
+  width: 72px;
+}
+
+#btnAnadirMenu {
+  width: 100%;
+  background: var(--dc-rojo);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: var(--font-title);
+  font-size: .85rem;
+  font-weight: 500;
+  letter-spacing: .3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity .15s;
 }
 
 #btnAnadirMenu:hover {
@@ -2607,4 +2708,51 @@ h3 {
 
   /* Saltos de página */
   .dc-section:last-child { page-break-after: avoid; }
+}
+
+.detalle-menus-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.detalle-menu-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #ffffff;
+    break-inside: avoid;
+}
+
+.detalle-menu-card h4 {
+    margin-bottom: 8px;
+    color: #131B23;
+    font-size: 1rem;
+    border-bottom: 2px solid #E1342E;
+    padding-bottom: 4px;
+}
+
+.detalle-termos-total {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-top: 2px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+@media print {
+    .detalle-menus-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .detalle-menu-card {
+        page-break-inside: avoid;
+    }
+
+    .detalle-termos-total {
+        page-break-inside: avoid;
+    }
 }

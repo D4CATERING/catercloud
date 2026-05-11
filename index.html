@@ -124,106 +124,104 @@
         <h1>Nueva Comanda</h1>
         <p>Completa los datos del pedido de catering</p>
       </div>
+
       <div class="dc-page-content">
         <div class="comanda-form-layout">
 
           <!-- Columna principal -->
           <div class="comanda-form-main">
             <form id="comandaCocinaForm" novalidate>
-                    <!-- Sección 1: Información básica -->
-                    <div class="form-section dc-section">
-                        <div class="dc-section-header">
-                            <span class="dc-section-icon">📋</span>
-                            <h3>Información Básica</h3>
+
+                <!-- Sección 1: Información básica -->
+                <div class="form-section dc-section">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">📋</span>
+                        <h3>Información Básica</h3>
+                    </div>
+
+                    <div class="dc-info-grid">
+                        <div class="dc-field dc-info-empresa">
+                            <label for="empresa" class="dc-label required">Empresa</label>
+                            <input type="text" id="empresa" class="dc-input" placeholder="Nombre de la empresa" required>
                         </div>
-                        <div class="dc-info-grid">
-                            <!-- Fila 1: Empresa (ancha) -->
-                            <div class="dc-field dc-info-empresa">
-                                <label for="empresa" class="dc-label required">Empresa</label>
-                                <input type="text" id="empresa" class="dc-input" placeholder="Nombre de la empresa" required>
-                            </div>
-                            <!-- Fila 2: Responsable (ancho) + Fecha + Hora -->
-                            <div class="dc-field dc-info-responsable">
-                                <label for="responsable" class="dc-label required">Responsable</label>
-                                <input type="text" id="responsable" class="dc-input" placeholder="Nombre del responsable" required>
-                            </div>
-                            <div class="dc-field dc-info-fecha">
-                                <label for="fecha_evento" class="dc-label required">Fecha del Evento</label>
-                                <input type="date" id="fecha_evento" class="dc-input" required>
-                            </div>
-                            <div class="dc-field dc-info-hora">
-                                <label for="hora_salida" class="dc-label required">Hora de Salida</label>
-                                <input type="time" id="hora_salida" class="dc-input" required>
-                            </div>
+
+                        <div class="dc-field dc-info-responsable">
+                            <label for="responsable" class="dc-label required">Responsable</label>
+                            <input type="text" id="responsable" class="dc-input" placeholder="Nombre del responsable" required>
+                        </div>
+
+                        <div class="dc-field dc-info-fecha">
+                            <label for="fecha_evento" class="dc-label required">Fecha del Evento</label>
+                            <input type="date" id="fecha_evento" class="dc-input" required>
+                        </div>
+
+                        <div class="dc-field dc-info-hora">
+                            <label for="hora_salida" class="dc-label required">Hora de Salida</label>
+                            <input type="time" id="hora_salida" class="dc-input" required>
                         </div>
                     </div>
-                    
-                    <!-- Sección 2: Menú Principal -->
-                    <div class="form-section">
-                        <div class="dc-section-header"><h3>🍴 Menú Principal</h3></div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div class="form-group">
-                                <label for="categoria">Categoría del Menú</label>
-                                <select id="categoria" onchange="cargarMenus()">
-                                    <option value="">Selecciona una categoría</option>
-                                    <option value="1">Desayunos</option>
-                                    <option value="2">Foodbox / Comida</option>
-                                    <option value="3">Servicios (Cocteles / Celebraciones)</option>
-                                    <option value="4">Foodbox Lunch</option>
-                                    <option value="5">Bandejas Preparadas</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="tipo_menaje">Tipo de Menaje</label>
-                                <select id="tipo_menaje" onchange="actualizarTipoMenajeGlobal()">
-                                    <option value="">Selecciona tipo</option>
-                                    <option value="desechable">Menaje Desechable</option>
-                                    <option value="loza">Menaje Loza (Emplatado Bonito)</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- PAX por menú + botón añadir (aparece al seleccionar categoría) -->
-                        <div id="btnAnadirMenuWrap" style="display:none; margin-top:10px; align-items:center; gap:10px; flex-wrap:wrap;">
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <label for="pax" style="font-size:0.82rem; color:#64748b; white-space:nowrap; margin:0;">PAX este menú</label>
-                                <input type="number" id="pax" class="dc-input" placeholder="0" min="1"
-                                       style="width:72px; padding:6px 10px; font-size:0.9rem;"
-                                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
-                            </div>
-                            <button type="button" id="btnAnadirMenu" onclick="anadirMenuAComanda()"
-                                style="background:transparent; color:#64748b; border:1px dashed #cbd5e1; border-radius:6px; padding:7px 16px; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:color .15s, border-color .15s; white-space:nowrap;">
-                                + Añadir a la comanda
-                            </button>
-                        </div>
-
-                        <div id="menusContainer" class="menu-selection"></div>
-                        <input type="hidden" id="menu_id" name="menu_id">
-
-                        <!-- Lista de menús añadidos -->
-                        <div id="menusAnadidosList" style="margin-top:12px;"></div>
-
-                        <!-- PAX total (oculto — se muestra en el resumen lateral) -->
-                        <span id="paxTotalWrap" style="display:none;"><span id="paxTotalValor">0</span></span>
+                </div>
+                
+                <!-- Sección 2: Menú Principal -->
+                <div class="form-section">
+                    <div class="dc-section-header">
+                        <h3>🍴 Menú Principal</h3>
                     </div>
-                    
-                    <!-- Sección 3: Multiplicadores de Cantidades -->
-                    <div id="multiplicadorSection" class="form-section dc-section" style="display: none;">
-                        <div class="dc-section-header">
-                            <span class="dc-section-icon">🧮</span>
-                            <h3>Multiplicadores de Cantidades</h3>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group">
+                            <label for="categoria">Categoría del Menú</label>
+                            <select id="categoria" onchange="cargarMenus()">
+                                <option value="">Selecciona una categoría</option>
+                                <option value="1">Desayunos</option>
+                                <option value="2">Foodbox / Comida</option>
+                                <option value="3">Servicios (Cocteles / Celebraciones)</option>
+                                <option value="4">Foodbox Lunch</option>
+                                <option value="5">Bandejas Preparadas</option>
+                            </select>
                         </div>
-                        <div style="padding: 12px 14px;">
+
+                        <div class="form-group">
+                            <label for="tipo_menaje">Tipo de Menaje</label>
+                            <select id="tipo_menaje" onchange="actualizarTipoMenajeGlobal()">
+                                <option value="">Selecciona tipo</option>
+                                <option value="desechable">Menaje Desechable</option>
+                                <option value="loza">Menaje Loza (Emplatado Bonito)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="menusContainer" class="menu-selection"></div>
+                    <input type="hidden" id="menu_id" name="menu_id">
+
+                    <!-- Lista de menús añadidos -->
+                    <div id="menusAnadidosList" style="margin-top:12px;"></div>
+
+                    <!-- PAX total oculto — se muestra en el resumen lateral -->
+                    <span id="paxTotalWrap" style="display:none;">
+                        <span id="paxTotalValor">0</span>
+                    </span>
+                </div>
+                
+                <!-- Sección 3: Multiplicadores de Cantidades -->
+                <div id="multiplicadorSection" class="form-section dc-section" style="display: none;">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">🧮</span>
+                        <h3>Multiplicadores de Cantidades</h3>
+                    </div>
+
+                    <div style="padding: 12px 14px;">
                         <div class="multiplicadores-container">
                             <div class="multiplicador-section">
                                 <h4>Referencias Saladas</h4>
+
                                 <div class="multiplicador-input-group">
                                     <span class="multiplicador-label">Multiplicador:</span>
                                     <input type="number" id="multiplicadorSaladas" class="multiplicador-input"
                                            value="1.5" step="0.1" min="0.1" max="10"
                                            oninput="actualizarMultiplicador('saladas', this.value)">
                                 </div>
+
                                 <div class="info-cantidad" id="infoCantidadSaladas">
                                     <strong>Cálculo:</strong> <span id="paxValue">0</span> PAX ×
                                     <span id="multSaladasValue">1</span> =
@@ -233,12 +231,14 @@
                             
                             <div class="multiplicador-section" id="multiplicadorPostresSection" style="display: none;">
                                 <h4>Postres</h4>
+
                                 <div class="multiplicador-input-group">
                                     <span class="multiplicador-label">Multiplicador:</span>
                                     <input type="number" id="multiplicadorPostres" class="multiplicador-input"
                                            value="1" step="0.1" min="0.1" max="10"
                                            oninput="actualizarMultiplicador('postres', this.value)">
                                 </div>
+
                                 <div class="info-cantidad" id="infoCantidadPostres">
                                     <strong>Cálculo:</strong> <span id="paxValue2">0</span> PAX ×
                                     <span id="multPostresValue">1</span> =
@@ -246,132 +246,143 @@
                                 </div>
                             </div>
                         </div>
-                        </div>
                     </div>
-                    
-                    <!-- Sección 4: Selección de Referencias -->
-                    <div id="referenciasSection" class="form-section dc-section" style="display: none;">
-                        <div class="dc-section-header">
-                            <span class="dc-section-icon">📋</span>
-                            <h3>Selección de Referencias</h3>
-                        </div>
-                        <div style="padding: 12px 14px;">
-
-                            <!-- Referencias Grises -->
-                            <div id="referenciasSaladasGroup" style="margin-bottom: 20px;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                    <label style="font-weight:500;">⬜ Referencias Grises</label>
-                                    <span id="contadorGris" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
-                                </div>
-                                <!-- compatibilidad con código antiguo -->
-                                <span id="minSaladas" style="display:none;">0</span>
-                                <span id="maxSaladas" style="display:none;">0</span>
-                                <div id="referenciasGrisGrid" class="referencias-grid"></div>
-                                <!-- alias para código antiguo -->
-                                <div id="referenciasSaladasGrid" style="display:none;"></div>
-                            </div>
-
-                            <!-- Referencias Rojas -->
-                            <div id="referenciasRojasGroup" style="margin-bottom: 20px; display:none;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                    <label style="font-weight:500; color:#c0392b;">🔴 Referencias Rojas</label>
-                                    <span id="contadorRojo" style="font-size:0.8rem; color:#c0392b; background:#fef2f2; padding:2px 8px; border-radius:999px;">0 / 0</span>
-                                </div>
-                                <div id="referenciasRojoGrid" class="referencias-grid"></div>
-                            </div>
-
-                            <!-- Postres -->
-                            <div id="referenciasPostresGroup" style="display: none; margin-top: 15px;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                    <label style="font-weight:500;">🍰 Postres</label>
-                                    <span id="contadorPostres" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
-                                </div>
-                                <span id="minPostres" style="display:none;">0</span>
-                                <span id="maxPostres" style="display:none;">0</span>
-                                <div id="referenciasPostresGrid" class="referencias-grid"></div>
-                            </div>
-
-                        </div>
-                    </div>
-                    
-                    <!-- Sección 5: Notas Adicionales (simplificada) -->
-                    <div class="form-section">
-                        <h3>📝 Notas Adicionales</h3>
-                        <div class="form-group">
-                            <label for="alergias_notas">Información importante para la cocina</label>
-                            <textarea id="alergias_notas" rows="3" placeholder="Alergias, restricciones dietéticas, instrucciones especiales, etc..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Sección 6: Menús Adicionales (MOVIDA AL FINAL) -->
-                    <div class="form-section">
-                        <h3>➕ Menús Adicionales</h3>
-                        <div id="menusAdicionalesList" style="margin-top:8px;">
-                            <!-- Menús añadidos a la comanda se muestran aquí -->
-                        </div>
-                    </div>
-                    
-                    <!-- Sección Logística inline (Desayuno / Foodbox / Lunch / Bandejas) -->
-                    <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
-                        <div class="dc-section-header">
-                            <span class="dc-section-icon">🚚</span>
-                            <h3>Datos de Logística</h3>
-                        </div>
-                        <div class="dc-log-grid">
-                            <div class="dc-field dc-log-contacto">
-                                <label for="log_inline_nombre_contacto" class="dc-label required">Nombre de Contacto</label>
-                                <input type="text" id="log_inline_nombre_contacto" class="dc-input" placeholder="Persona que recibe el pedido">
-                                <span class="dc-field-error" id="log_inline_nombre_contacto_err"></span>
-                            </div>
-                            <div class="dc-field dc-log-telefono">
-                                <label for="log_inline_telefono_contacto" class="dc-label required">Teléfono</label>
-                                <input type="tel" id="log_inline_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
-                                <span class="dc-field-error" id="log_inline_telefono_contacto_err"></span>
-                            </div>
-                            <div class="dc-field dc-log-hora-entrega">
-                                <label for="log_inline_hora_entrega" class="dc-label required">Hora de Entrega</label>
-                                <input type="time" id="log_inline_hora_entrega" class="dc-input">
-                                <span class="dc-field-error" id="log_inline_hora_entrega_err"></span>
-                            </div>
-                            <div class="dc-field dc-log-direccion">
-                                <label for="log_inline_direccion" class="dc-label required">Dirección Completa</label>
-                                <input type="text" id="log_inline_direccion" class="dc-input" placeholder="Calle, número, piso...">
-                                <span class="dc-field-error" id="log_inline_direccion_err"></span>
-                            </div>
-                            <div class="dc-field dc-log-cp">
-                                <label for="log_inline_codigo_postal" class="dc-label required">Código Postal</label>
-                                <input type="text" id="log_inline_codigo_postal" class="dc-input" placeholder="28001" maxlength="10">
-                                <span class="dc-field-error" id="log_inline_codigo_postal_err"></span>
-                            </div>
-                            <div class="dc-field dc-log-hora-evento">
-                                <label for="log_inline_hora_evento" class="dc-label required">Hora del Evento</label>
-                                <input type="time" id="log_inline_hora_evento" class="dc-input">
-                                <span class="dc-field-error" id="log_inline_hora_evento_err"></span>
-                            </div>
-
-                        </div>
+                </div>
+                
+                <!-- Sección 4: Selección de Referencias -->
+                <div id="referenciasSection" class="form-section dc-section" style="display: none;">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">📋</span>
+                        <h3>Selección de Referencias</h3>
                     </div>
 
-                    <!-- Material de Logística INLINE -->
-                    <div id="materialLogisticaInline" style="display: none;"></div>
+                    <div style="padding: 12px 14px;">
 
-                    <!-- Mensajes -->
-                    <div id="message" class="message"></div>
-                    
-                    <!-- Botones -->
-                    <div class="button-group">
-                        <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
-                            ← Volver
-                        </button>
-                        <button type="submit" class="btn-primary">
-                            💾 Guardar Comanda
-                        </button>
+                        <!-- Referencias Grises -->
+                        <div id="referenciasSaladasGroup" style="margin-bottom: 20px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                <label style="font-weight:500;">⬜ Referencias Grises</label>
+                                <span id="contadorGris" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                            </div>
+
+                            <span id="minSaladas" style="display:none;">0</span>
+                            <span id="maxSaladas" style="display:none;">0</span>
+                            <div id="referenciasGrisGrid" class="referencias-grid"></div>
+                            <div id="referenciasSaladasGrid" style="display:none;"></div>
+                        </div>
+
+                        <!-- Referencias Rojas -->
+                        <div id="referenciasRojasGroup" style="margin-bottom: 20px; display:none;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                <label style="font-weight:500; color:#c0392b;">🔴 Referencias Rojas</label>
+                                <span id="contadorRojo" style="font-size:0.8rem; color:#c0392b; background:#fef2f2; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                            </div>
+
+                            <div id="referenciasRojoGrid" class="referencias-grid"></div>
+                        </div>
+
+                        <!-- Postres -->
+                        <div id="referenciasPostresGroup" style="display: none; margin-top: 15px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                                <label style="font-weight:500;">🍰 Postres</label>
+                                <span id="contadorPostres" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                            </div>
+
+                            <span id="minPostres" style="display:none;">0</span>
+                            <span id="maxPostres" style="display:none;">0</span>
+                            <div id="referenciasPostresGrid" class="referencias-grid"></div>
+                        </div>
+
                     </div>
-                </form>
+                </div>
+                
+                <!-- Sección 5: Notas Adicionales -->
+                <div class="form-section">
+                    <h3>📝 Notas Adicionales</h3>
+
+                    <div class="form-group">
+                        <label for="alergias_notas">Información importante para la cocina</label>
+                        <textarea id="alergias_notas" rows="3" placeholder="Alergias, restricciones dietéticas, instrucciones especiales, etc..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Sección 6: Menús Adicionales -->
+                <div class="form-section">
+                    <h3>➕ Menús Adicionales</h3>
+
+                    <div id="menusAdicionalesList" style="margin-top:8px;">
+                        <!-- Menús añadidos a la comanda se muestran aquí -->
+                    </div>
+                </div>
+                
+                <!-- Sección Logística inline -->
+                <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">🚚</span>
+                        <h3>Datos de Logística</h3>
+                    </div>
+
+                    <div class="dc-log-grid">
+                        <div class="dc-field dc-log-contacto">
+                            <label for="log_inline_nombre_contacto" class="dc-label required">Nombre de Contacto</label>
+                            <input type="text" id="log_inline_nombre_contacto" class="dc-input" placeholder="Persona que recibe el pedido">
+                            <span class="dc-field-error" id="log_inline_nombre_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-telefono">
+                            <label for="log_inline_telefono_contacto" class="dc-label required">Teléfono</label>
+                            <input type="tel" id="log_inline_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
+                            <span class="dc-field-error" id="log_inline_telefono_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-entrega">
+                            <label for="log_inline_hora_entrega" class="dc-label required">Hora de Entrega</label>
+                            <input type="time" id="log_inline_hora_entrega" class="dc-input">
+                            <span class="dc-field-error" id="log_inline_hora_entrega_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-direccion">
+                            <label for="log_inline_direccion" class="dc-label required">Dirección Completa</label>
+                            <input type="text" id="log_inline_direccion" class="dc-input" placeholder="Calle, número, piso...">
+                            <span class="dc-field-error" id="log_inline_direccion_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-cp">
+                            <label for="log_inline_codigo_postal" class="dc-label required">Código Postal</label>
+                            <input type="text" id="log_inline_codigo_postal" class="dc-input" placeholder="28001" maxlength="10">
+                            <span class="dc-field-error" id="log_inline_codigo_postal_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-evento">
+                            <label for="log_inline_hora_evento" class="dc-label required">Hora del Evento</label>
+                            <input type="time" id="log_inline_hora_evento" class="dc-input">
+                            <span class="dc-field-error" id="log_inline_hora_evento_err"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Material de Logística INLINE -->
+                <div id="materialLogisticaInline" style="display: none;"></div>
+
+                <!-- Mensajes -->
+                <div id="message" class="message"></div>
+                
+                <!-- Botones -->
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
+                        ← Volver
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        💾 Guardar Comanda
+                    </button>
+                </div>
+
+            </form>
           </div><!-- /comanda-form-main -->
 
           <!-- Resumen lateral -->
           <div class="comanda-form-aside">
+
             <div class="comanda-resumen">
               <div class="comanda-resumen-header">
                 <h4>Resumen de Comanda</h4>
@@ -383,6 +394,19 @@
                 </div>
               </div>
             </div>
+
+            <!-- PAX + botón añadir — debajo del resumen -->
+            <div id="btnAnadirMenuWrap" style="display:none;">
+              <div class="btn-anadir-pax-row">
+                <label for="pax">PAX este menú</label>
+                <input type="number" id="pax" class="dc-input" placeholder="0" min="1"
+                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
+              </div>
+              <button type="button" id="btnAnadirMenu" onclick="anadirMenuAComanda()">
+                + Añadir a la comanda
+              </button>
+            </div>
+
           </div><!-- /aside -->
 
         </div><!-- /comanda-form-layout -->
@@ -398,7 +422,6 @@
             </div>
             
             <div class="modal-body">
-                <!-- Categoría -->
                 <div class="form-group">
                     <label for="modalCategoria">Categoría del Menú</label>
                     <select id="modalCategoria" onchange="cargarMenusModal()">
@@ -410,10 +433,8 @@
                     </select>
                 </div>
                 
-                <!-- Menús disponibles -->
                 <div id="modalMenusContainer" class="menu-selection"></div>
                 
-                <!-- PAX adicional -->
                 <div id="modalPaxSection" class="form-section" style="display: none; margin-top: 20px;">
                     <h4>👥 PAX para este menú</h4>
                     <input type="number" id="modalPaxAdicional" class="multiplicador-input" 
@@ -421,12 +442,13 @@
                            onchange="actualizarCantidadesReferenciasAdicionales()">
                 </div>
                 
-                <!-- Multiplicadores -->
                 <div id="modalMultiplicadorSection" class="form-section" style="display: none;">
                     <h4>🧮 Multiplicadores</h4>
+
                     <div class="multiplicadores-container">
                         <div class="multiplicador-section">
                             <h4>Referencias Saladas</h4>
+
                             <div class="multiplicador-input-group">
                                 <span class="multiplicador-label">Multiplicador:</span>
                                 <input type="number" id="modalMultiplicadorSaladasAdicional" class="multiplicador-input"
@@ -437,6 +459,7 @@
                         
                         <div class="multiplicador-section" id="modalPostresGroup" style="display: none;">
                             <h4>Postres</h4>
+
                             <div class="multiplicador-input-group">
                                 <span class="multiplicador-label">Multiplicador:</span>
                                 <input type="number" id="modalMultiplicadorPostresAdicional" class="multiplicador-input"
@@ -447,9 +470,9 @@
                     </div>
                 </div>
                 
-                <!-- Referencias -->
                 <div id="modalReferenciasSection" class="form-section" style="display: none;">
                     <h4>📋 Selección de Referencias</h4>
+
                     <div>
                         <label>Selecciona <span id="modalMinSaladas">X</span>-<span id="modalMaxSaladas">Y</span> referencias saladas:</label>
                         <div id="modalReferenciasSaladasGrid" class="referencias-grid" style="margin-top: 10px;"></div>
@@ -481,7 +504,9 @@
                 <p>La comanda de cocina se ha creado exitosamente. ¿Deseas crear también la comanda de logística para este evento?</p>
                 
                 <div class="form-group" style="margin-top: 20px;">
-                    <label><input type="checkbox" id="recordarPreferencia"> Recordar mi preferencia para futuras comandas</label>
+                    <label>
+                        <input type="checkbox" id="recordarPreferencia"> Recordar mi preferencia para futuras comandas
+                    </label>
                 </div>
             </div>
             
@@ -498,6 +523,7 @@
         <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
         <h1>Historial de Comandas</h1>
       </div>
+
       <div class="dc-page-content">
         <div class="historial-container">
             <div class="historial-filters">
@@ -510,6 +536,7 @@
                     <option value="completada">Completada</option>
                 </select>
             </div>
+
             <div id="comandasListHistorial" class="comandas-list"></div>
         </div>
       </div>
@@ -520,6 +547,7 @@
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlHistorial()">← Volver al Historial</button>
       </div>
+
       <div class="dc-page-content">
 
             <!-- ENCABEZADO -->
@@ -528,77 +556,141 @@
                     <div id="detalleCodigo" class="detalle-codigo"></div>
                     <div id="detalleFecha" class="detalle-fecha-sub"></div>
                 </div>
+
                 <div class="comanda-actions">
                     <button class="btn-icon" title="Editar" onclick="editarComanda()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
                     </button>
+
                     <button class="btn-icon" title="Imprimir" onclick="imprimirComanda()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"/>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                            <rect x="6" y="14" width="12" height="8"/>
+                        </svg>
                     </button>
+
                     <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="eliminarComanda()">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6"/>
+                            <path d="M14 11v6"/>
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        </svg>
                     </button>
                 </div>
             </div>
 
             <!-- INFORMACIÓN DEL EVENTO -->
             <div class="dc-section">
-                <div class="dc-section-header"><span>📋</span><h3>Información del Evento</h3></div>
+                <div class="dc-section-header">
+                    <span>📋</span>
+                    <h3>Información del Evento</h3>
+                </div>
+
                 <div class="detalle-grid">
-                    <div class="detalle-field"><span class="detalle-field-label">Empresa</span><span id="detalleEmpresa" class="detalle-field-value"></span></div>
-                    <div class="detalle-field"><span class="detalle-field-label">Responsable</span><span id="detalleResponsable" class="detalle-field-value"></span></div>
-                    <div class="detalle-field"><span class="detalle-field-label">PAX</span><span id="detallePax" class="detalle-field-value"></span></div>
-                    <div class="detalle-field"><span class="detalle-field-label">Fecha Evento</span><span id="detalleFechaEvento" class="detalle-field-value"></span></div>
-                    <div class="detalle-field"><span class="detalle-field-label">Hora Salida</span><span id="detalleHoraSalida" class="detalle-field-value"></span></div>
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Empresa</span>
+                        <span id="detalleEmpresa" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Responsable</span>
+                        <span id="detalleResponsable" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">PAX</span>
+                        <span id="detallePax" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Fecha Evento</span>
+                        <span id="detalleFechaEvento" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Hora Salida</span>
+                        <span id="detalleHoraSalida" class="detalle-field-value"></span>
+                    </div>
                 </div>
             </div>
 
-            <!-- MENÚ PRINCIPAL — título en cabecera, detalle en cuerpo -->
+            <!-- MENÚ PRINCIPAL -->
             <div class="dc-section">
-                <div class="dc-section-header"><span>🍽️</span><h3 id="detalleMenuTitulo">Menú</h3></div>
+                <div class="dc-section-header">
+                    <span>🍽️</span>
+                    <h3 id="detalleMenuTitulo">Menú</h3>
+                </div>
+                <div id="detalleMenajeBadge" class="detalle-menaje-badge" style="display:none;"></div>
                 <div class="detalle-body" id="detalleMenuPrincipal"></div>
             </div>
 
             <!-- MENÚS ADICIONALES -->
             <div class="dc-section" id="detalleMenusAdicionalesSection" style="display:none;">
-                <div class="dc-section-header"><span>➕</span><h3>Menús Adicionales</h3></div>
+                <div class="dc-section-header">
+                    <span>➕</span>
+                    <h3>Menús Adicionales</h3>
+                </div>
+
                 <div class="detalle-body" id="detalleMenusAdicionales"></div>
             </div>
 
             <!-- REFERENCIAS -->
             <div class="dc-section" id="detalleReferenciasSection" style="display:none;">
-                <div class="dc-section-header"><span>📋</span><h3>Referencias Seleccionadas</h3></div>
+                <div class="dc-section-header">
+                    <span>📋</span>
+                    <h3>Referencias Seleccionadas</h3>
+                </div>
+
                 <div class="detalle-body">
                     <div id="detalleMultiplicadoresSection" style="display:none; margin-bottom:6px;">
                         <span class="detalle-field-label">Multiplicadores: </span>
                         <span id="detalleMultiplicadores" class="detalle-field-value"></span>
                     </div>
+
                     <div id="detalleReferencias"></div>
                 </div>
             </div>
 
             <!-- NOTAS ADICIONALES -->
             <div class="dc-section" id="detalleNotasSection" style="display:none;">
-                <div class="dc-section-header"><span>📝</span><h3>Notas Adicionales</h3></div>
-                <div class="detalle-body"><div id="detalleNotas" class="detalle-field-value"></div></div>
+                <div class="dc-section-header">
+                    <span>📝</span>
+                    <h3>Notas Adicionales</h3>
+                </div>
+
+                <div class="detalle-body">
+                    <div id="detalleNotas" class="detalle-field-value"></div>
+                </div>
             </div>
 
-            <!-- LOGÍSTICA Y MATERIAL (siempre después de notas) -->
             <!-- DATOS DE ENTREGA -->
             <div class="dc-section" id="detalleDatosLogisticaSection" style="display:none;">
-                <div class="dc-section-header"><span>🚚</span><h3>Datos de Entrega</h3></div>
+                <div class="dc-section-header">
+                    <span>🚚</span>
+                    <h3>Datos de Entrega</h3>
+                </div>
+
                 <div id="detalleDatosLogisticaContent"></div>
             </div>
 
             <!-- MATERIAL NECESARIO -->
             <div class="dc-section" id="detalleLogisticaSection" style="display:none;">
-                <div class="dc-section-header"><span>📦</span><h3>Material Necesario</h3></div>
+                <div class="dc-section-header">
+                    <span>📦</span>
+                    <h3>Material Necesario</h3>
+                </div>
+
                 <div class="detalle-body" id="detalleLogisticaContent"></div>
             </div>
 
-      </div><!-- /dc-page-content -->
-    </div><!-- /detalleComanda -->
-
+      </div>
+    </div>
 
     <!-- FORMULARIO DE LOGÍSTICA -->
     <div id="logisticaForm" style="display: none;">
@@ -617,30 +709,36 @@
 
             <div class="form-container">
 
-                <!-- Datos heredados de cocina (solo lectura) -->
+                <!-- Datos heredados de cocina -->
                 <div class="form-section">
                     <h3>📋 Datos de la Comanda de Cocina</h3>
+
                     <div class="detalle-info">
                         <div class="info-item">
                             <div class="info-label">Código Cocina</div>
                             <div id="log_codigo_cocina" class="info-value log-readonly">—</div>
                         </div>
+
                         <div class="info-item">
                             <div class="info-label">Empresa</div>
                             <div id="log_empresa" class="info-value log-readonly">—</div>
                         </div>
+
                         <div class="info-item">
                             <div class="info-label">Responsable</div>
                             <div id="log_responsable" class="info-value log-readonly">—</div>
                         </div>
+
                         <div class="info-item">
                             <div class="info-label">PAX</div>
                             <div id="log_pax" class="info-value log-readonly">—</div>
                         </div>
+
                         <div class="info-item">
                             <div class="info-label">Fecha del Evento</div>
                             <div id="log_fecha_evento" class="info-value log-readonly">—</div>
                         </div>
+
                         <div class="info-item">
                             <div class="info-label">Hora de Salida</div>
                             <div id="log_hora_salida" class="info-value log-readonly">—</div>
@@ -654,38 +752,43 @@
                         <span class="dc-section-icon">🚚</span>
                         <h3>Datos de Entrega</h3>
                     </div>
+
                     <div class="dc-log-grid">
                         <div class="dc-field dc-log-contacto">
                             <label for="log_nombre_contacto" class="dc-label required">Nombre de Contacto</label>
                             <input type="text" id="log_nombre_contacto" class="dc-input" placeholder="Persona que recibe el pedido">
                             <span class="dc-field-error" id="log_nombre_contacto_err"></span>
                         </div>
+
                         <div class="dc-field dc-log-telefono">
                             <label for="log_telefono_contacto" class="dc-label required">Teléfono</label>
                             <input type="tel" id="log_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
                             <span class="dc-field-error" id="log_telefono_contacto_err"></span>
                         </div>
+
                         <div class="dc-field dc-log-hora-entrega">
                             <label for="log_hora_entrega" class="dc-label required">Hora de Entrega</label>
                             <input type="time" id="log_hora_entrega" class="dc-input">
                             <span class="dc-field-error" id="log_hora_entrega_err"></span>
                         </div>
+
                         <div class="dc-field dc-log-direccion">
                             <label for="log_direccion" class="dc-label required">Dirección Completa</label>
                             <input type="text" id="log_direccion" class="dc-input" placeholder="Calle, número, piso...">
                             <span class="dc-field-error" id="log_direccion_err"></span>
                         </div>
+
                         <div class="dc-field dc-log-cp">
                             <label for="log_codigo_postal" class="dc-label required">Código Postal</label>
                             <input type="text" id="log_codigo_postal" class="dc-input" placeholder="28001" maxlength="10">
                             <span class="dc-field-error" id="log_codigo_postal_err"></span>
                         </div>
+
                         <div class="dc-field dc-log-hora-evento">
                             <label for="log_hora_evento" class="dc-label required">Hora del Evento</label>
                             <input type="time" id="log_hora_evento" class="dc-input">
                             <span class="dc-field-error" id="log_hora_evento_err"></span>
                         </div>
-
                     </div>
                 </div>
 
@@ -694,10 +797,10 @@
 
                 <!-- Acciones -->
                 <div class="form-actions" style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
-                    <button type="button" class="btn-secondary"
-                            onclick="volverDesdeCancelLogistica()">
+                    <button type="button" class="btn-secondary" onclick="volverDesdeCancelLogistica()">
                         Cancelar
                     </button>
+
                     <button type="button" id="btnGuardarLogistica"
                             class="btn-submit"
                             onclick="guardarComandaLogistica()">
@@ -705,18 +808,15 @@
                     </button>
                 </div>
 
-            </div><!-- /form-container -->
-        </div><!-- /container -->
-    </div><!-- /#logisticaForm -->
+            </div>
+        </div>
+    </div>
 
-    <!-- JavaScript -->
-
-
-    <!-- Supabase (antes de auth.js) -->
+    <!-- Supabase -->
     <script src="vendor/supabase.min.js"></script>
     <script src="js/auth.js"></script>
 
-    <!-- Protección: si no hay sesión, ir a login -->
+    <!-- Protección -->
     <script>
       (async () => {
         try {
@@ -758,6 +858,7 @@
         if (el) el.textContent = name;
         if (av) av.textContent = (name[0] || 'D').toUpperCase();
       }
+
       document.addEventListener('user:changed', actualizarSidebar);
       document.addEventListener('DOMContentLoaded', actualizarSidebar);
 
@@ -765,14 +866,12 @@
         try { await Auth.signOut(); } finally { window.location.href = 'login.html'; }
       });
 
-      // Resaltar nav item activo
       function setNavActive(id) {
         document.querySelectorAll('.dc-nav-item').forEach(el => el.classList.remove('active'));
         const el = document.getElementById(id);
         if (el) el.classList.add('active');
       }
 
-      // Filtros pill del dashboard
       function filtrarPorEstado(estado) {
         document.querySelectorAll('.dash-filter-pill').forEach(p => p.classList.remove('active'));
         event.target.classList.add('active');
@@ -780,7 +879,6 @@
         if (typeof filtrarComandas === 'function') filtrarComandas();
       }
 
-      // mostrarDashboard: solo calendario
       function mostrarDashboard() {
         document.getElementById('dashboard').style.display = '';
         document.getElementById('comandaForm').style.display = 'none';
@@ -790,13 +888,12 @@
         if (typeof cargarCalendario === 'function') cargarCalendario();
       }
 
-      // Al cargar: setear nav activo y mostrar calendario
       document.addEventListener('DOMContentLoaded', () => {
         setNavActive('nav-dashboard');
         if (typeof cargarCalendario === 'function') cargarCalendario();
       });
     </script>
 
-</main><!-- /dc-main -->
+</main>
 </body>
 </html>

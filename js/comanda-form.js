@@ -262,7 +262,9 @@ async function seleccionarMenu(menuId, element) {
 
     // Aplicar tipo de menaje ya seleccionado a los termos y material
     if (typeof window.actualizarTipoMenajeGlobal === 'function') {
+        // Dos pasadas: una rápida para material y una más tarde cuando los termos ya están en DOM
         setTimeout(() => window.actualizarTipoMenajeGlobal(), 200);
+        setTimeout(() => window.actualizarTipoMenajeGlobal(), 600);
     }
 
     // Obtener categoría

@@ -417,7 +417,10 @@ async function manejarEnvioFormulario(e) {
     e.preventDefault();
     
     // Obtener el botón de submit con verificación
-    const submitBtn = e.target.querySelector('button[type="submit"]');
+    // Botón puede estar dentro del form o en el panel lateral del resumen
+    const submitBtn = e.target.querySelector('button[type="submit"]')
+                   || document.querySelector('.btn-guardar-comanda')
+                   || document.getElementById('btnGuardarComanda');
     if (!submitBtn) {
         mostrarMensaje('❌ Error: No se encontró el botón de envío', 'error');
         return;
@@ -1024,12 +1027,10 @@ window.actualizarTipoMenajeGlobal = function() {
 
     const tipoTermo = tipoMenaje === 'loza' ? 'acero' : 'desechable';
 
-    // Actualizar todos los selectores de termo visibles
+    // 1. Actualizar todos los selectores de termo visibles en el formulario actual
     document.querySelectorAll('.select-termo').forEach(select => {
         select.value = tipoTermo;
 
-        // Extraer refId del atributo onchange: actualizarTipoTermo('refId', this.value)
-        // (cambiar select.value no dispara onchange, hay que llamarlo explícitamente)
         const onchangeAttr = select.getAttribute('onchange') || '';
         const match = onchangeAttr.match(/actualizarTipoTermo\('([^']+)'/);
         const refId = match ? match[1] : select.closest('[data-id]')?.dataset.id;
@@ -1039,7 +1040,14 @@ window.actualizarTipoMenajeGlobal = function() {
         }
     });
 
-    // Relanzar material para aplicar filtros solo_loza / solo_desechable
+    // 2. Propagar el tipo_menaje a todos los menús ya acumulados
+    if (window.MenusAdicionalesState?.menusAdicionales) {
+        window.MenusAdicionalesState.menusAdicionales.forEach(m => {
+            m.tipo_menaje = tipoMenaje;
+        });
+    }
+
+    // 3. Relanzar material para aplicar filtros solo_loza / solo_desechable
     const categoriaId = parseInt(document.getElementById('categoria')?.value);
     if (categoriaId && typeof window.autocompletarMaterialPorCategoria === 'function') {
         window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');

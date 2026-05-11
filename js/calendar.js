@@ -150,7 +150,7 @@ function _renderEventosDia(eventosPorFecha) {
     const itemsHtml = evs.map(ev => {
         const badge = estadoBadge[ev.estado] || estadoBadge.creada;
         return `
-        <div class="event-item" onclick="verDetalleComandaPorCodigo('${ev.codigo}')">
+        <div class="event-item" onclick="verDetalleComanda('${ev.codigo}')">
             <div class="event-header">
                 ${ev.hora ? `<span class="event-time">🕐 ${ev.hora}</span>` : ''}
                 <span class="event-badge ${badge.cls}">${badge.label}</span>

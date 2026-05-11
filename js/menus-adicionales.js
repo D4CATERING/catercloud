@@ -686,6 +686,13 @@
     if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
     if (typeof window.limpiarMaterialLogistica === 'function') window.limpiarMaterialLogistica();
 
+    // Reaplicar tipo de menaje al nuevo menú que se configurará a continuación
+    setTimeout(() => {
+      if (typeof window.actualizarTipoMenajeGlobal === 'function') {
+        window.actualizarTipoMenajeGlobal();
+      }
+    }, 250);
+
     // Resetear campos del menú principal
     const catSelect = document.getElementById('categoria');
     if (catSelect) catSelect.value = '';
@@ -738,31 +745,46 @@
     const menus = window.MenusAdicionalesState.menusAdicionales;
 
     if (!menus.length) {
-      body.innerHTML = `<div class="resumen-empty"><div style="font-size:1.5rem;margin-bottom:6px">📋</div><div>Añade menús a la comanda</div></div>`;
+      body.innerHTML = `
+        <div class="resumen-empty">
+          <div style="font-size:1.5rem;margin-bottom:6px">📋</div>
+          <div>Añade menús a la comanda</div>
+        </div>
+        <div class="resumen-footer">
+          <button type="submit" form="comandaCocinaForm" class="btn-guardar-comanda" disabled>
+            💾 Guardar Comanda
+          </button>
+        </div>`;
       return;
     }
 
     const paxTotal = menus.reduce((s, m) => s + (m.pax || 0), 0);
 
-    let html = '';
+    let itemsHtml = '';
     menus.forEach((m, i) => {
-      html += `
-        <div class="resumen-menu-chip">
-          <span class="resumen-chip-nombre">${m.nombre || '—'}</span>
-          <span class="resumen-chip-pax">${m.pax} pax</span>
+      itemsHtml += `
+        <div class="resumen-item">
+          <span class="resumen-item-nombre">${m.nombre || '—'}</span>
+          <span class="resumen-item-pax">${m.pax} pax</span>
           <button class="resumen-chip-x" onclick="eliminarMenuResumen(${i})" title="Eliminar">×</button>
         </div>`;
     });
 
-    html += `
-      <div class="resumen-totales">
-        <span class="resumen-totales-label">Total</span>
-        <span class="resumen-totales-val">${paxTotal} pax</span>
-        <span class="resumen-totales-sep">·</span>
-        <span class="resumen-totales-label">${menus.length} ${menus.length === 1 ? 'menú' : 'menús'}</span>
+    const totalesHtml = `
+      <div class="resumen-divider"></div>
+      <div class="resumen-total-row">
+        <span>Total PAX</span>
+        <span class="resumen-total-num">${paxTotal} pax</span>
       </div>`;
 
-    body.innerHTML = html;
+    const footerHtml = `
+      <div class="resumen-footer">
+        <button type="submit" form="comandaCocinaForm" class="btn-guardar-comanda">
+          💾 Guardar Comanda
+        </button>
+      </div>`;
+
+    body.innerHTML = itemsHtml + totalesHtml + footerHtml;
   }
 
   // ─────────────────────────────────────────────────────────────
