@@ -1111,6 +1111,21 @@ input:focus, select:focus, textarea:focus {
 
 /* ===== ESTILOS PARA FOODBOX LUNCH ===== */
 
+#foodboxLunchSection .dc-section-header ~ * {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+#foodboxLunchSection > p {
+    padding: 0 14px;
+    margin-top: 8px;
+}
+
+#foodboxLunchSection > div {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
 .foodbox-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -2045,6 +2060,21 @@ h3 {
     color: #475569;
     margin: 0 0 8px 0;
     text-transform: uppercase;
+}
+
+#foodboxLunchSection .dc-section-header ~ * {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+#foodboxLunchSection > p {
+    padding: 0 14px;
+    margin-top: 8px;
+}
+
+#foodboxLunchSection > div {
+    padding-left: 14px;
+    padding-right: 14px;
 }
 
 .foodbox-grid {

@@ -93,23 +93,24 @@ function cargarOpcionesFoodboxLunch() {
     ref.insertAdjacentHTML('afterend', `
         <div class="form-section dc-section" id="foodboxLunchSection">
             <div class="dc-section-header"><h3>🥗 Foodbox Lunch</h3></div>
-            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 20px;">Selecciona las opciones para cada categoría</p>
-            
-            <div style="margin-bottom: 15px;">
-                <h4 class="foodbox-titulo">🥗 Ensaladas y Bowls</h4>
-                <div id="foodboxEnsaladasGrid" class="foodbox-grid"></div>
+            <div style="padding: 8px 14px 14px;">
+                <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 16px;">Selecciona las opciones para cada categoría</p>
+                
+                <div style="margin-bottom: 16px;">
+                    <h4 class="foodbox-titulo">🥗 Ensaladas y Bowls</h4>
+                    <div id="foodboxEnsaladasGrid" class="foodbox-grid"></div>
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <h4 class="foodbox-titulo">🥪 Sándwiches y Bocadillos</h4>
+                    <div id="foodboxSandwichesGrid" class="foodbox-grid"></div>
+                </div>
+                
+                <div>
+                    <h4 class="foodbox-titulo">🍰 Postres</h4>
+                    <div id="foodboxPostresGrid" class="foodbox-grid"></div>
+                </div>
             </div>
-            
-            <div style="margin-bottom: 15px;">
-                <h4 class="foodbox-titulo">🥪 Sándwiches y Bocadillos</h4>
-                <div id="foodboxSandwichesGrid" class="foodbox-grid"></div>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-                <h4 class="foodbox-titulo">🍰 Postres</h4>
-                <div id="foodboxPostresGrid" class="foodbox-grid"></div>
-            </div>
-
         </div>
     `);
     
