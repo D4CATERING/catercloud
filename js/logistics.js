@@ -162,7 +162,8 @@
             2: 'foodbox',
             3: 'servicios',
             4: 'lunch',
-            5: 'bandejas'
+            5: 'foodbox',
+            6: 'foodbox'
         };
 
         const menuTipo = mapeo[categoriaId];

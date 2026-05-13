@@ -122,6 +122,7 @@ function verDetalleComanda(codigo) {
 }
 
 function _renderMenuDetalle(comanda, pax) {
+
     let html = '';
 
     function fila(nombre, cantidad, unidad, esTitulo) {
@@ -210,6 +211,30 @@ function _renderMenuDetalle(comanda, pax) {
             html += fila('Postres' + mulLabel, '', '', true);
             postres.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
+    }
+
+    // ── DIY Desayunos (cat 5) y Foodbox (cat 6) ──
+    if (comanda.bandejas) {
+        const b = comanda.bandejas;
+        const grupos = [
+            { icono: '☕', label: 'Termos y Bebidas',  items: b.termos     || [] },
+            { icono: '🍽️', label: 'Servicio',          items: b.servicio   || [] },
+            { icono: '🍰', label: 'Dulces y Bollería', items: b.dulces     || [] },
+            { icono: '🥪', label: 'Salados y Bebidas', items: b.salados    || [] },
+            { icono: '🥗', label: 'Saladas',           items: b.saladas    || [] },
+            { icono: '🥪', label: 'Sándwiches',        items: b.sandwiches || [] },
+            { icono: '🍰', label: 'Postres',           items: b.postres    || [] },
+        ].filter(g => g.items.length > 0);
+
+        grupos.forEach(g => {
+            html += fila(g.icono + ' ' + g.label, '', '', true);
+            g.items.forEach(it => {
+                const variantes = it.variantes?.length
+                    ? ' (' + it.variantes.map(v => v.nombre || v).join(', ') + ')'
+                    : '';
+                html += fila(it.nombre + variantes, it.cantidad || 1, 'ud.', false);
+            });
+        });
     }
 
     if (!html) {

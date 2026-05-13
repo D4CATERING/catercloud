@@ -52,7 +52,12 @@
     }
     if (categoriaId == 5) {
       return [
-        { id: 16, nombre: 'BANDEJAS PREPARADAS', descripcion: 'Selección de bandejas', items_salados_min: 0, items_salados_max: 0, items_postres_min: 0, items_postres_max: 0 },
+        { id: 16, nombre: 'DO IT YOURSELF DESAYUNOS', descripcion: 'Bandejas de desayuno para montar', items_salados_min: 0, items_salados_max: 0, items_postres_min: 0, items_postres_max: 0 },
+      ];
+    }
+    if (categoriaId == 6) {
+      return [
+        { id: 17, nombre: 'DO IT YOURSELF FOODBOX', descripcion: 'Bandejas foodbox para montar', items_salados_min: 0, items_salados_max: 0, items_postres_min: 0, items_postres_max: 0 },
       ];
     }
     return [];
@@ -597,15 +602,16 @@
       return;
     }
 
+    const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
+
     const paxEl = document.getElementById('pax');
     const pax = parseInt(paxEl?.value) || 0;
-    if (pax <= 0) {
+    // Cat 5/6 (DIY) no requieren PAX
+    if (pax <= 0 && ![5, 6].includes(categoriaId)) {
       mostrarToastError('Introduce el número de PAX para este menú');
       paxEl?.focus();
       return;
     }
-
-    const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
 
     // Capturar material usando la fuente de verdad (window.materialLogistica)
     // ANTES de que limpiarMaterialLogistica() lo vacíe
@@ -650,8 +656,17 @@
     }
     if (categoriaId === 5 && window.BandejasState) {
       item.bandejas = {
-        saladas: [...(window.BandejasState?.saladas?.selected || [])],
-        dulces:  [...(window.BandejasState?.dulces?.selected  || [])],
+        termos:   [...(window.BandejasState?.diy_termos?.selected   || [])],
+        servicio: [...(window.BandejasState?.diy_servicio?.selected || [])],
+        dulces:   [...(window.BandejasState?.diy_dulces?.selected   || [])],
+        salados:  [...(window.BandejasState?.diy_salados?.selected  || [])],
+      };
+    }
+    if (categoriaId === 6 && window.BandejasState) {
+      item.bandejas = {
+        saladas:    [...(window.BandejasState?.diy_fb_saladas?.selected    || [])],
+        sandwiches: [...(window.BandejasState?.diy_fb_sandwiches?.selected || [])],
+        postres:    [...(window.BandejasState?.diy_fb_postres?.selected    || [])],
       };
     }
 
@@ -744,23 +759,38 @@
 
     const menus = window.MenusAdicionalesState.menusAdicionales;
 
-    if (!menus.length) {
+    // Recoger selecciones DIY activas (cat 5 o 6)
+    const categoriaActiva = parseInt(document.getElementById('categoria')?.value) || 0;
+    const diyItems = [];
+    if ([5, 6].includes(categoriaActiva) && window.BandejasState) {
+      const claves = categoriaActiva === 5
+        ? ['diy_termos', 'diy_servicio', 'diy_dulces', 'diy_salados']
+        : ['diy_fb_saladas', 'diy_fb_sandwiches', 'diy_fb_postres'];
+      claves.forEach(k => {
+        (window.BandejasState[k]?.selected || []).forEach(it => diyItems.push(it));
+      });
+    }
+
+    const hayMenus = menus.length > 0;
+    const hayDIY   = diyItems.length > 0;
+
+    if (!hayMenus && !hayDIY) {
       body.innerHTML = `
         <div class="resumen-empty">
           <div style="font-size:1.5rem;margin-bottom:6px">📋</div>
           <div>Añade menús a la comanda</div>
         </div>
         <div class="resumen-footer">
-          <button type="submit" form="comandaCocinaForm" class="btn-guardar-comanda" disabled>
+          <button type="button" class="btn-guardar-comanda" onclick="window._guardarComandaDIY()" disabled>
             💾 Guardar Comanda
           </button>
         </div>`;
       return;
     }
 
-    const paxTotal = menus.reduce((s, m) => s + (m.pax || 0), 0);
-
     let itemsHtml = '';
+
+    // Menús acumulados normales
     menus.forEach((m, i) => {
       itemsHtml += `
         <div class="resumen-item">
@@ -770,22 +800,84 @@
         </div>`;
     });
 
-    const totalesHtml = `
+    // Ítems DIY seleccionados en tiempo real
+    let totalDIY = 0;
+    if (hayDIY) {
+      if (hayMenus) itemsHtml += '<div class="resumen-divider"></div>';
+      diyItems.forEach(it => {
+        const qty = it.cantidad || 1;
+        const precio = it.precio != null ? it.precio : null;
+        const subtotal = precio != null ? precio * qty : null;
+        if (subtotal != null) totalDIY += subtotal;
+
+        const variantesText = it.variantes?.length
+          ? `<div class="resumen-item-variantes">${it.variantes.map(v => v.nombre || v).join(', ')}</div>`
+          : '';
+        const precioText = precio != null
+          ? `<span class="resumen-diy-precio">${subtotal.toFixed(2).replace('.', ',')} €</span>`
+          : '';
+
+        itemsHtml += `
+          <div class="resumen-item resumen-item--diy">
+            <div class="resumen-diy-body">
+              <span class="resumen-item-nombre">${it.nombre}</span>
+              ${precio != null ? `<span class="resumen-diy-sub">${qty} × ${precio.toFixed(2).replace('.', ',')} €</span>` : `<span class="resumen-diy-sub">${qty} ud${qty > 1 ? 's' : ''}.</span>`}
+              ${variantesText}
+            </div>
+            <div class="resumen-diy-right">
+              ${precioText}
+              <button class="resumen-diy-trash" onclick="window._diyEliminar('${it.id}')" title="Eliminar">🗑</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    // Función para eliminar ítem DIY desde el resumen
+    window._diyEliminar = function(itemId) {
+      if (!window.BandejasState) return;
+      const categoriaActiva = parseInt(document.getElementById('categoria')?.value) || 0;
+      const claves = categoriaActiva === 5
+        ? ['diy_termos', 'diy_servicio', 'diy_dulces', 'diy_salados']
+        : ['diy_fb_saladas', 'diy_fb_sandwiches', 'diy_fb_postres'];
+      claves.forEach(k => {
+        const st = window.BandejasState[k];
+        if (!st) return;
+        const idx = st.selected.findIndex(x => x.id === itemId);
+        if (idx >= 0) st.selected.splice(idx, 1);
+      });
+      // Re-renderizar grids DIY
+      ['diyTermosContainer','diyServicioContainer','diyDulcesContainer','diySaladosContainer',
+       'diyFbSaladasContainer','diyFbSandwichesContainer','diyFbPostresContainer'].forEach(cId => {
+        const el = document.getElementById(cId);
+        if (el) {
+          const stKey = Object.keys(window.BandejasState).find(k =>
+            window.BandejasState[k].items?.length &&
+            document.getElementById(cId)?.className.includes('diy')
+          );
+        }
+      });
+      actualizarResumenLateral();
+    };
+
+    const paxTotal = menus.reduce((s, m) => s + (m.pax || 0), 0);
+    const totalesHtml = (paxTotal > 0 || totalDIY > 0) ? `
       <div class="resumen-divider"></div>
-      <div class="resumen-total-row">
-        <span>Total PAX</span>
-        <span class="resumen-total-num">${paxTotal} pax</span>
-      </div>`;
+      ${paxTotal > 0 ? `<div class="resumen-total-row"><span>Total PAX</span><span class="resumen-total-num">${paxTotal} pax</span></div>` : ''}
+      ${totalDIY > 0 ? `<div class="resumen-total-row"><span>Total</span><span class="resumen-total-num">${totalDIY.toFixed(2).replace('.', ',')} €</span></div>` : ''}
+    ` : '';
 
     const footerHtml = `
       <div class="resumen-footer">
-        <button type="submit" form="comandaCocinaForm" class="btn-guardar-comanda">
+        <button type="button" class="btn-guardar-comanda" onclick="window._guardarComandaDIY()">
           💾 Guardar Comanda
         </button>
       </div>`;
 
     body.innerHTML = itemsHtml + totalesHtml + footerHtml;
   }
+
+  // Exponer para que bandejas-preparadas.js pueda llamarla
+  window.actualizarResumenLateral = actualizarResumenLateral;
 
   // ─────────────────────────────────────────────────────────────
   // PÚBLICA: Eliminar un menú del resumen por índice
@@ -821,6 +913,24 @@
 
     actualizarResumenLateral();
     console.log(`🗑️ Menú eliminado del resumen. Quedan: ${st.menusAdicionales.length}`);
+  };
+
+
+  // Para cat 5/6: acumular selecciones DIY y luego disparar el submit
+  window._guardarComandaDIY = function () {
+    const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
+    if ([5, 6].includes(categoriaId)) {
+      // Acumular el menú DIY antes de guardar
+      window.anadirMenuAComanda();
+      // Dar un tick para que se procese y luego disparar submit
+      setTimeout(() => {
+        const form = document.getElementById('comandaCocinaForm');
+        if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
+      }, 50);
+    } else {
+      const form = document.getElementById('comandaCocinaForm');
+      if (form) form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
   };
 
 })();

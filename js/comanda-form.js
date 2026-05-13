@@ -202,7 +202,8 @@ async function cargarMenus() {
     }
     else if (categoriaId == 5) {
         menus = [
-            { id: 16, nombre: 'BANDEJAS PREPARADAS', descripcion: 'Seleccion de Bandejas' }
+            { id: 16, nombre: 'DO IT YOURSELF DESAYUNOS', descripcion: 'Bandejas de desayuno para montar', _cat: 5 },
+            { id: 17, nombre: 'DO IT YOURSELF FOODBOX',   descripcion: 'Bandejas foodbox para montar',    _cat: 6 }
         ];
     }
     
@@ -267,8 +268,9 @@ async function seleccionarMenu(menuId, element) {
         setTimeout(() => window.actualizarTipoMenajeGlobal(), 600);
     }
 
-    // Obtener categoría
-    const categoriaId = parseInt(document.getElementById('categoria').value);
+    // Obtener categoría — para DIY usar _cat del menu si existe
+    const categoriaId = window.menuSeleccionado?._cat
+        || parseInt(document.getElementById('categoria').value);
 
 
     // ===== DESAYUNOS =====
@@ -435,24 +437,65 @@ async function seleccionarMenu(menuId, element) {
     }
 
     
-// ===== BANDEJAS PREPARADAS =====
+// ===== DO IT YOURSELF DESAYUNOS (Cat 5) =====
 if (categoriaId === 5) {
     document.getElementById('multiplicadorSection').style.display = 'none';
     document.getElementById('referenciasSection').style.display = 'none';
-
     const desayunoSection = document.getElementById('desayunoReferencesSection');
     if (desayunoSection) desayunoSection.style.display = 'none';
+    const foodboxSection = document.getElementById('foodboxLunchSection');
+    if (foodboxSection) foodboxSection.remove();
+    const diyFoodboxSection = document.getElementById('diyFoodboxSection');
+    if (diyFoodboxSection) diyFoodboxSection.remove();
 
-    const foodboxLunchSection2 = document.getElementById('foodboxLunchSection');
-    if (foodboxLunchSection2) foodboxLunchSection2.style.display = 'none';
-
-    // ✅ Aquí es donde se llama
-    if (typeof cargarBandejasPreparadas === 'function') {
-        cargarBandejasPreparadas();
+    if (typeof cargarDIYDesayunos === 'function') {
+        await cargarDIYDesayunos();
     } else {
-        console.error('No existe cargarBandejasPreparadas(). Revisa que bandejas-preparadas.js esté cargando bien.');
+        console.error('cargarDIYDesayunos() no encontrado. Revisa bandejas-preparadas.js');
     }
 
+    // Mostrar logística inline igual que Foodbox/Comida
+    const logSecDIY5 = document.getElementById('logisticaInlineSection');
+    if (logSecDIY5) logSecDIY5.style.display = 'block';
+    const matInlineDIY5 = document.getElementById('materialLogisticaInline');
+    if (matInlineDIY5) matInlineDIY5.style.display = 'block';
+    if (typeof inicializarMaterialLogistica === 'function') {
+        await inicializarMaterialLogistica('materialLogisticaInline');
+        if (typeof autocompletarMaterialPorCategoria === 'function') {
+            await autocompletarMaterialPorCategoria(5, 'materialLogisticaInline');
+        }
+    }
+    return;
+}
+
+// ===== DO IT YOURSELF FOODBOX (Cat 6) =====
+if (categoriaId === 6) {
+    document.getElementById('multiplicadorSection').style.display = 'none';
+    document.getElementById('referenciasSection').style.display = 'none';
+    const desayunoSection = document.getElementById('desayunoReferencesSection');
+    if (desayunoSection) desayunoSection.style.display = 'none';
+    const foodboxSection = document.getElementById('foodboxLunchSection');
+    if (foodboxSection) foodboxSection.remove();
+    const diyDesayunosSection = document.getElementById('diyDesayunosSection');
+    if (diyDesayunosSection) diyDesayunosSection.remove();
+
+    if (typeof cargarDIYFoodbox === 'function') {
+        cargarDIYFoodbox();
+    } else {
+        console.error('cargarDIYFoodbox() no encontrado. Revisa bandejas-preparadas.js');
+    }
+
+    // Mostrar logística inline igual que Foodbox/Comida
+    const logSecDIY6 = document.getElementById('logisticaInlineSection');
+    if (logSecDIY6) logSecDIY6.style.display = 'block';
+    const matInlineDIY6 = document.getElementById('materialLogisticaInline');
+    if (matInlineDIY6) matInlineDIY6.style.display = 'block';
+    if (typeof inicializarMaterialLogistica === 'function') {
+        await inicializarMaterialLogistica('materialLogisticaInline');
+        if (typeof autocompletarMaterialPorCategoria === 'function') {
+            await autocompletarMaterialPorCategoria(6, 'materialLogisticaInline');
+        }
+    }
     return;
 }
 
@@ -484,14 +527,18 @@ function limpiarSeccionesMenu() {
     const foodboxSection = document.getElementById('foodboxLunchSection');
     if (foodboxSection) foodboxSection.remove();
 
-    const bandejasSection = document.getElementById('bandejasPreparadasSection');
-    if (bandejasSection) bandejasSection.style.display = 'none';
+    const diyDesayunosSection = document.getElementById('diyDesayunosSection');
+    if (diyDesayunosSection) diyDesayunosSection.remove();
+    const diyFoodboxSection = document.getElementById('diyFoodboxSection');
+    if (diyFoodboxSection) diyFoodboxSection.remove();
 
     window.referenciasSeleccionadas = { saladas: [], postres: [] };
     window.referenciasDesayuno = {};
     if (window.BandejasState) {
-        window.BandejasState.saladas.selected = [];
-        window.BandejasState.dulces.selected = [];
+        ['diy_dulces','diy_salados','diy_termos','diy_servicio',
+         'diy_fb_saladas','diy_fb_sandwiches','diy_fb_postres'].forEach(k => {
+            if (window.BandejasState[k]) window.BandejasState[k].selected = [];
+        });
     }
 
     // Limpiar items de zumo/agua y menaje inyectados por desayunos

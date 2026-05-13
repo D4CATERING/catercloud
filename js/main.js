@@ -504,6 +504,29 @@ if (categoriaId == 4) { // FOODBOX LUNCH
             }
         } : { multiplicadores: null, referencias: null }),
 
+        // DIY Desayunos (cat 5)
+        ...(_catPrincipal == 5 ? {
+            bandejas: _menuPrincipal.bandejas || (typeof window.obtenerSeleccionesDIY === 'function'
+                ? window.obtenerSeleccionesDIY(5)
+                : {
+                    termos:   [...(window.BandejasState?.diy_termos?.selected   || [])],
+                    servicio: [...(window.BandejasState?.diy_servicio?.selected || [])],
+                    dulces:   [...(window.BandejasState?.diy_dulces?.selected   || [])],
+                    salados:  [...(window.BandejasState?.diy_salados?.selected  || [])],
+                })
+        } : {}),
+
+        // DIY Foodbox (cat 6)
+        ...(_catPrincipal == 6 ? {
+            bandejas: _menuPrincipal.bandejas || (typeof window.obtenerSeleccionesDIY === 'function'
+                ? window.obtenerSeleccionesDIY(6)
+                : {
+                    saladas:    [...(window.BandejasState?.diy_fb_saladas?.selected    || [])],
+                    sandwiches: [...(window.BandejasState?.diy_fb_sandwiches?.selected || [])],
+                    postres:    [...(window.BandejasState?.diy_fb_postres?.selected    || [])],
+                })
+        } : {}),
+
         // Notas
         ...(document.getElementById('alergias_notas') ? {
             alergias: { notas: document.getElementById('alergias_notas').value }
