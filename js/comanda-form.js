@@ -536,7 +536,7 @@ function limpiarSeccionesMenu() {
     window.referenciasDesayuno = {};
     if (window.BandejasState) {
         ['diy_dulces','diy_salados','diy_termos','diy_servicio',
-         'diy_fb_saladas','diy_fb_sandwiches','diy_fb_postres'].forEach(k => {
+         'diy_fb_saladas','diy_fb_postres'].forEach(k => {
             if (window.BandejasState[k]) window.BandejasState[k].selected = [];
         });
     }

@@ -11,9 +11,8 @@
     diy_dulces:        { items: [], selected: [] },
     diy_salados:       { items: [], selected: [] },
     diy_termos:        { items: [], selected: [] },
-    diy_servicio:      { items: [], selected: [] },
+
     diy_fb_saladas:    { items: [], selected: [] },
-    diy_fb_sandwiches: { items: [], selected: [] },
     diy_fb_postres:    { items: [], selected: [] },
   };
 
@@ -51,21 +50,22 @@
   // ── Fallback (Cat 5) ─────────────────────────────────
   function getFallbackDesayunos() {
     return [
-      { id: 'f_t1', tipo: 'termo',    nombre: 'Termo de café', variantes: [] },
-      { id: 'f_t2', tipo: 'termo',    nombre: 'Termo de chocolate caliente', variantes: [] },
-      { id: 'f_t3', tipo: 'termo',    nombre: 'Termo de leche', variantes: [] },
-      { id: 'f_t4', tipo: 'termo',    nombre: 'Termo de leche sin lactosa', variantes: [] },
-      { id: 'f_t5', tipo: 'termo',    nombre: 'Termo de bebida vegetal', variantes: [] },
-      { id: 'f_t6', tipo: 'termo',    nombre: 'Termo de agua para infusión', variantes: [
+      { id: 'f_t1', tipo: 'termo', nombre: 'Termo de café', variantes: [] },
+      { id: 'f_t2', tipo: 'termo', nombre: 'Termo de chocolate caliente', variantes: [] },
+      { id: 'f_t3', tipo: 'termo', nombre: 'Termo de leche', variantes: [] },
+      { id: 'f_t4', tipo: 'termo', nombre: 'Termo de leche sin lactosa', variantes: [] },
+      { id: 'f_t5', tipo: 'termo', nombre: 'Termo de bebida vegetal', variantes: [] },
+      { id: 'f_t6', tipo: 'termo', nombre: 'Termo de agua para infusión', variantes: [
         { id: 'v1', nombre: 'Te english breakfast' },
         { id: 'v2', nombre: 'Te rojo' },
         { id: 'v3', nombre: 'Te verde' },
       ]},
-      { id: 'f_s1', tipo: 'servicio', nombre: 'Servicio desechable', variantes: [
-        { id: 'v4', nombre: 'Vaso' },{ id: 'v5', nombre: 'Removedor' },
-        { id: 'v6', nombre: 'Azúcar blanca' },{ id: 'v7', nombre: 'Azúcar morena' },
-        { id: 'v8', nombre: 'Sacarina' },
-      ]},
+      { id: 'f_e3', tipo: 'termo', nombre: 'Smoothie True Fruit (por unidad)', variantes: [] },
+      { id: 'f_e4', tipo: 'termo', nombre: 'Café Starbucks (por unidad)', variantes: [] },
+      { id: 'f_e5', tipo: 'termo', nombre: 'Zumo de naranja natural (1l.)', variantes: [] },
+      { id: 'f_e6', tipo: 'termo', nombre: 'Agua pet 33 cl.', variantes: [] },
+      { id: 'f_e7', tipo: 'termo', nombre: 'Agua envase ECO BRICK', variantes: [] },
+
       { id: 'f_d1', tipo: 'dulce', nombre: 'Mini bollería (30 Uds.)', variantes: [
         { id: 'v9', nombre: 'Mini croissant' },{ id: 'v10', nombre: 'Mini cinnamon roll' },
         { id: 'v11', nombre: 'Mini trenza de chocolate' },{ id: 'v12', nombre: 'Mini envoltini' },
@@ -96,11 +96,6 @@
         { id: 'v28', nombre: 'Paleta ibérica con tomate' },{ id: 'v29', nombre: 'Tortilla española' },
         { id: 'v30', nombre: 'Ensaladilla rusa' },{ id: 'v31', nombre: 'Vegetal' },{ id: 'v32', nombre: 'Pollo al curry' },
       ]},
-      { id: 'f_e3', tipo: 'salado', nombre: 'Smoothie True Fruit (por unidad)', variantes: [] },
-      { id: 'f_e4', tipo: 'salado', nombre: 'Café Starbucks (por unidad)', variantes: [] },
-      { id: 'f_e5', tipo: 'salado', nombre: 'Zumo de naranja natural (1l.)', variantes: [] },
-      { id: 'f_e6', tipo: 'salado', nombre: 'Agua pet 33 cl.', variantes: [] },
-      { id: 'f_e7', tipo: 'salado', nombre: 'Agua envase ECO BRICK', variantes: [] },
     ];
   }
 
@@ -256,13 +251,12 @@
   window.cargarDIYDesayunos = async function () {
     crearSeccion('diyDesayunosSection', '🥐 Do It Yourself Desayunos', [
       { icono: '☕', titulo: 'Termos y Bebidas',  containerId: 'diyTermosContainer'   },
-      { icono: '🍽️', titulo: 'Servicio',          containerId: 'diyServicioContainer' },
       { icono: '🍰', titulo: 'Dulces y Bollería', containerId: 'diyDulcesContainer'   },
       { icono: '🥪', titulo: 'Salados y Bebidas', containerId: 'diySaladosContainer'  },
     ]);
 
     // Loading
-    ['diyTermosContainer','diyServicioContainer','diyDulcesContainer','diySaladosContainer']
+    ['diyTermosContainer','diyDulcesContainer','diySaladosContainer']
       .forEach(id => { const el = $(id); if (el) el.innerHTML = '<span style="color:#94a3b8;font-size:.8rem">Cargando…</span>'; });
 
     let items;
@@ -274,8 +268,8 @@
       items = getFallbackDesayunos();
     }
 
-    const mapa = { termo: 'diy_termos', servicio: 'diy_servicio', dulce: 'diy_dulces', salado: 'diy_salados' };
-    const contenedores = { termo: 'diyTermosContainer', servicio: 'diyServicioContainer', dulce: 'diyDulcesContainer', salado: 'diySaladosContainer' };
+    const mapa = { termo: 'diy_termos', dulce: 'diy_dulces', salado: 'diy_salados' };
+    const contenedores = { termo: 'diyTermosContainer', dulce: 'diyDulcesContainer', salado: 'diySaladosContainer' };
 
     Object.keys(mapa).forEach(tipo => {
       const stKey = mapa[tipo];
@@ -289,36 +283,117 @@
   window.cargarDIYFoodbox = function () {
     crearSeccion('diyFoodboxSection', '🥗 Do It Yourself Foodbox', [
       { icono: '🥗', titulo: 'Saladas',    containerId: 'diyFbSaladasContainer'    },
-      { icono: '🥪', titulo: 'Sándwiches', containerId: 'diyFbSandwichesContainer' },
       { icono: '🍰', titulo: 'Postres',    containerId: 'diyFbPostresContainer'    },
     ]);
 
     const data = {
-      diy_fb_saladas:    [
-        { id: 'fs1', nombre: 'Tabla Jamón Ibérico 500gr', variantes: [] },
-        { id: 'fs2', nombre: 'Tabla Paletilla Ibérica 500gr', variantes: [] },
-        { id: 'fs3', nombre: 'Tabla de Quesos 500gr', variantes: [] },
-        { id: 'fs4', nombre: 'Croquetas Jamón/Pollo 24uds', variantes: [] },
-        { id: 'fs5', nombre: 'Tortilla con Chistorra y/o Padrón', variantes: [] },
-        { id: 'fs6', nombre: 'Quiche Lorraine 8 raciones', variantes: [] },
-        { id: 'fs7', nombre: 'Mini Sandwich Variado 36uds', variantes: [] },
-        { id: 'fs8', nombre: 'Mini Empanadilla Criolla 36uds', variantes: [] },
+      diy_fb_saladas: [
+        // Tablas y embutidos
+        { id: 'fs1',  nombre: 'Tabla de embutido ibérico 500g con picos y pan airbag'},
+        { id: 'fs2',  nombre: 'Tabla de paleta ibérica 500g con pan airbag'},
+        { id: 'fs3',  nombre: 'Tabla de jamón ibérico 400g con pan airbag', variantes: [] },
+        { id: 'fs4',  nombre: 'Tabla de quesos internacionales 500g'},
+         
+      
+        // Croquetas y fritos
+        { id: 'fs5',  nombre: 'Croquetas 24 uds', variantes: [
+          { id: 'fs5v1', nombre: 'Jamón' }, { id: 'fs5v2', nombre: 'Boletus' }, { id: 'fs5v3', nombre: 'Pollo' },
+        ]},
+        { id: 'fs6',  nombre: 'Pollo al estilo Kentucky con salsa barbacoa 24 uds', variantes: [] },
+        { id: 'fs7',  nombre: 'Empanadillas 36 uds', variantes: [
+          { id: 'fs7v1', nombre: 'Criollas' }, { id: 'fs7v2', nombre: 'Espinacas y pasas' },
+          { id: 'fs7v3', nombre: 'Calabaza y bacon' }, { id: 'fs7v4', nombre: 'Atún' },
+        ]},
+        // Tortillas
+        { id: 'fs8',  nombre: 'Tortilla de patata con pan airbag', variantes: [
+          { id: 'fs9',  nombre: 'Guarnición de chistorra'},
+          { id: 'fs10', nombre: 'Guarnición de padrón'}, ]},
+        { id: 'fs11', nombre: 'Tortilla rellena', variantes: [
+          { id: 'fs11v1', nombre: 'Sobrasada y brie' },
+          { id: 'fs11v2', nombre: 'Ensalada de langostino' },
+          { id: 'fs11v3', nombre: 'Pimiento de piquillo y morcilla' },
+        ]},
+        // Quiches
+        { id: 'fs12', nombre: 'Quiche Loraine de bacon y puerro 8 raciones', variantes: [] },
+        { id: 'fs13', nombre: 'Quiche Loraine de tomate seco y verduras 8 raciones', variantes: [] },
+        { id: 'fs14', nombre: 'Quiche de bacalao con cebolla caramelizada 8 raciones', variantes: [] },
+        // Mini croissants
+        { id: 'fs15', nombre: 'Mini croissant 24 uds', variantes: [
+          { id: 'fs15v1', nombre: 'Ensaladilla vegetal' }, { id: 'fs15v2', nombre: 'Mixto' },
+          { id: 'fs15v3', nombre: 'Salmón y queso crema' },
+        ]},
+        // Mini bagels
+        { id: 'fs16', nombre: 'Mini bagel 24 uds', variantes: [
+          { id: 'fs16v1', nombre: 'Mortadela con crema trufada' },
+          { id: 'fs16v2', nombre: 'Pastrami, pepinillo y mostaza Roastbeef' },
+          { id: 'fs16v3', nombre: 'Salmón y queso crema' },
+          { id: 'fs16v4', nombre: 'Proteína vegetal' },
+        ]},
+        // Pulguitas
+        { id: 'fs17', nombre: 'Pulguitas 20 uds', variantes: [
+          { id: 'fs17v1', nombre: 'Tortilla de patata' }, { id: 'fs17v2', nombre: 'Verduras asadas' },
+          { id: 'fs17v3', nombre: 'Pollo al curry' }, { id: 'fs17v4', nombre: 'Paleta con tomate' },
+          { id: 'fs17v5', nombre: 'Lomo con pimientos' },
+        ]},
+        // Mini wraps
+        { id: 'fs18', nombre: 'Mini wraps 25 uds', variantes: [
+          { id: 'fs18v1', nombre: 'Mortadela con crema trufada' },
+          { id: 'fs18v2', nombre: 'Salmón con aguacate' },
+          { id: 'fs18v3', nombre: 'Pastrami, pepinillo y mostaza' },
+        ]},
+        // Mini sándwich
+        { id: 'fs19', nombre: 'Mini sándwich 36 uds', variantes: [
+          { id: 'fs19v1', nombre: 'Pechuga de pavo, aguacate y tomate' },
+          { id: 'fs19v2', nombre: 'Pollo lechuga mayo curry' },
+          { id: 'fs19v3', nombre: 'Atún, aceituna negra, lechuga y mahonesa' },
+          { id: 'fs19v4', nombre: 'Ensaladilla vegetal' },
+          { id: 'fs19v5', nombre: 'Tortilla' },
+          { id: 'fs19v6', nombre: 'Pastrami, pepinillo y mayo siracha' },
+          { id: 'fs19v7', nombre: 'Ricota, tomate seco, pesto y mortadela' },
+          { id: 'fs19v8', nombre: 'Bacon y mayo mostaza' },
+          { id: 'fs19v9', nombre: 'Gorgonzola, queso crema, nueces y miel' },
+        ]},
+        // Mini rollitos y otros
+        { id: 'fs20', nombre: 'Mini rollitos de primavera con salsa sweet chili 30 uds', variantes: [] },
+        { id: 'fs21', nombre: 'Cheese rings con salsa Barbacoa 24 uds', variantes: [] },
+        { id: 'fs22', nombre: 'Gyozas vegetales con salsa de soja 24 uds', variantes: [] },
+        { id: 'fs23', nombre: 'Focaccia de mortadela, pesto, tomate seco y ricotta 24 uds', variantes: [] },
+        // Mini tartaletas
+        { id: 'fs24', nombre: 'Mini tartaletas 30 uds — Salmón con queso crema', variantes: [] },
+        { id: 'fs25', nombre: 'Mini tartaletas 30 uds — Nuestra ensaladilla rusa', variantes: [] },
+        // Mini ensaladas
+        { id: 'fs26', nombre: 'Mini ensaladas (c/u)', variantes: [
+          { id: 'fs26v1', nombre: 'Mini poke teriyaki' },
+          { id: 'fs26v2', nombre: 'Mini poke de salmón' },
+          { id: 'fs26v3', nombre: 'Mini ensalada toscana' },
+          { id: 'fs26v4', nombre: 'Mini ensalada de pasta-pesto' },
+          { id: 'fs26v5', nombre: 'Mini ensalada L.A' },
+          { id: 'fs26v6', nombre: 'Mini tabule de cuscús con garbanzo' },
+          { id: 'fs26v7', nombre: 'Mini ensalada griega' },
+          { id: 'fs26v8', nombre: 'Mini ensalada César' },
+        ]},
+        // Mini burgers, tacos y bao
+        { id: 'fw1', nombre: 'Mini Burger con queso 25 uds', variantes: [] },
+        { id: 'fw2', nombre: 'Mini quesadillas sincronizadas 24 uds', variantes: [] },
+        { id: 'fw3', nombre: 'Taco al pastor 24 uds', variantes: [] },
+        { id: 'fw4', nombre: 'Taco de tinga de pollo 24 uds', variantes: [] },
+        { id: 'fw5', nombre: 'Bao de pulled pork 24 uds', variantes: [] },
       ],
-      diy_fb_sandwiches: [
-        { id: 'fw1', nombre: 'Mini Burguer con Queso 24uds', variantes: [] },
-        { id: 'fw2', nombre: 'Mini Bao de Costilla BBQ 24uds', variantes: [] },
-        { id: 'fw3', nombre: 'Mini Taco Cochinita Pibil 24uds', variantes: [] },
-        { id: 'fw4', nombre: 'Mini Quesadillas 24uds', variantes: [] },
-      ],
-      diy_fb_postres:    [
-        { id: 'fp1', nombre: 'Mini bollería 30uds', variantes: [] },
-        { id: 'fp2', nombre: 'Mini carrot cakes 30uds', variantes: [] },
-        { id: 'fp3', nombre: 'Mini tarta Idiazabal 30uds', variantes: [] },
+      diy_fb_postres: [
+        { id: 'fp1', nombre: 'Brocheta de fruta 30 uds', variantes: [] },
+        { id: 'fp2', nombre: 'Postres 20 uds', variantes: [
+          { id: 'fp2v1', nombre: 'Mini cheesecake' },
+          { id: 'fp2v2', nombre: 'Mini brownie con crema inglesa' },
+          { id: 'fp2v3', nombre: 'Mini arroz con leche' },
+          { id: 'fp2v4', nombre: 'Mini natillas con galleta' },
+          { id: 'fp2v5', nombre: 'Mini oreo sweet' },
+          { id: 'fp2v6', nombre: 'Mini kitkat shot' },
+          { id: 'fp2v7', nombre: 'Mini tiramisú' },
+        ]},
       ],
     };
     const contenedores = {
       diy_fb_saladas: 'diyFbSaladasContainer',
-      diy_fb_sandwiches: 'diyFbSandwichesContainer',
       diy_fb_postres: 'diyFbPostresContainer',
     };
 
@@ -334,17 +409,27 @@
   // ── Obtener selecciones ──────────────────────────────
   window.obtenerSeleccionesDIY = function (categoria) {
     if (categoria === 5) return {
-      termos:   window.BandejasState.diy_termos.selected,
-      servicio: window.BandejasState.diy_servicio.selected,
-      dulces:   window.BandejasState.diy_dulces.selected,
-      salados:  window.BandejasState.diy_salados.selected,
+      termos:  window.BandejasState.diy_termos.selected,
+      dulces:  window.BandejasState.diy_dulces.selected,
+      salados: window.BandejasState.diy_salados.selected,
     };
     if (categoria === 6) return {
-      saladas:    window.BandejasState.diy_fb_saladas.selected,
-      sandwiches: window.BandejasState.diy_fb_sandwiches.selected,
-      postres:    window.BandejasState.diy_fb_postres.selected,
+      saladas: window.BandejasState.diy_fb_saladas.selected,
+      postres: window.BandejasState.diy_fb_postres.selected,
     };
     return {};
+  };
+
+  // ── Re-renderizar todos los grupos activos de una categoría ──
+  window.renderDIYGrupos = function (categoriaId) {
+    if (categoriaId === 5) {
+      renderGrupo('diy_termos',  'diyTermosContainer');
+      renderGrupo('diy_dulces',  'diyDulcesContainer');
+      renderGrupo('diy_salados', 'diySaladosContainer');
+    } else if (categoriaId === 6) {
+      renderGrupo('diy_fb_saladas', 'diyFbSaladasContainer');
+      renderGrupo('diy_fb_postres', 'diyFbPostresContainer');
+    }
   };
 
   console.log('✅ Módulo DIY listo');

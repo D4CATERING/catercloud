@@ -664,9 +664,8 @@
     }
     if (categoriaId === 6 && window.BandejasState) {
       item.bandejas = {
-        saladas:    [...(window.BandejasState?.diy_fb_saladas?.selected    || [])],
-        sandwiches: [...(window.BandejasState?.diy_fb_sandwiches?.selected || [])],
-        postres:    [...(window.BandejasState?.diy_fb_postres?.selected    || [])],
+        saladas: [...(window.BandejasState?.diy_fb_saladas?.selected || [])],
+        postres: [...(window.BandejasState?.diy_fb_postres?.selected || [])],
       };
     }
 
@@ -760,12 +759,15 @@
     const menus = window.MenusAdicionalesState.menusAdicionales;
 
     // Recoger selecciones DIY activas (cat 5 o 6)
-    const categoriaActiva = parseInt(document.getElementById('categoria')?.value) || 0;
+    // window.menuSeleccionado?._cat resuelve el caso en que cat 5 y 6 comparten el mismo <select value="5">
+    const categoriaActiva = window.menuSeleccionado?._cat
+      || parseInt(document.getElementById('categoria')?.value)
+      || 0;
     const diyItems = [];
     if ([5, 6].includes(categoriaActiva) && window.BandejasState) {
       const claves = categoriaActiva === 5
         ? ['diy_termos', 'diy_servicio', 'diy_dulces', 'diy_salados']
-        : ['diy_fb_saladas', 'diy_fb_sandwiches', 'diy_fb_postres'];
+        : ['diy_fb_saladas', 'diy_fb_postres'];
       claves.forEach(k => {
         (window.BandejasState[k]?.selected || []).forEach(it => diyItems.push(it));
       });
@@ -835,27 +837,22 @@
     // Función para eliminar ítem DIY desde el resumen
     window._diyEliminar = function(itemId) {
       if (!window.BandejasState) return;
-      const categoriaActiva = parseInt(document.getElementById('categoria')?.value) || 0;
+      const categoriaActiva = window.menuSeleccionado?._cat
+        || parseInt(document.getElementById('categoria')?.value)
+        || 0;
       const claves = categoriaActiva === 5
         ? ['diy_termos', 'diy_servicio', 'diy_dulces', 'diy_salados']
-        : ['diy_fb_saladas', 'diy_fb_sandwiches', 'diy_fb_postres'];
+        : ['diy_fb_saladas', 'diy_fb_postres'];
       claves.forEach(k => {
         const st = window.BandejasState[k];
         if (!st) return;
         const idx = st.selected.findIndex(x => x.id === itemId);
         if (idx >= 0) st.selected.splice(idx, 1);
       });
-      // Re-renderizar grids DIY
-      ['diyTermosContainer','diyServicioContainer','diyDulcesContainer','diySaladosContainer',
-       'diyFbSaladasContainer','diyFbSandwichesContainer','diyFbPostresContainer'].forEach(cId => {
-        const el = document.getElementById(cId);
-        if (el) {
-          const stKey = Object.keys(window.BandejasState).find(k =>
-            window.BandejasState[k].items?.length &&
-            document.getElementById(cId)?.className.includes('diy')
-          );
-        }
-      });
+      // Re-renderizar grids DIY llamando al módulo de bandejas
+      if (typeof window.renderDIYGrupos === 'function') {
+        window.renderDIYGrupos(categoriaActiva);
+      }
       actualizarResumenLateral();
     };
 
