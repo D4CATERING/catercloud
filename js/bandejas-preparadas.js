@@ -280,14 +280,48 @@
   };
 
   // ── API pública: DIY Foodbox ─────────────────────────
-  window.cargarDIYFoodbox = function () {
+  async function cargarDesdeFoodboxSupabase() {
+    if (!window.supabaseClient) throw new Error('Supabase no inicializado');
+
+    const { data: opciones, error } = await window.supabaseClient
+      .from('diy_bandejas_foodbox')
+      .select('*')
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+
+    if (error) throw error;
+
+    const ids = opciones.map(o => o.id);
+    let variantes = [];
+    if (ids.length) {
+      const { data: vars, error: errV } = await window.supabaseClient
+        .from('diy_bandejas_foodbox_variantes')
+        .select('*')
+        .in('opcion_id', ids)
+        .eq('activo', true)
+        .order('orden', { ascending: true });
+      if (!errV) variantes = vars || [];
+    }
+
+    return opciones.map(o => ({
+      ...o,
+      variantes: variantes.filter(v => v.opcion_id === o.id)
+    }));
+  }
+
+  window.cargarDIYFoodbox = async function () {
     crearSeccion('diyFoodboxSection', '🥗 Do It Yourself Foodbox', [
       { icono: '🥗', titulo: 'Saladas',    containerId: 'diyFbSaladasContainer'    },
       { icono: '🍰', titulo: 'Postres',    containerId: 'diyFbPostresContainer'    },
     ]);
 
-    const data = {
-      diy_fb_saladas: [
+    let items = [];
+    try {
+      items = await cargarDesdeFoodboxSupabase();
+      console.log('✅ DIY Foodbox desde Supabase:', items.length, 'ítems');
+    } catch (e) {
+      console.warn('⚠️ Supabase falló para DIY Foodbox, usando fallback:', e.message);
+      const fallbackSaladas = [
         // Tablas y embutidos
         { id: 'fs1',  nombre: 'Tabla de embutido ibérico 500g con picos y pan airbag'},
         { id: 'fs2',  nombre: 'Tabla de paleta ibérica 500g con pan airbag'},
@@ -372,14 +406,15 @@
           { id: 'fs26v7', nombre: 'Mini ensalada griega' },
           { id: 'fs26v8', nombre: 'Mini ensalada César' },
         ]},
-        // Mini burgers, tacos y bao
+      // Mini burgers, tacos y bao
         { id: 'fw1', nombre: 'Mini Burger con queso 25 uds', variantes: [] },
         { id: 'fw2', nombre: 'Mini quesadillas sincronizadas 24 uds', variantes: [] },
         { id: 'fw3', nombre: 'Taco al pastor 24 uds', variantes: [] },
         { id: 'fw4', nombre: 'Taco de tinga de pollo 24 uds', variantes: [] },
         { id: 'fw5', nombre: 'Bao de pulled pork 24 uds', variantes: [] },
-      ],
-      diy_fb_postres: [
+      ];
+      // fallback postres
+      const fallbackPostres = [
         { id: 'fp1', nombre: 'Brocheta de fruta 30 uds', variantes: [] },
         { id: 'fp2', nombre: 'Postres 20 uds', variantes: [
           { id: 'fp2v1', nombre: 'Mini cheesecake' },
@@ -390,8 +425,27 @@
           { id: 'fp2v6', nombre: 'Mini kitkat shot' },
           { id: 'fp2v7', nombre: 'Mini tiramisú' },
         ]},
-      ],
+      ];
+      items = [...fallbackSaladas, ...fallbackPostres];
+    }
+
+    // Distribuir por tipo (Supabase) o usar fallback directamente
+    let saladas, postres;
+    if (items.length && items[0].tipo) {
+      // Datos de Supabase — tienen campo tipo
+      saladas = items.filter(o => o.tipo === 'salado');
+      postres  = items.filter(o => o.tipo === 'postre');
+    } else {
+      // Fallback — ya están separados
+      saladas = items.filter(o => !['fp1','fp2'].includes(o.id));
+      postres  = items.filter(o =>  ['fp1','fp2'].includes(o.id));
+    }
+
+    const data = {
+      diy_fb_saladas: saladas,
+      diy_fb_postres: postres,
     };
+
     const contenedores = {
       diy_fb_saladas: 'diyFbSaladasContainer',
       diy_fb_postres: 'diyFbPostresContainer',

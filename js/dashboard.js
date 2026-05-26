@@ -83,15 +83,67 @@ function volverAlDashboard() {
     document.getElementById('detalleComanda').style.display = 'none';
     const clientesPanel = document.getElementById('clientesPanel');
     if (clientesPanel) clientesPanel.style.display = 'none';
-    
+
     window.comandaEditando = null;
     window.menuSeleccionado = null;
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
     window.pax = 0;
+
+    // Limpiar formulario
+    const form = document.getElementById('comandaCocinaForm');
+    if (form) form.reset();
+
+    // Limpiar selector de categoría y menús
+    const catSelect = document.getElementById('categoria');
+    if (catSelect) catSelect.value = '';
+    const menusContainer = document.getElementById('menusContainer');
+    if (menusContainer) menusContainer.innerHTML = '';
+
+    // Limpiar secciones DIY
+    const diyDesayunosSection = document.getElementById('diyDesayunosSection');
+    if (diyDesayunosSection) diyDesayunosSection.remove();
+    const diyFoodboxSection = document.getElementById('diyFoodboxSection');
+    if (diyFoodboxSection) diyFoodboxSection.remove();
+
+    // Limpiar estado de BandejasState
+    if (window.BandejasState) {
+        ['diy_dulces','diy_salados','diy_termos',
+         'diy_fb_saladas','diy_fb_postres'].forEach(k => {
+            if (window.BandejasState[k]) {
+                window.BandejasState[k].items = [];
+                window.BandejasState[k].selected = [];
+            }
+        });
+    }
+
+    // Limpiar material de logística
+    if (typeof window.limpiarMaterialLogistica === 'function') {
+        window.limpiarMaterialLogistica();
+    }
+    const matInline = document.getElementById('materialLogisticaInline');
+    if (matInline) {
+        matInline.style.display = 'none';
+        matInline.innerHTML = '';
+    }
+    const logisticaSection = document.getElementById('logisticaInlineSection');
+    if (logisticaSection) logisticaSection.style.display = 'none';
+
+    // Limpiar secciones de referencias y multiplicadores
+    const multiplicadorSection = document.getElementById('multiplicadorSection');
+    if (multiplicadorSection) multiplicadorSection.style.display = 'none';
+    const referenciasSection = document.getElementById('referenciasSection');
+    if (referenciasSection) referenciasSection.style.display = 'none';
+
     // Limpiar zumos de logística
     if (window.materialLogistica?.bebidas) {
         window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
     }
+
+    // Limpiar campos de logística inline
+    if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
+
+    // Limpiar resumen lateral
+    if (typeof window.resetearMenusAcumulados === 'function') window.resetearMenusAcumulados();
 
     if (typeof cargarCalendario === 'function') {
         cargarCalendario();

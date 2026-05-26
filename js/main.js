@@ -1071,7 +1071,8 @@ window.actualizarTipoMenajeGlobal = function() {
     }
 
     // 3. Relanzar material para aplicar filtros solo_loza / solo_desechable
-    const categoriaId = parseInt(document.getElementById('categoria')?.value);
+    const categoriaId = window.menuSeleccionado?._cat
+        || parseInt(document.getElementById('categoria')?.value);
     if (categoriaId && typeof window.autocompletarMaterialPorCategoria === 'function') {
         window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
     }

@@ -480,7 +480,7 @@ if (categoriaId === 6) {
     if (diyDesayunosSection) diyDesayunosSection.remove();
 
     if (typeof cargarDIYFoodbox === 'function') {
-        cargarDIYFoodbox();
+        await cargarDIYFoodbox();
     } else {
         console.error('cargarDIYFoodbox() no encontrado. Revisa bandejas-preparadas.js');
     }
