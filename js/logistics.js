@@ -127,23 +127,33 @@
 
         container.innerHTML = `
             <div class="dc-material-section">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h4 class="dc-material-title">📦 Material Necesario</h4>
+                <div class="dc-material-header">
+                    <span class="dc-material-header-icon">📦</span>
+                    <span class="dc-material-title">Material necesario</span>
                     ${window.materialLogistica.isAdmin ? 
-                        '<button type="button" onclick="abrirAdminMaterial()" class="btn-material-admin">⚙️ Gestionar</button>' 
+                        '<button type="button" onclick="abrirAdminMaterial()" class="btn-material-admin"><i class="ti ti-settings"></i> Gestionar</button>' 
                         : ''}
                 </div>
                 <div class="dc-material-grid">
                     <div class="dc-material-col">
-                        <h5>🥤 Bebidas</h5>
+                        <div class="dc-material-col-header">
+                            <span>🍷</span>
+                            <span>Bebidas</span>
+                        </div>
                         <div id="${containerId}_bebidas" class="dc-material-list"></div>
                     </div>
                     <div class="dc-material-col">
-                        <h5>🍽️ Menaje</h5>
+                        <div class="dc-material-col-header">
+                            <span>🍽️</span>
+                            <span>Menaje</span>
+                        </div>
                         <div id="${containerId}_menaje" class="dc-material-list"></div>
                     </div>
                     <div class="dc-material-col">
-                        <h5>✨ Extras</h5>
+                        <div class="dc-material-col-header">
+                            <span>✨</span>
+                            <span>Extras</span>
+                        </div>
                         <div id="${containerId}_extras" class="dc-material-list"></div>
                     </div>
                 </div>
@@ -156,6 +166,15 @@
     /**
      * Autocompleta según categoría
      */
+    // IDs de ítems incluidos en el precio según tipo de menú
+    const INCLUIDOS_POR_MENU = {
+        desayunos: [
+            '3a6e55f0-64ab-4c74-a19f-bdb4c85a31d8', // Vasos para zumo
+            '548b2e15-1315-4673-ad3d-e5cd8102e816', // Kit desechable para café
+            'a045fca2-d788-491d-a521-f731bc744e54', // Servilletas
+        ],
+    };
+
     window.autocompletarMaterialPorCategoria = async function(categoriaId, containerId) {
         const mapeo = {
             1: 'desayunos',
@@ -170,23 +189,32 @@
         if (!menuTipo) return;
 
         const materialMenu = await cargarMaterialPorMenu(menuTipo);
-        const pax = window.pax || 0;
+        const incluidosIds = INCLUIDOS_POR_MENU[menuTipo] || [];
+        const pax = window.pax || parseInt(document.getElementById('pax')?.value) || 0;
 
         if (materialMenu.length > 0) {
-            // Usar configuración de Supabase
             const materialIds = materialMenu.map(m => m.material_id);
             const catalogo = window.materialLogistica.catalogoCompleto || [];
 
             ['bebidas', 'menaje', 'extras'].forEach(tipo => {
-                window.materialLogistica[tipo] = catalogo
-                    .filter(item => item.tipo === tipo && materialIds.includes(item.id))
-                    .map(item => ({
-                        ...item,
-                        cantidad: 0,  // Empezar en 0, usuario indica cantidad
-                        checked: false,  // No marcado por defecto
-                        subitems_expanded: false,
-                        subitems_selected: []
-                    }));
+                const inyectados = (window.materialLogistica[tipo] || []).filter(i => i._zumoId || i._menaje_desayuno || i._extras_desayuno);
+
+                window.materialLogistica[tipo] = [
+                    ...inyectados,
+                    ...catalogo
+                        .filter(item => item.tipo === tipo && materialIds.includes(item.id))
+                        .map(item => {
+                            const incluido = incluidosIds.includes(item.id);
+                            return {
+                                ...item,
+                                cantidad: incluido ? pax : 0,
+                                checked: incluido,
+                                incluido_en: incluido ? [menuTipo] : (item.incluido_en || []),
+                                subitems_expanded: false,
+                                subitems_selected: []
+                            };
+                        })
+                ];
             });
         }
 
@@ -247,18 +275,13 @@
             const lista = document.getElementById(`${containerId}_${tipo}`);
             if (!lista) return;
 
-            // Guardar items inyectados por desayunos.js (zumo/agua y menaje)
-            // para no perderlos al re-renderizar el material de logistica
-            const itemsDesayuno = Array.from(lista.querySelectorAll('[data-zumo-id], [data-menaje-desayuno], [data-extras-desayuno], [data-menaje-foodbox], [data-extras-foodbox]'));
-
             const items = window.materialLogistica[tipo];
 
-            if (items.length === 0 && itemsDesayuno.length === 0) {
+            if (items.length === 0) {
                 lista.innerHTML = '<p class="dc-material-empty">Sin elementos</p>';
                 return;
             }
 
-            // Renderizar solo los items propios de logistica
             lista.innerHTML = items.map(item => {
                 if (item.tiene_subitems) {
                     return renderizarItemConSubitems(item, tipo, containerId);
@@ -266,60 +289,63 @@
                     return renderizarItemSimple(item, tipo);
                 }
             }).join('');
-
-            // Re-insertar items de desayunos (desayunos.js los limpia al cambiar de menú)
-            itemsDesayuno.forEach(item => {
-                lista.appendChild(item);
-            });
         });
     }
 
     function renderizarItemSimple(item, tipo) {
+        const precio = item.precio > 0
+            ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+            : item.incluido_en?.length
+                ? `<span class="dc-material-incluido">incluido</span>`
+                : `<span class="dc-material-precio dc-material-precio--sin-precio">—</span>`;
+
+        const btnClass = item.checked ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn';
+        const btnIcon  = item.checked ? 'ti-check' : 'ti-plus';
+
         return `
-            <label class="dc-material-item">
-                <input type="checkbox" 
-                       ${item.checked ? 'checked' : ''}
-                       onchange="toggleMaterialItem('${tipo}', '${item.id}', this.checked)">
-                <span class="dc-material-nombre">${item.nombre}</span>
-                <input type="number" 
-                       class="dc-material-cantidad" 
-                       value="${item.cantidad !== undefined ? item.cantidad : 0}"
-                       min="0"
-                       onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">
-                <span class="dc-material-unidad">${item.unidad}</span>
-            </label>
+            <div class="dc-material-item ${item.checked ? 'dc-material-item--active' : ''}">
+                <div class="dc-material-item-info">
+                    <span class="dc-material-nombre">${item.nombre}</span>
+                    ${precio}
+                </div>
+                <div class="dc-material-item-right">
+                    ${item.checked ? `<input type="number" class="dc-material-cantidad" value="${item.cantidad || 0}" min="0" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">` : ''}
+                    <button type="button" class="${btnClass}" onclick="toggleMaterialItemNew('${tipo}', '${item.id}', '${item.containerId || ''}')">
+                        <i class="ti ${btnIcon}"></i>
+                    </button>
+                </div>
+            </div>
         `;
     }
 
     function renderizarItemConSubitems(item, tipo, containerId) {
-        const isExpanded = item.subitems_expanded;
+        const precio = item.precio > 0
+            ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+            : item.incluido_en?.length
+                ? `<span class="dc-material-incluido">incluido</span>`
+                : '';
+
+        const btnClass = item.checked ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn';
+        const btnIcon  = item.checked ? '✓' : '+';
+        const subitemsSeleccionados = (item.subitems_selected || []).map(s => s.nombre || s.id).join(', ');
+
         return `
             <div class="dc-material-item-expandable">
-                <label class="dc-material-item">
-                    <input type="checkbox" 
-                           ${item.checked ? 'checked' : ''}
-                           onchange="toggleMaterialItemExpandable('${tipo}', '${item.id}', this.checked, '${containerId}')">
-                    <span class="dc-material-nombre">${item.nombre}</span>
-                    <button type="button" class="dc-material-expand-btn" 
-                            onclick="toggleSubitems('${tipo}', '${item.id}', '${containerId}')">
-                        ${isExpanded ? '▼' : '▶'}
-                    </button>
-                </label>
-                <div class="dc-material-subitems" style="display: ${isExpanded ? 'block' : 'none'}">
-                    ${(item.subitems || []).map(subitem => `
-                        <label class="dc-material-subitem">
-                            <input type="checkbox" 
-                                   ${isSubitemSelected(item, subitem.id) ? 'checked' : ''}
-                                   onchange="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', this.checked, '${containerId}')">
-                            <span class="dc-material-nombre">${subitem.nombre}</span>
-                            <input type="number" 
-                                   class="dc-material-cantidad" 
-                                   value="${getSubitemCantidad(item, subitem.id)}"
-                                   min="0"
-                                   onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
-                            <span class="dc-material-unidad">${subitem.unidad}</span>
-                        </label>
-                    `).join('')}
+                <div class="dc-material-item ${item.checked ? 'dc-material-item--active' : ''}"
+                     style="cursor:pointer"
+                     onclick="abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">
+                    <div class="dc-material-item-info">
+                        <span class="dc-material-nombre">${item.nombre}</span>
+                        ${subitemsSeleccionados
+                            ? `<span class="dc-material-precio">${subitemsSeleccionados}</span>`
+                            : precio}
+                    </div>
+                    <div class="dc-material-item-right">
+                        <button type="button" class="${btnClass}"
+                                onclick="event.stopPropagation(); toggleMaterialItemNew('${tipo}', '${item.id}', '${containerId}')">
+                            ${btnIcon}
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -341,12 +367,10 @@
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
         if (!item) return;
         item.checked = checked;
-        // Al marcar, autorellenar cantidad con PAX solo para menaje (bebidas/extras se diligencian manualmente)
         if (checked && tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
             const pax = parseInt(document.getElementById('pax')?.value || 0);
             if (pax > 0) {
                 item.cantidad = pax;
-                // Actualizar el input visible en el DOM
                 const label = document.querySelector(
                     `#materialLogisticaInline_${tipo} input[onchange*="${itemId}"]`
                 )?.closest('label');
@@ -356,6 +380,18 @@
                 }
             }
         }
+    };
+
+    window.toggleMaterialItemNew = function(tipo, itemId, containerId) {
+        const item = window.materialLogistica[tipo].find(i => i.id == itemId);
+        if (!item) return;
+        item.checked = !item.checked;
+        if (item.checked && tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
+            const pax = parseInt(document.getElementById('pax')?.value || 0);
+            if (pax > 0) item.cantidad = pax;
+        }
+        const cId = containerId || 'materialLogisticaInline';
+        renderizarMaterial(cId);
     };
 
     window.toggleMaterialItemExpandable = function(tipo, itemId, checked, containerId) {
@@ -432,5 +468,50 @@
         }
         return cantidadBase;
     }
+
+    // ── Modal subitems ───────────────────────────────────
+    window.abrirModalMaterialSubitems = function(tipo, itemId, containerId) {
+        const item = window.materialLogistica[tipo]?.find(i => i.id === itemId);
+        if (!item || !item.subitems?.length) return;
+
+        const modal = document.getElementById('modalMaterialSubitems');
+        const titulo = document.getElementById('modalMaterialSubitemsTitle');
+        const opciones = document.getElementById('modalMaterialSubitemsOpciones');
+        if (!modal) return;
+
+        titulo.textContent = item.nombre;
+        opciones.innerHTML = item.subitems.map(subitem => {
+            const seleccionado = isSubitemSelected(item, subitem.id);
+            const cantidad = getSubitemCantidad(item, subitem.id);
+            return `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;
+                            padding:10px 14px;margin-bottom:6px;border-radius:6px;
+                            border:1px solid #E8E6E1;background:${seleccionado ? 'rgba(219,234,254,0.5)' : 'white'};">
+                    <span class="dc-material-nombre">${subitem.nombre}</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0"
+                            onchange="updateSubitemCantidad('${tipo}','${itemId}','${subitem.id}',this.value,'${containerId}')">` : ''}
+                        <button type="button"
+                                class="${seleccionado ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn'}"
+                                onclick="toggleSubitem('${tipo}','${itemId}','${subitem.id}',${!seleccionado},'${containerId}'); setTimeout(()=>abrirModalMaterialSubitems('${tipo}','${itemId}','${containerId}'),50);">
+                            ${seleccionado ? '✓' : '+'}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        modal.style.display = 'flex';
+    };
+
+    window.cerrarModalMaterialSubitems = function() {
+        const modal = document.getElementById('modalMaterialSubitems');
+        if (modal) modal.style.display = 'none';
+    };
+
+    document.addEventListener('click', function(e) {
+        const modal = document.getElementById('modalMaterialSubitems');
+        if (modal && e.target === modal) modal.style.display = 'none';
+    });
 
 })();

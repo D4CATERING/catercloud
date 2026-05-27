@@ -252,6 +252,7 @@ function renderizarZumoEnLogistica(ref, cantidadTotal) {
 
     // Añadir el zumo del menú actual
     window.materialLogistica.bebidas.push({
+        id: ref.id,
         _zumoId: ref.id,
         item_id: ref.id,
         nombre: ref.nombre,
@@ -259,6 +260,8 @@ function renderizarZumoEnLogistica(ref, cantidadTotal) {
         unidad: ref.unidad || 'litros',
         checked: true,
         tipo: 'bebidas',
+        precio: 0,
+        incluido_en: ['desayunos'],
         tiene_subitems: false,
         subitems: [],
         subitems_selected: []
@@ -1704,6 +1707,9 @@ async function seleccionarMenu(menuId, element) {
 
         if (typeof inicializarMaterialLogistica === 'function') {
             await inicializarMaterialLogistica('materialLogisticaInline');
+            // Añadir menaje incluido ANTES de autocompletar para que sea preservado
+            const paxDesayuno = window.pax || parseInt(document.getElementById('pax')?.value) || 0;
+            renderizarMenajeDesayunoEnLogistica(paxDesayuno);
             if (typeof autocompletarMaterialPorCategoria === 'function') {
                 await autocompletarMaterialPorCategoria(1, 'materialLogisticaInline');
             }

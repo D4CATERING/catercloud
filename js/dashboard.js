@@ -88,10 +88,26 @@ function volverAlDashboard() {
     window.menuSeleccionado = null;
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
     window.pax = 0;
+    window.foodboxSelecciones = { ensaladas: [], sandwiches: [], postres: [] };
+
+    // Limpiar paginación de referencias
+    if (window.referenciasPaginacion) {
+        ['gris', 'rojo', 'postres'].forEach(tipo => {
+            if (window.referenciasPaginacion[tipo]) {
+                window.referenciasPaginacion[tipo].page = 1;
+                window.referenciasPaginacion[tipo].query = '';
+                window.referenciasPaginacion[tipo].items = [];
+            }
+        });
+    }
 
     // Limpiar formulario
     const form = document.getElementById('comandaCocinaForm');
     if (form) form.reset();
+
+    // Limpiar PAX explícitamente
+    const paxInput = document.getElementById('pax');
+    if (paxInput) paxInput.value = '';
 
     // Limpiar selector de categoría y menús
     const catSelect = document.getElementById('categoria');
@@ -104,6 +120,25 @@ function volverAlDashboard() {
     if (diyDesayunosSection) diyDesayunosSection.remove();
     const diyFoodboxSection = document.getElementById('diyFoodboxSection');
     if (diyFoodboxSection) diyFoodboxSection.remove();
+
+    // Limpiar secciones dinámicas adicionales
+    const desayunoSection = document.getElementById('desayunoReferencesSection');
+    if (desayunoSection) desayunoSection.style.display = 'none';
+    const foodboxLunchSection = document.getElementById('foodboxLunchSection');
+    if (foodboxLunchSection) foodboxLunchSection.remove();
+
+    // Limpiar grids de referencias
+    ['referenciasGrisGrid','referenciasRojoGrid','referenciasPostresGrid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+    });
+    // Limpiar buscadores
+    ['referenciasGrisGrid__search','referenciasRojoGrid__search','referenciasPostresGrid__search'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    // Limpiar selección visual de menús
+    document.querySelectorAll('.menu-option.selected').forEach(el => el.classList.remove('selected'));
 
     // Limpiar estado de BandejasState
     if (window.BandejasState) {
