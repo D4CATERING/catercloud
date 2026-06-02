@@ -128,31 +128,45 @@
         container.innerHTML = `
             <div class="dc-material-section">
                 <div class="dc-material-header">
-                    <span class="dc-material-header-icon">📦</span>
-                    <span class="dc-material-title">Material necesario</span>
+                    <div class="dc-material-heading">
+                        <span class="dc-material-header-icon">📦</span>
+                        <div>
+                            <span class="dc-material-title">Material necesario</span>
+                            <span class="dc-material-subtitle">Revisa cantidades y elementos antes de guardar</span>
+                        </div>
+                    </div>
                     ${window.materialLogistica.isAdmin ? 
                         '<button type="button" onclick="abrirAdminMaterial()" class="btn-material-admin"><i class="ti ti-settings"></i> Gestionar</button>' 
                         : ''}
                 </div>
                 <div class="dc-material-grid">
-                    <div class="dc-material-col">
+                    <div class="dc-material-col dc-material-col--bebidas">
                         <div class="dc-material-col-header">
                             <span>🍷</span>
-                            <span>Bebidas</span>
+                            <div>
+                                <span>Bebidas</span>
+                                <small>Agua, zumos y refrescos</small>
+                            </div>
                         </div>
                         <div id="${containerId}_bebidas" class="dc-material-list"></div>
                     </div>
-                    <div class="dc-material-col">
+                    <div class="dc-material-col dc-material-col--menaje">
                         <div class="dc-material-col-header">
                             <span>🍽️</span>
-                            <span>Menaje</span>
+                            <div>
+                                <span>Menaje</span>
+                                <small>Piezas y servicio</small>
+                            </div>
                         </div>
                         <div id="${containerId}_menaje" class="dc-material-list"></div>
                     </div>
-                    <div class="dc-material-col">
+                    <div class="dc-material-col dc-material-col--extras">
                         <div class="dc-material-col-header">
                             <span>✨</span>
-                            <span>Extras</span>
+                            <div>
+                                <span>Extras</span>
+                                <small>Apoyos y adicionales</small>
+                            </div>
                         </div>
                         <div id="${containerId}_extras" class="dc-material-list"></div>
                     </div>
@@ -331,8 +345,7 @@
 
         return `
             <div class="dc-material-item-expandable">
-                <div class="dc-material-item ${item.checked ? 'dc-material-item--active' : ''}"
-                     style="cursor:pointer"
+                <div class="dc-material-item dc-material-item--clickable ${item.checked ? 'dc-material-item--active' : ''}"
                      onclick="abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">
                     <div class="dc-material-item-info">
                         <span class="dc-material-nombre">${item.nombre}</span>
@@ -484,11 +497,9 @@
             const seleccionado = isSubitemSelected(item, subitem.id);
             const cantidad = getSubitemCantidad(item, subitem.id);
             return `
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;
-                            padding:10px 14px;margin-bottom:6px;border-radius:6px;
-                            border:1px solid #E8E6E1;background:${seleccionado ? 'rgba(219,234,254,0.5)' : 'white'};">
+                <div class="dc-material-modal-option ${seleccionado ? 'dc-material-modal-option--active' : ''}">
                     <span class="dc-material-nombre">${subitem.nombre}</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="dc-material-modal-actions">
                         ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0"
                             onchange="updateSubitemCantidad('${tipo}','${itemId}','${subitem.id}',this.value,'${containerId}')">` : ''}
                         <button type="button"

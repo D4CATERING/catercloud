@@ -15,28 +15,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-    <!-- Estilos logística -->
-    <style>
-        .log-readonly {
-            background: #f8fafc;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            font-size: .95rem;
-        }
-        .log-error {
-            color: #dc2626;
-            font-size: 0.8rem;
-            margin-top: 4px;
-            display: block;
-            min-height: 16px;
-        }
-    </style>
 </head>
 <body>
 
-<!-- ══ SIDEBAR ══ -->
+<!-- Sidebar principal -->
 <aside class="dc-sidebar">
   <div class="dc-sidebar-brand">
     <img src="assets/images/logo.png" alt="Decuatro" class="dc-sidebar-logo">
@@ -71,10 +53,10 @@
   </div>
 </aside>
 
-<!-- ══ MAIN ══ -->
+<!-- Contenido principal -->
 <main class="dc-main" id="dcMain">
 
-    <!-- ══ DASHBOARD ══ -->
+    <!-- Vista: Dashboard -->
     <div id="dashboard">
       <div class="dc-page-header dash-page-header">
         <div>
@@ -117,7 +99,7 @@
       </div>
     </div>
 
-    <!-- ══ FORMULARIO DE COMANDA ══ -->
+    <!-- Vista: Nueva comanda -->
     <div id="comandaForm" style="display: none;">
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
@@ -132,7 +114,7 @@
           <div class="comanda-form-main">
             <form id="comandaCocinaForm" novalidate>
 
-                <!-- Sección 1: Información básica -->
+                <!-- Comanda: Información básica -->
                 <div class="form-section dc-section">
                     <div class="dc-section-header">
                         <span class="dc-section-icon">📋</span>
@@ -162,13 +144,13 @@
                     </div>
                 </div>
                 
-                <!-- Sección 2: Menú Principal -->
+                <!-- Comanda: Menú principal -->
                 <div class="form-section">
                     <div class="dc-section-header">
                         <h3>🍴 Menú Principal</h3>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="dc-two-column-grid">
                         <div class="form-group">
                             <label for="categoria">Categoría del Menú</label>
                             <select id="categoria" onchange="cargarMenus()">
@@ -194,23 +176,23 @@
                     <div id="menusContainer" class="menu-selection"></div>
                     <input type="hidden" id="menu_id" name="menu_id">
 
-                    <!-- Lista de menús añadidos -->
-                    <div id="menusAnadidosList" style="margin-top:12px;"></div>
+                    <!-- Menús añadidos -->
+                    <div id="menusAnadidosList" class="dc-mt-12"></div>
 
-                    <!-- PAX total oculto — se muestra en el resumen lateral -->
+                    <!-- PAX total oculto: se muestra en el resumen lateral -->
                     <span id="paxTotalWrap" style="display:none;">
                         <span id="paxTotalValor">0</span>
                     </span>
                 </div>
                 
-                <!-- Sección 3: Multiplicadores de Cantidades -->
+                <!-- Comanda: Multiplicadores de cantidades -->
                 <div id="multiplicadorSection" class="form-section dc-section" style="display: none;">
                     <div class="dc-section-header">
                         <span class="dc-section-icon">🧮</span>
                         <h3>Multiplicadores de Cantidades</h3>
                     </div>
 
-                    <div style="padding: 12px 14px;">
+                    <div class="dc-section-body">
                         <div class="multiplicadores-container">
                             <div class="multiplicador-section">
                                 <h4>Referencias Saladas</h4>
@@ -249,20 +231,20 @@
                     </div>
                 </div>
                 
-                <!-- Sección 4: Selección de Referencias -->
+                <!-- Comanda: Selección de referencias -->
                 <div id="referenciasSection" class="form-section dc-section" style="display: none;">
                     <div class="dc-section-header">
                         <span class="dc-section-icon">📋</span>
                         <h3>Selección de Referencias</h3>
                     </div>
 
-                    <div style="padding: 12px 14px;">
+                    <div class="dc-section-body">
 
-                        <!-- Referencias Grises -->
-                        <div id="referenciasSaladasGroup" style="margin-bottom: 20px;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                <label style="font-weight:500;">⬜ Referencias Grises</label>
-                                <span id="contadorGris" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                        <!-- Referencias grises -->
+                        <div id="referenciasSaladasGroup" class="referencias-group">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title">⬜ Referencias Grises</label>
+                                <span id="contadorGris" class="referencias-counter">0 / 0</span>
                             </div>
 
                             <span id="minSaladas" style="display:none;">0</span>
@@ -271,21 +253,21 @@
                             <div id="referenciasSaladasGrid" style="display:none;"></div>
                         </div>
 
-                        <!-- Referencias Rojas -->
-                        <div id="referenciasRojasGroup" style="margin-bottom: 20px; display:none;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                <label style="font-weight:500; color:#c0392b;">🔴 Referencias Rojas</label>
-                                <span id="contadorRojo" style="font-size:0.8rem; color:#c0392b; background:#fef2f2; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                        <!-- Referencias rojas -->
+                        <div id="referenciasRojasGroup" class="referencias-group" style="display:none;">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title referencias-group-title--red">🔴 Referencias Rojas</label>
+                                <span id="contadorRojo" class="referencias-counter referencias-counter--red">0 / 0</span>
                             </div>
 
                             <div id="referenciasRojoGrid" class="referencias-grid"></div>
                         </div>
 
                         <!-- Postres -->
-                        <div id="referenciasPostresGroup" style="display: none; margin-top: 15px;">
-                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                                <label style="font-weight:500;">🍰 Postres</label>
-                                <span id="contadorPostres" style="font-size:0.8rem; color:#64748b; background:#f1f5f9; padding:2px 8px; border-radius:999px;">0 / 0</span>
+                        <div id="referenciasPostresGroup" class="referencias-group referencias-group--postres" style="display: none;">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title">🍰 Postres</label>
+                                <span id="contadorPostres" class="referencias-counter">0 / 0</span>
                             </div>
 
                             <span id="minPostres" style="display:none;">0</span>
@@ -296,7 +278,7 @@
                     </div>
                 </div>
                 
-                <!-- Sección 5: Notas Adicionales -->
+                <!-- Comanda: Notas adicionales -->
                 <div class="form-section">
                     <h3>📝 Notas Adicionales</h3>
 
@@ -306,14 +288,17 @@
                     </div>
                 </div>
                 
-                <!-- Menús Adicionales — gestionados desde el resumen lateral -->
+                <!-- Menús adicionales gestionados desde el resumen lateral -->
                 <div id="menusAdicionalesList" style="display:none;"></div>
-                
-                <!-- Sección Logística inline -->
+
+                <!-- Comanda: Datos de logística -->
                 <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
                     <div class="dc-section-header">
                         <span class="dc-section-icon">🚚</span>
-                        <h3>Datos de Logística</h3>
+                        <div class="dc-log-heading">
+                            <h3>Datos de Logística</h3>
+                            <span>Contacto, dirección y horarios del servicio</span>
+                        </div>
                     </div>
 
                     <div class="dc-log-grid">
@@ -355,13 +340,13 @@
                     </div>
                 </div>
 
-                <!-- Material de Logística INLINE -->
+                <!-- Comanda: Material de logística -->
                 <div id="materialLogisticaInline" style="display: none;"></div>
 
-                <!-- Mensajes -->
+                <!-- Mensajes del formulario -->
                 <div id="message" class="message"></div>
                 
-                <!-- Botones -->
+                <!-- Acciones del formulario -->
                 <div class="button-group">
                     <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
                         ← Volver
@@ -389,7 +374,7 @@
               </div>
             </div>
 
-            <!-- PAX + botón añadir — debajo del resumen -->
+            <!-- PAX y acción de añadir menú -->
             <div id="btnAnadirMenuWrap" style="display:none;">
               <div class="btn-anadir-pax-row">
                 <label for="pax">PAX este menú</label>
@@ -407,7 +392,8 @@
       </div><!-- /dc-page-content -->
     </div><!-- /comandaForm -->
 
-    <!-- MODAL para seleccionar menús adicionales -->
+    <!-- Modales -->
+    <!-- Modal: Menús adicionales -->
     <div id="modalMenus" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -429,7 +415,7 @@
                 
                 <div id="modalMenusContainer" class="menu-selection"></div>
                 
-                <div id="modalPaxSection" class="form-section" style="display: none; margin-top: 20px;">
+                <div id="modalPaxSection" class="form-section dc-mt-20" style="display: none;">
                     <h4>👥 PAX para este menú</h4>
                     <input type="number" id="modalPaxAdicional" class="multiplicador-input" 
                            placeholder="Número de PAX" min="1" value=""
@@ -469,12 +455,12 @@
 
                     <div>
                         <label>Selecciona <span id="modalMinSaladas">X</span>-<span id="modalMaxSaladas">Y</span> referencias saladas:</label>
-                        <div id="modalReferenciasSaladasGrid" class="referencias-grid" style="margin-top: 10px;"></div>
+                        <div id="modalReferenciasSaladasGrid" class="referencias-grid dc-mt-10"></div>
                     </div>
                     
-                    <div id="modalPostresGroupRef" style="display: none; margin-top: 15px;">
+                    <div id="modalPostresGroupRef" class="dc-mt-15" style="display: none;">
                         <label>Selecciona <span id="modalMinPostres">A</span>-<span id="modalMaxPostres">B</span> referencias de postres:</label>
-                        <div id="modalReferenciasPostresGrid" class="referencias-grid" style="margin-top: 10px;"></div>
+                        <div id="modalReferenciasPostresGrid" class="referencias-grid dc-mt-10"></div>
                     </div>
                 </div>
             </div>
@@ -486,10 +472,23 @@
         </div>
     </div>
 
-    <!-- MODAL DE CONFIRMACIÓN PARA LOGÍSTICA -->
-    <!-- Modal subitems de material logística -->
-    <div id="modalMaterialSubitems" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 380px;">
+    <!-- Modal: Opciones desayuno (bollería, sandwich, pulguita) -->
+    <div id="modalDesayunoOpciones" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h3 id="modalDesayunoTitle">Seleccionar opciones</h3>
+                <span class="close-modal" onclick="cerrarModalDesayunoOpciones()">×</span>
+            </div>
+            <div class="modal-body" id="modalDesayunoBody"></div>
+            <div class="modal-footer" id="modalDesayunoFooter" style="display:none;">
+                <button type="button" class="btn-primary" onclick="confirmarModalDesayunoOpciones()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Subitems de material logística -->
+    <div id="modalMaterialSubitems" class="modal">
+        <div class="modal-content modal-content--compact">
             <div class="modal-header">
                 <h3 id="modalMaterialSubitemsTitle">Seleccionar opción</h3>
                 <span class="close-modal" onclick="cerrarModalMaterialSubitems()">×</span>
@@ -500,8 +499,9 @@
         </div>
     </div>
 
-    <div id="modalConfirmacionLogistica" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px;">
+    <!-- Modal: Confirmación para crear logística -->
+    <div id="modalConfirmacionLogistica" class="modal">
+        <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h3>🚚 ¿Crear también comanda de logística?</h3>
                 <span class="close-modal" onclick="cerrarModalConfirmacion()">×</span>
@@ -510,7 +510,7 @@
             <div class="modal-body">
                 <p>La comanda de cocina se ha creado exitosamente. ¿Deseas crear también la comanda de logística para este evento?</p>
                 
-                <div class="form-group" style="margin-top: 20px;">
+                <div class="form-group dc-mt-20">
                     <label>
                         <input type="checkbox" id="recordarPreferencia"> Recordar mi preferencia para futuras comandas
                     </label>
@@ -524,7 +524,7 @@
         </div>
     </div>
 
-    <!-- ══ HISTORIAL ══ -->
+    <!-- Vista: Historial -->
     <div id="historialPage" style="display: none;">
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
@@ -549,7 +549,7 @@
       </div>
     </div>
 
-    <!-- ══ DETALLE DE COMANDA ══ -->
+    <!-- Vista: Detalle de comanda -->
     <div id="detalleComanda" style="display: none;">
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlHistorial()">← Volver al Historial</button>
@@ -557,7 +557,7 @@
 
       <div class="dc-page-content">
 
-            <!-- ENCABEZADO -->
+            <!-- Detalle: Encabezado -->
             <div class="detalle-header">
                 <div>
                     <div id="detalleCodigo" class="detalle-codigo"></div>
@@ -592,7 +592,7 @@
                 </div>
             </div>
 
-            <!-- INFORMACIÓN DEL EVENTO -->
+            <!-- Detalle: Información del evento -->
             <div class="dc-section">
                 <div class="dc-section-header">
                     <span>📋</span>
@@ -627,7 +627,7 @@
                 </div>
             </div>
 
-            <!-- MENÚ PRINCIPAL -->
+            <!-- Detalle: Menú principal -->
             <div class="dc-section">
                 <div class="dc-section-header">
                     <span>🍽️</span>
@@ -637,7 +637,7 @@
                 <div class="detalle-body" id="detalleMenuPrincipal"></div>
             </div>
 
-            <!-- MENÚS ADICIONALES -->
+            <!-- Detalle: Menús adicionales -->
             <div class="dc-section" id="detalleMenusAdicionalesSection" style="display:none;">
                 <div class="dc-section-header">
                     <span>➕</span>
@@ -647,7 +647,7 @@
                 <div class="detalle-body" id="detalleMenusAdicionales"></div>
             </div>
 
-            <!-- REFERENCIAS -->
+            <!-- Detalle: Referencias -->
             <div class="dc-section" id="detalleReferenciasSection" style="display:none;">
                 <div class="dc-section-header">
                     <span>📋</span>
@@ -655,7 +655,7 @@
                 </div>
 
                 <div class="detalle-body">
-                    <div id="detalleMultiplicadoresSection" style="display:none; margin-bottom:6px;">
+                    <div id="detalleMultiplicadoresSection" class="dc-mb-6" style="display:none;">
                         <span class="detalle-field-label">Multiplicadores: </span>
                         <span id="detalleMultiplicadores" class="detalle-field-value"></span>
                     </div>
@@ -664,7 +664,7 @@
                 </div>
             </div>
 
-            <!-- NOTAS ADICIONALES -->
+            <!-- Detalle: Notas adicionales -->
             <div class="dc-section" id="detalleNotasSection" style="display:none;">
                 <div class="dc-section-header">
                     <span>📝</span>
@@ -676,7 +676,7 @@
                 </div>
             </div>
 
-            <!-- DATOS DE ENTREGA -->
+            <!-- Detalle: Datos de entrega -->
             <div class="dc-section" id="detalleDatosLogisticaSection" style="display:none;">
                 <div class="dc-section-header">
                     <span>🚚</span>
@@ -686,7 +686,7 @@
                 <div id="detalleDatosLogisticaContent"></div>
             </div>
 
-            <!-- MATERIAL NECESARIO -->
+            <!-- Detalle: Material necesario -->
             <div class="dc-section" id="detalleLogisticaSection" style="display:none;">
                 <div class="dc-section-header">
                     <span>📦</span>
@@ -699,7 +699,7 @@
       </div>
     </div>
 
-    <!-- FORMULARIO DE LOGÍSTICA -->
+    <!-- Vista: Formulario de logística -->
     <div id="logisticaForm" style="display: none;">
         <button class="back-button" onclick="volverDesdeCancelLogistica()">
             ← Cancelar y volver al Inicio
@@ -716,48 +716,54 @@
 
             <div class="form-container">
 
-                <!-- Datos heredados de cocina -->
-                <div class="form-section">
-                    <h3>📋 Datos de la Comanda de Cocina</h3>
+                <!-- Logística: Datos heredados de cocina -->
+                <div class="form-section logistics-summary-section">
+                    <div class="logistics-summary-header">
+                        <span>Resumen</span>
+                        <strong>Comanda de cocina</strong>
+                    </div>
 
-                    <div class="detalle-info">
-                        <div class="info-item">
+                    <div class="detalle-info logistics-summary-grid">
+                        <div class="info-item logistics-summary-item logistics-summary-item--code">
                             <div class="info-label">Código Cocina</div>
                             <div id="log_codigo_cocina" class="info-value log-readonly">—</div>
                         </div>
 
-                        <div class="info-item">
+                        <div class="info-item logistics-summary-item logistics-summary-item--company">
                             <div class="info-label">Empresa</div>
                             <div id="log_empresa" class="info-value log-readonly">—</div>
                         </div>
 
-                        <div class="info-item">
+                        <div class="info-item logistics-summary-item">
                             <div class="info-label">Responsable</div>
                             <div id="log_responsable" class="info-value log-readonly">—</div>
                         </div>
 
-                        <div class="info-item">
+                        <div class="info-item logistics-summary-item logistics-summary-item--small">
                             <div class="info-label">PAX</div>
                             <div id="log_pax" class="info-value log-readonly">—</div>
                         </div>
 
-                        <div class="info-item">
+                        <div class="info-item logistics-summary-item">
                             <div class="info-label">Fecha del Evento</div>
                             <div id="log_fecha_evento" class="info-value log-readonly">—</div>
                         </div>
 
-                        <div class="info-item">
+                        <div class="info-item logistics-summary-item logistics-summary-item--small">
                             <div class="info-label">Hora de Salida</div>
                             <div id="log_hora_salida" class="info-value log-readonly">—</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Datos exclusivos de logística -->
+                <!-- Logística: Datos de entrega -->
                 <div class="form-section dc-section dc-section--logistics">
                     <div class="dc-section-header">
                         <span class="dc-section-icon">🚚</span>
-                        <h3>Datos de Entrega</h3>
+                        <div class="dc-log-heading">
+                            <h3>Datos de Entrega</h3>
+                            <span>Contacto, dirección y horarios del servicio</span>
+                        </div>
                     </div>
 
                     <div class="dc-log-grid">
@@ -799,11 +805,11 @@
                     </div>
                 </div>
 
-                <!-- Material de Logística PÁGINA SEPARADA -->
+                <!-- Logística: Material necesario -->
                 <div id="materialLogisticaPage"></div>
 
-                <!-- Acciones -->
-                <div class="form-actions" style="display:flex; gap:12px; justify-content:flex-end; margin-top:24px;">
+                <!-- Logística: Acciones -->
+                <div class="form-actions form-actions--end">
                     <button type="button" class="btn-secondary" onclick="volverDesdeCancelLogistica()">
                         Cancelar
                     </button>
@@ -819,11 +825,11 @@
         </div>
     </div>
 
-    <!-- Supabase -->
+    <!-- Scripts: Autenticación -->
     <script src="vendor/supabase.min.js"></script>
     <script src="js/auth.js"></script>
 
-    <!-- Protección -->
+    <!-- Control de acceso -->
     <script>
       (async () => {
         try {
@@ -836,7 +842,7 @@
       })();
     </script>
 
-    <!-- JavaScript de tu app -->
+    <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
     <script src="js/calendar.js"></script>
     <script src="js/dashboard.js"></script>
@@ -854,7 +860,7 @@
     <script src="js/logistics.js"></script>
     <script src="js/generar-comandas.js"></script>
 
-    <!-- Sidebar: usuario + logout + navegación activa -->
+    <!-- Scripts: Sidebar y navegación -->
     <script>
       function actualizarSidebar() {
         const u = window.currentUser;

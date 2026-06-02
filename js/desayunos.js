@@ -367,102 +367,69 @@ function generarHTMLReferenciaDesayuno(ref, cantidadTotal, pax) {
 
 // Generar HTML para selector de bollería
 function generarHTMLBolleria(ref) {
+    const refData = window.referenciasDesayuno?.[ref.id];
+    const sel = refData?.opcionesSeleccionadas || [];
+    const texto = sel.length === 0 ? 'Seleccionar tipos'
+        : sel.length === 1 ? sel[0]
+        : sel.length + ' tipos seleccionados';
     return `
         <div class="dropdown-bolleria">
-            <button type="button" class="dropdown-btn" onclick="toggleBolleriaDropdown('${ref.id}')">
-                <span class="dropdown-text" id="dropdown-text-${ref.id}">Seleccionar tipos</span>
+            <button type="button" class="dropdown-btn" onclick="abrirModalDesayunoBolleria('${ref.id}')">
+                <span class="dropdown-text" id="dropdown-text-${ref.id}">${texto}</span>
                 <span class="dropdown-arrow">▼</span>
             </button>
-            <div class="dropdown-content" id="dropdown-${ref.id}">
-                <div class="bolleria-checkbox-group">
-                    ${ref.opciones.map(opcion => `
-                        <label class="checkbox-bolleria">
-                            <input type="checkbox" value="${opcion}"
-                                onchange="actualizarBolleriaCheckbox('${ref.id}', this)">
-                            <span>${opcion}</span>
-                        </label>
-                    `).join('')}
-                </div>
-            </div>
         </div>
     `;
 }
 
 // Generar HTML para sandwich simple (1 por persona)
 function generarHTMLSandwichSimple(ref) {
+    const refData = window.referenciasDesayuno?.[ref.id];
+    const sel = refData?.sabor || '';
     return `
         <div class="sandwich-select">
-            <select class="select-sandwich" onchange="actualizarSandwichSeleccion('${ref.id}', this.value)">
-                <option value="">Elegir sabor...</option>
-                ${ref.opciones.map(opcion => `
-                    <option value="${opcion}">${opcion}</option>
-                `).join('')}
-            </select>
+            <button type="button" class="dropdown-btn" onclick="abrirModalDesayunoSandwichSimple('${ref.id}')">
+                <span class="dropdown-text" id="dropdown-text-${ref.id}">${sel || 'Elegir sabor...'}</span>
+                <span class="dropdown-arrow">▼</span>
+            </button>
         </div>
     `;
 }
 
-// Generar HTML para sandwiches múltiples (2 por persona - CLASSIC) - VERSIÓN SIMPLIFICADA
+// Generar HTML para sandwiches múltiples (2 por persona - CLASSIC)
 function generarHTMLSandwichMultiple(ref, pax) {
-    let html = `<div class="sandwich-multiple-container" style="margin-top: 5px; width: 100%;">`;
-    
-    for (let i = 1; i <= ref.cantidadSandwiches; i++) {
-        html += `
-            <div class="sandwich-multiple-item" style="margin-bottom: 5px;">
-                <select class="select-sandwich"
-                    onchange="actualizarSandwichMultipleSeleccion('${ref.id}', ${i}, this.value)">
-                    <option value="">Elegir sabor ${i}...</option>
-                    ${ref.opciones.map(opcion => `
-                        <option value="${opcion}">${opcion}</option>
-                    `).join('')}
-                </select>
-            </div>
-        `;
-    }
-    
-    html += `</div>`;
-    return html;
+    const refData = window.referenciasDesayuno?.[ref.id];
+    const s1 = refData?.sandwiches?.[0]?.sabor || '';
+    const s2 = refData?.sandwiches?.[1]?.sabor || '';
+    const texto = [s1,s2].filter(Boolean).join(' + ') || 'Elegir sabores...';
+    return `
+        <div class="sandwich-select">
+            <button type="button" class="dropdown-btn" onclick="abrirModalDesayunoSandwichMultiple('${ref.id}')">
+                <span class="dropdown-text" id="dropdown-text-${ref.id}">${texto}</span>
+                <span class="dropdown-arrow">▼</span>
+            </button>
+        </div>
+    `;
 }
 
 // Generar HTML para selector sandwich O pulguita (PREMIUM)
 function generarHTMLSandwichOPulguita(ref, pax) {
+    const refData = window.referenciasDesayuno?.[ref.id];
+    const tipo = refData?.modo || 'sandwich';
+    let texto;
+    if (tipo === 'pulguita') {
+        texto = refData?.pulguita || 'Elegir pulguita...';
+    } else {
+        const s1 = refData?.sandwiches?.[0]?.sabor || '';
+        const s2 = refData?.sandwiches?.[1]?.sabor || '';
+        texto = [s1,s2].filter(Boolean).join(' + ') || 'Elegir sabores...';
+    }
     return `
-        <div class="sandwich-o-pulguita-container" style="margin-top: 6px; width: 100%;">
-            <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-                <label style="font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    <input type="radio" name="tipo_${ref.id}" value="sandwich"
-                        onchange="toggleSandwichOPulguita('${ref.id}', 'sandwich')" checked>
-                    2 Sándwiches
-                </label>
-                <label style="font-size: 0.72rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                    <input type="radio" name="tipo_${ref.id}" value="pulguita"
-                        onchange="toggleSandwichOPulguita('${ref.id}', 'pulguita')">
-                    1 Pulguita
-                </label>
-            </div>
-            <div id="container_sandwich_${ref.id}">
-                <div class="sandwich-multiple-item" style="margin-bottom: 5px;">
-                    <select class="select-sandwich"
-                        onchange="actualizarSandwichMultipleSeleccion('${ref.id}', 1, this.value)">
-                        <option value="">Elegir sabor 1...</option>
-                        ${ref.opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
-                    </select>
-                </div>
-                <div class="sandwich-multiple-item">
-                    <select class="select-sandwich"
-                        onchange="actualizarSandwichMultipleSeleccion('${ref.id}', 2, this.value)">
-                        <option value="">Elegir sabor 2...</option>
-                        ${ref.opciones.map(o => `<option value="${o}">${o}</option>`).join('')}
-                    </select>
-                </div>
-            </div>
-            <div id="container_pulguita_${ref.id}" style="display:none;">
-                <select class="select-sandwich"
-                    onchange="actualizarPulguitaSeleccion('${ref.id}', this.value)">
-                    <option value="">Elegir pulguita...</option>
-                    ${(ref.pulguitas||[]).map(o => `<option value="${o}">${o}</option>`).join('')}
-                </select>
-            </div>
+        <div class="sandwich-select">
+            <button type="button" class="dropdown-btn" onclick="abrirModalDesayunoSandwichOPulguita('${ref.id}')">
+                <span class="dropdown-text" id="dropdown-text-${ref.id}">${texto}</span>
+                <span class="dropdown-arrow">▼</span>
+            </button>
         </div>
     `;
 }
@@ -515,6 +482,7 @@ function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
             tipo: ref.tipo,
             tipoTermo: 'desechable',
             sandwiches: [],
+            opcionesDisponibles: ref.opciones || [],
             cantidadPorPax: ref.cantidadPorPax,
             cantidadSandwiches: ref.cantidadSandwiches
         };
@@ -544,12 +512,14 @@ function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
             cantidad: cantidadTotal,
             unidad: ref.unidad,
             tipo: ref.tipo,
-            modo: 'sandwich', // 'sandwich' o 'pulguita'
+            modo: 'sandwich',
             sandwiches: [
                 { id: ref.id + '_1', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) },
                 { id: ref.id + '_2', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) }
             ],
             pulguita: '',
+            opcionesDisponibles: ref.opciones || [],
+            pulguitasDisponibles: ref.pulguitas || [],
             cantidadPorPax: ref.cantidadPorPax
         };
     } else if (ref.tipo === 'sandwich_fijo') {
@@ -1810,3 +1780,213 @@ function cambiarCantidadDesayuno(refId, delta) {
 }
 
 window.cambiarCantidadDesayuno = cambiarCantidadDesayuno;
+// ══════════════════════════════════════════════════════
+// MODAL OPCIONES DESAYUNO
+// ══════════════════════════════════════════════════════
+
+let _modalDesayunoCallback = null;
+
+function _abrirModalDesayuno(titulo, bodyHTML, footerVisible, callback) {
+    document.getElementById('modalDesayunoTitle').textContent = titulo;
+    document.getElementById('modalDesayunoBody').innerHTML = bodyHTML;
+    document.getElementById('modalDesayunoFooter').style.display = footerVisible ? 'block' : 'none';
+    _modalDesayunoCallback = callback || null;
+    document.getElementById('modalDesayunoOpciones').style.display = 'flex';
+}
+
+window.cerrarModalDesayunoOpciones = function() {
+    document.getElementById('modalDesayunoOpciones').style.display = 'none';
+};
+
+window.confirmarModalDesayunoOpciones = function() {
+    if (_modalDesayunoCallback) _modalDesayunoCallback();
+    cerrarModalDesayunoOpciones();
+};
+
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('modalDesayunoOpciones');
+    if (modal && e.target === modal) cerrarModalDesayunoOpciones();
+});
+
+// Bollería
+window.abrirModalDesayunoBolleria = function(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    if (!ref) return;
+    const opciones = ref.opcionesDisponibles || [];
+    const seleccionadas = ref.opcionesSeleccionadas || [];
+    const body = opciones.map(opcion => `
+        <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:4px;
+                      border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;
+                      background:${seleccionadas.includes(opcion) ? 'rgba(219,234,254,0.5)' : 'white'}">
+            <input type="checkbox" value="${opcion}" ${seleccionadas.includes(opcion) ? 'checked' : ''}
+                   onchange="toggleBolleriaModalCheck('${refId}','${opcion}',this.checked,this)">
+            <span style="font-size:0.82rem">${opcion}</span>
+        </label>`).join('');
+    _abrirModalDesayuno('Seleccionar tipos de bollería', `<div style="display:flex;flex-direction:column;gap:2px;">${body}</div>`, false, null);
+};
+
+window.toggleBolleriaModalCheck = function(refId, opcion, checked, el) {
+    const ref = window.referenciasDesayuno?.[refId];
+    if (!ref) return;
+    if (!ref.opcionesSeleccionadas) ref.opcionesSeleccionadas = [];
+    const label = el.closest('label');
+    if (label) label.style.background = checked ? 'rgba(219,234,254,0.5)' : 'white';
+    if (checked && !ref.opcionesSeleccionadas.includes(opcion)) {
+        ref.opcionesSeleccionadas.push(opcion);
+    } else if (!checked) {
+        ref.opcionesSeleccionadas = ref.opcionesSeleccionadas.filter(o => o !== opcion);
+    }
+    const btn = document.getElementById('dropdown-text-' + refId);
+    if (btn) {
+        const sel = ref.opcionesSeleccionadas;
+        btn.textContent = sel.length === 0 ? 'Seleccionar tipos'
+            : sel.length === 1 ? sel[0]
+            : sel.length + ' tipos seleccionados';
+    }
+};
+
+// Sandwich simple
+window.abrirModalDesayunoSandwichSimple = function(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    if (!ref) return;
+    const opciones = ref.opcionesDisponibles || [];
+    const seleccionado = ref.sabor || '';
+    const body = opciones.map(opcion => `
+        <div onclick="seleccionarSandwichSimpleModal('${refId}','${opcion}')"
+             style="padding:9px 14px;border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;
+                    font-size:0.82rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;
+                    background:${seleccionado===opcion?'rgba(219,234,254,0.5)':'white'}">
+            <span>${opcion}</span>
+            ${seleccionado===opcion?'<span style="color:#1d4ed8">✓</span>':''}
+        </div>`).join('');
+    _abrirModalDesayuno('Elegir sabor', body, false, null);
+};
+
+window.seleccionarSandwichSimpleModal = function(refId, opcion) {
+    actualizarSandwichSeleccion(refId, opcion);
+    const ref = window.referenciasDesayuno?.[refId];
+    if (ref) ref.sabor = opcion;
+    const btn = document.getElementById('dropdown-text-' + refId);
+    if (btn) btn.textContent = opcion;
+    cerrarModalDesayunoOpciones();
+};
+
+// Sandwich múltiple
+window.abrirModalDesayunoSandwichMultiple = function(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    if (!ref) return;
+    const opciones = ref.opcionesDisponibles || [];
+    const sel1 = ref.sandwiches?.[0]?.sabor || '';
+    const sel2 = ref.sandwiches?.[1]?.sabor || '';
+    const makeOpts = (num, sel) => opciones.map(o => `
+        <div onclick="seleccionarSandwichMultipleModal('${refId}',${num},'${o}')"
+             style="padding:7px 12px;border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;font-size:0.8rem;margin-bottom:3px;
+                    background:${sel===o?'rgba(219,234,254,0.5)':'white'}">
+            ${o} ${sel===o?'✓':''}
+        </div>`).join('');
+    const body = `
+        <p style="font-size:0.78rem;color:#64748b;margin-bottom:8px">Elige 2 sabores:</p>
+        <div style="margin-bottom:12px">
+            <label style="font-size:0.75rem;color:#475569;font-weight:500">Sabor 1</label>
+            <div style="margin-top:5px">${makeOpts(1, sel1)}</div>
+        </div>
+        <div>
+            <label style="font-size:0.75rem;color:#475569;font-weight:500">Sabor 2</label>
+            <div style="margin-top:5px">${makeOpts(2, sel2)}</div>
+        </div>`;
+    _abrirModalDesayuno('Elegir sabores', body, true, () => {
+        const r = window.referenciasDesayuno?.[refId];
+        const btn = document.getElementById('dropdown-text-' + refId);
+        if (btn && r) {
+            const s1 = r.sandwiches?.[0]?.sabor || '';
+            const s2 = r.sandwiches?.[1]?.sabor || '';
+            btn.textContent = [s1,s2].filter(Boolean).join(' + ') || 'Elegir sabores...';
+        }
+    });
+};
+
+window.seleccionarSandwichMultipleModal = function(refId, num, opcion) {
+    actualizarSandwichMultipleSeleccion(refId, num, opcion);
+    abrirModalDesayunoSandwichMultiple(refId);
+};
+
+// Sandwich o Pulguita
+window.abrirModalDesayunoSandwichOPulguita = function(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    if (!ref) return;
+    const tipo = ref.modo || 'sandwich';
+    const opciones = ref.opcionesDisponibles || [];
+    const pulguitas = ref.pulguitasDisponibles || [];
+    const sel1 = ref.sandwiches?.[0]?.sabor || '';
+    const sel2 = ref.sandwiches?.[1]?.sabor || '';
+    const selP = ref.pulguita || '';
+
+    const sopOpts = tipo === 'sandwich'
+        ? ['Sabor 1','Sabor 2'].map((lbl, idx) => {
+            const sel = idx === 0 ? sel1 : sel2;
+            const num = idx + 1;
+            return `<div style="margin-bottom:10px">
+                <label style="font-size:0.75rem;color:#475569;font-weight:500">${lbl}</label>
+                <div style="margin-top:5px">
+                    ${opciones.map(o => `
+                        <div onclick="seleccionarSOPSandwichModal('${refId}',${num},'${o}')"
+                             style="padding:7px 12px;border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;font-size:0.8rem;margin-bottom:3px;
+                                    background:${sel===o?'rgba(219,234,254,0.5)':'white'}">
+                            ${o} ${sel===o?'✓':''}
+                        </div>`).join('')}
+                </div>
+            </div>`;
+        }).join('')
+        : pulguitas.map(o => `
+            <div onclick="seleccionarSOPPulguitaModal('${refId}','${o}')"
+                 style="padding:9px 14px;border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;font-size:0.8rem;margin-bottom:4px;
+                        display:flex;align-items:center;justify-content:space-between;
+                        background:${selP===o?'rgba(219,234,254,0.5)':'white'}">
+                <span>${o}</span>${selP===o?'<span style="color:#1d4ed8">✓</span>':''}
+            </div>`).join('');
+
+    const body = `
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+            <button type="button" onclick="cambiarTipoSOPModal('${refId}','sandwich')"
+                    style="flex:1;padding:8px;border-radius:6px;font-size:0.8rem;cursor:pointer;
+                           border:1px solid ${tipo==='sandwich'?'#93c5fd':'#E8E6E1'};
+                           background:${tipo==='sandwich'?'rgba(219,234,254,0.5)':'white'}">
+                2 Sándwiches
+            </button>
+            <button type="button" onclick="cambiarTipoSOPModal('${refId}','pulguita')"
+                    style="flex:1;padding:8px;border-radius:6px;font-size:0.8rem;cursor:pointer;
+                           border:1px solid ${tipo==='pulguita'?'#93c5fd':'#E8E6E1'};
+                           background:${tipo==='pulguita'?'rgba(219,234,254,0.5)':'white'}">
+                1 Pulguita
+            </button>
+        </div>
+        <div id="modalSOP_${refId}">${sopOpts}</div>`;
+
+    _abrirModalDesayuno('Elegir opción', body, true, () => {
+        const r = window.referenciasDesayuno?.[refId];
+        const btn = document.getElementById('dropdown-text-' + refId);
+        if (!btn || !r) return;
+        if (r.modo === 'pulguita') {
+            btn.textContent = r.pulguita || 'Elegir pulguita...';
+        } else {
+            const s1 = r.sandwiches?.[0]?.sabor || '';
+            const s2 = r.sandwiches?.[1]?.sabor || '';
+            btn.textContent = [s1,s2].filter(Boolean).join(' + ') || 'Elegir sabores...';
+        }
+    });
+};
+
+window.cambiarTipoSOPModal = function(refId, tipo) {
+    toggleSandwichOPulguita(refId, tipo);
+    abrirModalDesayunoSandwichOPulguita(refId);
+};
+
+window.seleccionarSOPSandwichModal = function(refId, num, opcion) {
+    actualizarSandwichMultipleSeleccion(refId, num, opcion);
+    abrirModalDesayunoSandwichOPulguita(refId);
+};
+
+window.seleccionarSOPPulguitaModal = function(refId, opcion) {
+    actualizarPulguitaSeleccion(refId, opcion);
+    abrirModalDesayunoSandwichOPulguita(refId);
+};
