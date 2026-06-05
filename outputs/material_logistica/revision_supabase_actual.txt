@@ -1,0 +1,40 @@
+Filas totales: 60
+tipo
+bebidas    28
+extras     15
+menaje     17
+
+Kit loza para cafe:
+- Kit loza para café | activo=true | solo_loza=true | solo_desechable=false | parent_id=- | visible_loza=True | visible_desechable=False
+
+Items principales activos visibles en desechable por tipo:
+tipo
+bebidas     8
+extras     11
+menaje      8
+
+Items principales activos visibles en loza por tipo:
+tipo
+bebidas     8
+extras     11
+menaje     11
+
+Subitems activos:
+   tipo                 nombre  parent_nombre orden
+bebidas         Coca-Cola Zero      Refrescos     2
+ menaje        Barca Vaso alto        Cristal     2
+bebidas       Aquarius Naranja      Refrescos     7
+bebidas        Aquarius LimÃ³n      Refrescos     6
+bebidas                 Nestea      Refrescos     9
+ menaje    Barca Copas de cava        Cristal     4
+ menaje Barca Vaso on the rock        Cristal     1
+bebidas           Fanta LimÃ³n      Refrescos     4
+bebidas          Fanta Naranja      Refrescos     5
+ menaje    Barca Copas de vino        Cristal     3
+ extras     Mantel de AlgodÃ³n Mantel velador     1
+ extras      Mantel Desechable         Mantel     2
+bebidas                 Sprite      Refrescos     8
+ extras     Mantel de AlgodÃ³n         Mantel     1
+ extras      Mantel Desechable Mantel velador     2
+bebidas        Coca-Cola Light      Refrescos     3
+bebidas              Coca-Cola      Refrescos     1

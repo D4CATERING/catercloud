@@ -92,6 +92,12 @@ function configurarValidacionesEnTiempoReal() {
         paxInput.addEventListener('blur', validarPax);
         paxInput.addEventListener('input', function() {
             limpiarErrorCampo(this);
+            if (typeof actualizarCantidades === 'function') {
+                actualizarCantidades();
+            }
+            if (typeof window.actualizarCantidadesMaterialIncluido === 'function') {
+                window.actualizarCantidadesMaterialIncluido('materialLogisticaInline');
+            }
         });
     }
     
@@ -415,6 +421,10 @@ function limpiarErrorCampo(input) {
  */
 async function manejarEnvioFormulario(e) {
     e.preventDefault();
+
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede guardar comandas.')) {
+        return;
+    }
     
     // Obtener el botón de submit con verificación
     // Botón puede estar dentro del form o en el panel lateral del resumen
@@ -468,16 +478,28 @@ if (categoriaId == 4) { // FOODBOX LUNCH
     const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
 
-    const _menuPrincipal  = _menusAcumulados[0] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
+    const _menuPrincipalBase = _menusAcumulados[0] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
+    const _menuPrincipal  = {
+        ..._menuPrincipalBase,
+        pax: _menuPrincipalBase.pax || parseInt(document.getElementById('pax')?.value) || 0
+    };
     const _menusAdicionales = _menusAcumulados.slice(1);
     const _catPrincipal   = _menuPrincipal.categoriaId || categoriaId;
     const _paxTotal       = _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0)
                             || parseInt(document.getElementById('pax').value) || 0;
 
     // ── Preparar datos de la comanda ─────────────────────────────────────────
+    const usuarioActualNombre = typeof obtenerNombreUsuarioActual === 'function'
+        ? obtenerNombreUsuarioActual()
+        : (window.currentUser?.email || '');
+    const responsableFormulario = document.getElementById('responsable').value || usuarioActualNombre;
+
     const comandaData = {
         empresa:      document.getElementById('empresa').value,
-        responsable:  document.getElementById('responsable').value,
+        responsable:  responsableFormulario,
+        creado_por_nombre: usuarioActualNombre,
+        creado_por_email: window.currentUser?.email || '',
+        creado_por_id: window.currentUser?.id || null,
         pax:          _paxTotal,
         hora_salida:  document.getElementById('hora_salida').value,
         fecha_evento: document.getElementById('fecha_evento').value,
@@ -553,7 +575,7 @@ if (categoriaId == 4) { // FOODBOX LUNCH
         
         if (window.comandaEditando) {
             // Actualizar comanda existente
-            const resultado = actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
+            const resultado = await actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
             
             if (resultado) {
                 mostrarMensaje(`✅ Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
@@ -674,9 +696,12 @@ const _materialCompleto = (
      window._materialAcumulado.extras?.length)
 )   ? window._materialAcumulado
     : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado() : { bebidas: [], menaje: [], extras: [] });
+const _materialNormalizado = typeof window.normalizarMaterialLogistica === 'function'
+    ? window.normalizarMaterialLogistica(_materialCompleto)
+    : _materialCompleto;
 
 // Enriquecer comandaData con material y tipo_menaje antes de guardar
-comandaData.material_logistica = _materialCompleto;
+comandaData.material_logistica = _materialNormalizado;
 if (!comandaData.tipo_menaje) {
     comandaData.tipo_menaje = document.getElementById('tipo_menaje')?.value || null;
 }

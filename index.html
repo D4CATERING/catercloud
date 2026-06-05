@@ -32,7 +32,7 @@
     <div class="dc-nav-item" onclick="mostrarDashboard()" id="nav-dashboard">
       <span class="nav-icon">⊞</span> Dashboard
     </div>
-    <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda">
+    <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda" data-requires-write>
       <span class="nav-icon">＋</span> Nueva Comanda
     </div>
     <div class="dc-nav-sep"></div>
@@ -63,7 +63,7 @@
           <h1>Calendario Pedidos</h1>
           <p>Pedidos por fecha de evento</p>
         </div>
-        <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()">
+        <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()" data-requires-write>
           <span class="btn-plus">+</span> Nueva Comanda
         </button>
       </div>
@@ -92,6 +92,7 @@
             <div class="event-details">
               <h4 id="selectedDateTitle">Hoy</h4>
               <div id="eventList" class="event-list"></div>
+              <div id="solicitudFormCalendario" class="calendar-request-form" style="display:none;"></div>
             </div>
           </div>
 
@@ -157,7 +158,6 @@
                                 <option value="">Selecciona una categoría</option>
                                 <option value="1">Desayunos</option>
                                 <option value="2">Foodbox / Comida</option>
-                                <option value="3">Servicios (Cocteles / Celebraciones)</option>
                                 <option value="4">Foodbox Lunch</option>
                                 <option value="5">Bandejas Preparadas</option>
                             </select>
@@ -351,7 +351,7 @@
                     <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
                         ← Volver
                     </button>
-                    <button type="submit" class="btn-primary">
+                    <button type="submit" class="btn-primary" data-requires-write>
                         💾 Guardar Comanda
                     </button>
                 </div>
@@ -408,7 +408,6 @@
                         <option value="">Selecciona una categoría</option>
                         <option value="1">Desayunos</option>
                         <option value="2">Foodbox / Comida</option>
-                        <option value="3">Servicios (Cocteles / Celebraciones)</option>
                         <option value="5">Bandejas Preparadas</option>
                     </select>
                 </div>
@@ -541,11 +540,27 @@
                     <option value="creada">Creada</option>
                     <option value="proceso">En proceso</option>
                     <option value="completada">Completada</option>
+                    <option value="negociacion">En negociación</option>
+                    <option value="por_confirmar">Por confirmar</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="anulada">Anulada</option>
                 </select>
             </div>
 
             <div id="comandasListHistorial" class="comandas-list"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Vista: Expediente de pedido -->
+    <div id="expedientePedido" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver al Dashboard</button>
+        <h1>Expediente de Pedido</h1>
+      </div>
+
+      <div class="dc-page-content">
+        <div id="expedientePedidoContent" class="expediente-container"></div>
       </div>
     </div>
 
@@ -565,7 +580,7 @@
                 </div>
 
                 <div class="comanda-actions">
-                    <button class="btn-icon" title="Editar" onclick="editarComanda()">
+                    <button class="btn-icon" title="Editar" onclick="editarComanda()" data-requires-write>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -580,7 +595,7 @@
                         </svg>
                     </button>
 
-                    <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="eliminarComanda()">
+                    <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="eliminarComanda()" data-requires-admin>
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"/>
                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -816,6 +831,7 @@
 
                     <button type="button" id="btnGuardarLogistica"
                             class="btn-submit"
+                            data-requires-write
                             onclick="guardarComandaLogistica()">
                         🚚 Guardar Comanda de Logística
                     </button>
@@ -826,16 +842,25 @@
     </div>
 
     <!-- Scripts: Autenticación -->
-    <script src="vendor/supabase.min.js"></script>
-    <script src="js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+      if (!window.supabase) {
+        document.write('<script src="vendor/supabase.min.js"><\\/script>');
+      }
+    </script>
+    <script src="js/auth.js?v=20260605b"></script>
+    <script src="js/permissions.js"></script>
 
     <!-- Control de acceso -->
     <script>
       (async () => {
         try {
+          if (window.AuthReady) await window.AuthReady;
           if (!window.Auth) return window.location.href = "login.html";
           const u = await Auth.getUser();
           if (!u) window.location.href = "login.html";
+          window.currentUser = u;
+          if (window.AppPermissions) await AppPermissions.load();
         } catch (e) {
           window.location.href = "login.html";
         }
@@ -844,8 +869,9 @@
 
     <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
-    <script src="js/calendar.js"></script>
-    <script src="js/dashboard.js"></script>
+    <script src="js/clients.js"></script>
+    <script src="js/calendar.js?v=20260605"></script>
+    <script src="js/dashboard.js?v=20260605"></script>
     <script src="js/dom-utils.js"></script>
     <script src="js/desayunos.js"></script>
     <script src="js/referencias.js"></script>
@@ -854,8 +880,8 @@
     <script src="js/bandejas-preparadas.js"></script>
     <script src="js/foodbox-lunch.js"></script>
     <script src="js/comanda-form.js"></script>
-    <script src="js/historial.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/historial.js?v=20260605"></script>
+    <script src="js/main.js?v=20260605"></script>
     <script src="js/preferencias.js"></script>
     <script src="js/logistics.js"></script>
     <script src="js/generar-comandas.js"></script>
@@ -895,6 +921,7 @@
         document.getElementById('dashboard').style.display = '';
         document.getElementById('comandaForm').style.display = 'none';
         document.getElementById('historialPage').style.display = 'none';
+        document.getElementById('expedientePedido').style.display = 'none';
         document.getElementById('detalleComanda').style.display = 'none';
         setNavActive('nav-dashboard');
         if (typeof cargarCalendario === 'function') cargarCalendario();

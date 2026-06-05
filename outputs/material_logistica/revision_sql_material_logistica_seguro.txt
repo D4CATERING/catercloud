@@ -1,0 +1,12 @@
+SQL seguro generado para evitar conflicto por primary key id.
+Con id existentes: 38
+Nuevos sin id: 9
+
+Item IDs corregidos:
+Fila Excel 45: item_id duplicado 'ext_mantel_algodon' cambiado a 'ext_mantel_algodon_mantel_velador'
+
+Padres resueltos:
+Fila Excel 36: padre resuelto como Cristal (ext_cristal)
+Fila Excel 37: padre resuelto como Cristal (ext_cristal)
+Fila Excel 38: padre resuelto como Cristal (ext_cristal)
+Fila Excel 39: padre resuelto como Cristal (ext_cristal)

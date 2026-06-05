@@ -1,5 +1,19 @@
 // ========== HISTORIAL DE COMANDA ==========
 
+function getEstadoPedidoLabel(estado) {
+    const labels = {
+        creada: 'Creada',
+        proceso: 'En proceso',
+        completada: 'Completada',
+        negociacion: 'En negociacion',
+        por_confirmar: 'Por confirmar',
+        confirmado: 'Confirmado',
+        anulada: 'Anulada'
+    };
+
+    return labels[estado] || (estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : '-');
+}
+
 function cargarHistorial() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
     const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
@@ -10,36 +24,7 @@ function cargarHistorial() {
     }
 
     historial.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
-
-    let html = '';
-
-    historial.forEach(comanda => {
-        const fechaCreacion = new Date(comanda.fecha_creacion);
-        const fechaEvento = new Date(comanda.fecha_evento);
-
-        html += `
-        <div class="comanda-item" onclick="verDetalleComanda('${comanda.codigo}')">
-            <div class="comanda-header">
-                <div class="comanda-codigo">${comanda.codigo}</div>
-                <div class="comanda-fecha">${fechaCreacion.toLocaleDateString('es-ES', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}</div>
-            </div>
-            <div class="comanda-empresa">${comanda.empresa}</div>
-            <div class="comanda-info">Responsable: ${comanda.responsable}</div>
-            <div class="comanda-info">${comanda.pax} PAX - Evento: ${fechaEvento.toLocaleDateString('es-ES')}</div>
-            <div class="comanda-info">Menú principal: ${comanda.menu_principal?.nombre || 'No especificado'}</div>
-            <div class="comanda-estado estado-${comanda.estado}">
-                ${comanda.estado.charAt(0).toUpperCase() + comanda.estado.slice(1)}
-            </div>
-        </div>`;
-    });
-
-    container.innerHTML = html;
+    container.innerHTML = historial.map(renderHistorialItem).join('');
 }
 
 function filtrarComandas() {
@@ -50,13 +35,17 @@ function filtrarComandas() {
     const filtroEstado = document.getElementById('filtroEstado').value;
 
     const comandasFiltradas = historial.filter(comanda => {
+        const empresa = (comanda.empresa || '').toLowerCase();
+        const codigo = (comanda.codigo || '').toLowerCase();
+        const responsable = (comanda.responsable || '').toLowerCase();
+
         const coincideBusqueda = !filtro ||
-            comanda.empresa.toLowerCase().includes(filtro) ||
-            comanda.codigo.toLowerCase().includes(filtro) ||
-            comanda.responsable.toLowerCase().includes(filtro);
+            empresa.includes(filtro) ||
+            codigo.includes(filtro) ||
+            responsable.includes(filtro);
 
         const coincideFecha = !filtroFecha ||
-            comanda.fecha_evento.split('T')[0] === filtroFecha;
+            (comanda.fecha_evento || '').split('T')[0] === filtroFecha;
 
         const coincideEstado = !filtroEstado ||
             comanda.estado === filtroEstado;
@@ -73,14 +62,17 @@ function filtrarComandas() {
         return;
     }
 
-    let html = '';
+    container.innerHTML = comandasFiltradas.map(renderHistorialItem).join('');
+}
 
-    comandasFiltradas.forEach(comanda => {
-        const fechaCreacion = new Date(comanda.fecha_creacion);
-        const fechaEvento = new Date(comanda.fecha_evento);
+function renderHistorialItem(comanda) {
+    const fechaCreacion = new Date(comanda.fecha_creacion);
+    const fechaEvento = new Date(comanda.fecha_evento);
+    const menuNombre = comanda.menu_principal?.nombre || comanda.menu_categoria_nombre || 'No especificado';
+    const estado = comanda.estado || 'creada';
 
-        html += `
-        <div class="comanda-item" onclick="verDetalleComanda('${comanda.codigo}')">
+    return `
+        <div class="comanda-item" onclick="verExpedientePedido('${comanda.codigo}')">
             <div class="comanda-header">
                 <div class="comanda-codigo">${comanda.codigo}</div>
                 <div class="comanda-fecha">${fechaCreacion.toLocaleDateString('es-ES', {
@@ -91,17 +83,14 @@ function filtrarComandas() {
                     minute: '2-digit'
                 })}</div>
             </div>
-            <div class="comanda-empresa">${comanda.empresa}</div>
-            <div class="comanda-info">Responsable: ${comanda.responsable}</div>
-            <div class="comanda-info">${comanda.pax} PAX - Evento: ${fechaEvento.toLocaleDateString('es-ES')}</div>
-            <div class="comanda-info">Menú principal: ${comanda.menu_principal?.nombre || 'No especificado'}</div>
-            <div class="comanda-estado estado-${comanda.estado}">
-                ${comanda.estado.charAt(0).toUpperCase() + comanda.estado.slice(1)}
+            <div class="comanda-empresa">${comanda.empresa || 'Solicitud sin empresa'}</div>
+            <div class="comanda-info">Responsable: ${comanda.responsable || 'Pendiente'}</div>
+            <div class="comanda-info">${comanda.pax || comanda.pax_total || 0} PAX - Evento: ${fechaEvento.toLocaleDateString('es-ES')}</div>
+            <div class="comanda-info">Menu principal: ${menuNombre}</div>
+            <div class="comanda-estado estado-${estado}">
+                ${getEstadoPedidoLabel(estado)}
             </div>
         </div>`;
-    });
-
-    container.innerHTML = html;
 }
 
 function verDetalleComanda(codigo) {
@@ -112,13 +101,337 @@ function verDetalleComanda(codigo) {
     const comandaForm = document.getElementById('comandaForm');
     const historialPage = document.getElementById('historialPage');
     const detalleComanda = document.getElementById('detalleComanda');
+    const expedientePedido = document.getElementById('expedientePedido');
 
     if (dashboard) dashboard.style.display = 'none';
     if (comandaForm) comandaForm.style.display = 'none';
     if (historialPage) historialPage.style.display = 'none';
+    if (expedientePedido) expedientePedido.style.display = 'none';
     if (detalleComanda) detalleComanda.style.display = 'block';
 
     _renderDetalleComanda(comanda);
+}
+
+function verExpedientePedido(codigo) {
+    const comanda = obtenerComandaDelHistorial(codigo);
+    if (!comanda) { alert('Pedido no encontrado'); return; }
+
+    const dashboard = document.getElementById('dashboard');
+    const comandaForm = document.getElementById('comandaForm');
+    const historialPage = document.getElementById('historialPage');
+    const detalleComanda = document.getElementById('detalleComanda');
+    const expedientePedido = document.getElementById('expedientePedido');
+
+    if (dashboard) dashboard.style.display = 'none';
+    if (comandaForm) comandaForm.style.display = 'none';
+    if (historialPage) historialPage.style.display = 'none';
+    if (detalleComanda) detalleComanda.style.display = 'none';
+    if (expedientePedido) {
+        expedientePedido.hidden = false;
+        expedientePedido.style.display = 'block';
+    }
+
+    _renderExpedientePedido(comanda);
+}
+
+function _renderExpedientePedido(comanda) {
+    const cont = document.getElementById('expedientePedidoContent');
+    if (!cont) return;
+
+    const fechaEvento = comanda.fecha_evento
+        ? new Date(comanda.fecha_evento).toLocaleDateString('es-ES')
+        : 'Sin fecha';
+    const estado = comanda.estado || 'creada';
+    const estadoLabel = getEstadoPedidoLabel(estado);
+    const documentos = comanda.documentos || {};
+    const tieneCocina = documentos.cocina_path;
+    const tieneLogistica = documentos.logistica_path;
+    const esSolicitud = comanda.tipo_registro === 'solicitud' || ['negociacion', 'por_confirmar', 'confirmado'].includes(estado);
+    const puedeCrearComanda = estado !== 'anulada';
+    const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+    const archivosHtml = esSolicitud
+        ? _renderArchivosSolicitud(comanda)
+        : _renderArchivosComanda(documentos, tieneCocina, tieneLogistica);
+
+    cont.innerHTML = `
+        <div class="expediente-header">
+            <div>
+                <div class="expediente-label">Expediente de pedido</div>
+                <h2>${comanda.codigo || 'Sin codigo'}</h2>
+                <p>${comanda.empresa || 'Empresa pendiente'} - ${fechaEvento}</p>
+            </div>
+            <div class="comanda-estado estado-${estado}">${estadoLabel}</div>
+        </div>
+
+        <div class="expediente-grid">
+            <section class="expediente-section">
+                <h3>Datos del pedido</h3>
+                <div class="expediente-fields">
+                    <div><span>Empresa</span><strong>${comanda.empresa || '-'}</strong></div>
+                    <div><span>Responsable</span><strong>${comanda.responsable || '-'}</strong></div>
+                    <div><span>PAX</span><strong>${comanda.pax || comanda.pax_total || '-'}</strong></div>
+                    <div><span>Hora salida</span><strong>${comanda.hora_salida || '-'}</strong></div>
+                    <div><span>Menu</span><strong>${comanda.menu_principal?.nombre || comanda.menu_categoria_nombre || (esSolicitud ? 'Pendiente de definir' : '-')}</strong></div>
+                    <div><span>Creado por</span><strong>${comanda.creado_por_nombre || comanda.responsable || '-'}</strong></div>
+                    <div><span>Editado por</span><strong>${comanda.editado_por_nombre || comanda.editado_por || '-'}</strong></div>
+                </div>
+            </section>
+
+            <section class="expediente-section">
+                <h3>Operaciones</h3>
+                <p class="expediente-muted">${esSolicitud ? 'Actualiza el estado de la solicitud o crea la comanda cuando se confirme.' : 'La comanda ya esta creada y se puede consultar.'}</p>
+                ${puedeEditar ? `<div class="expediente-status-actions">
+                    <button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmado</button>
+                    <button class="expediente-status-btn estado-anulada" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'anulada')">Anulado</button>
+                </div>` : ''}
+                <div class="expediente-actions">
+                    ${esSolicitud
+                        ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
+                        : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>`}
+                </div>
+            </section>
+
+            <section class="expediente-section expediente-section-wide">
+                <h3>Archivos</h3>
+                ${archivosHtml}
+            </section>
+        </div>`;
+}
+
+function _renderArchivosComanda(documentos, tieneCocina, tieneLogistica) {
+    return `<div class="expediente-files">
+        <div class="expediente-file">
+            <span>Comanda cocina</span>
+            ${tieneCocina
+                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.cocina_path}')">Abrir</button>`
+                : `<em>Pendiente</em>`}
+        </div>
+        <div class="expediente-file">
+            <span>Comanda logistica</span>
+            ${tieneLogistica
+                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.logistica_path}')">Abrir</button>`
+                : `<em>Pendiente</em>`}
+        </div>
+    </div>`;
+}
+
+function _renderArchivosSolicitud(comanda) {
+    const adjuntos = comanda.adjuntos || [];
+    const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+    const adjuntosHtml = adjuntos.length
+        ? adjuntos.map((a, index) => `
+            <div class="expediente-file">
+                <span>${a.nombre || `Archivo ${index + 1}`}</span>
+                ${a.tipo === 'link' && a.url
+                    ? `<a href="${a.url}" target="_blank">Abrir</a>`
+                    : (a.path
+                        ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${a.path}')">Abrir</button>`
+                        : `<em>Guardado</em>`)}
+            </div>
+        `).join('')
+        : '<p class="expediente-muted">Aun no hay archivos cargados para esta solicitud.</p>';
+
+    const uploadHtml = puedeEditar ? `<div class="expediente-upload"
+            ondragover="event.preventDefault(); this.classList.add('is-dragging')"
+            ondragleave="this.classList.remove('is-dragging')"
+            ondrop="soltarArchivoSolicitud(event, '${comanda.codigo}')">
+            <input type="file" id="archivoSolicitudInput" multiple
+                onchange="cargarArchivosSolicitud('${comanda.codigo}', this.files)">
+            <div class="expediente-upload-title">Cargar archivo</div>
+            <div class="expediente-upload-text">Arrastra archivos aqui o selecciona desde tu ordenador.</div>
+            <div class="expediente-upload-actions">
+                <button type="button" onclick="document.getElementById('archivoSolicitudInput').click()">Seleccionar archivo</button>
+            </div>
+        </div>
+        <div class="expediente-link-upload">
+            <input type="url" id="archivoSolicitudUrl" placeholder="Pegar enlace de Drive, Dropbox, email u otra ubicacion">
+            <button type="button" onclick="guardarEnlaceSolicitud('${comanda.codigo}')">Guardar enlace</button>
+        </div>` : '';
+
+    return `${uploadHtml}
+        <div class="expediente-files expediente-files-adjuntos">
+            ${adjuntosHtml}
+        </div>`;
+}
+
+function abrirComandaDesdeExpediente(codigo) {
+    const expedientePedido = document.getElementById('expedientePedido');
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    verDetalleComanda(codigo);
+}
+
+function convertirSolicitudEnComanda(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear comandas.')) {
+        return;
+    }
+
+    const solicitud = obtenerComandaDelHistorial(codigo);
+    if (!solicitud) { alert('Solicitud no encontrada'); return; }
+    const expedientePedido = document.getElementById('expedientePedido');
+    const expedienteContent = document.getElementById('expedientePedidoContent');
+    const historialPage = document.getElementById('historialPage');
+    const detalleComanda = document.getElementById('detalleComanda');
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    if (expedienteContent) expedienteContent.innerHTML = '';
+    if (historialPage) historialPage.style.display = 'none';
+    if (detalleComanda) detalleComanda.style.display = 'none';
+
+    window.comandaEditando = null;
+    if (typeof mostrarComandaCocina === 'function') mostrarComandaCocina();
+
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    if (expedienteContent) expedienteContent.innerHTML = '';
+
+    const empresa = document.getElementById('empresa');
+    const responsable = document.getElementById('responsable');
+    const pax = document.getElementById('pax');
+    const fecha = document.getElementById('fecha_evento');
+
+    if (empresa) empresa.value = solicitud.empresa || '';
+    if (responsable) responsable.value = typeof obtenerNombreUsuarioActual === 'function'
+        ? obtenerNombreUsuarioActual()
+        : (solicitud.responsable || '');
+    if (pax) pax.value = solicitud.pax || '';
+    if (fecha) fecha.value = (solicitud.fecha_evento || '').split('T')[0];
+}
+
+async function anularPedidoDesdeExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede anular pedidos.')) {
+        return;
+    }
+
+    if (!confirm('Quieres marcar este pedido como anulado?')) return;
+    const ok = await actualizarComandaEnHistorial(codigo, { estado: 'anulada' });
+    if (ok) verExpedientePedido(codigo);
+}
+
+async function actualizarEstadoPedidoDesdeExpediente(codigo, estado) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede cambiar estados.')) {
+        return;
+    }
+
+    const ok = await actualizarComandaEnHistorial(codigo, { estado });
+    if (!ok) {
+        alert('No se pudo actualizar el estado del pedido.');
+        return;
+    }
+
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    verExpedientePedido(codigo);
+}
+
+function soltarArchivoSolicitud(event, codigo) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('is-dragging');
+    cargarArchivosSolicitud(codigo, event.dataTransfer.files);
+}
+
+async function cargarArchivosSolicitud(codigo, files) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede cargar archivos.')) {
+        return;
+    }
+
+    const lista = Array.from(files || []);
+    if (!lista.length) return;
+
+    for (const file of lista) {
+        await guardarAdjuntoSolicitud(codigo, {
+            tipo: 'archivo',
+            nombre: file.name,
+            archivo: file,
+            mime_type: file.type || 'application/octet-stream',
+            size: file.size || 0
+        });
+    }
+
+    verExpedientePedido(codigo);
+}
+
+async function guardarEnlaceSolicitud(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede cargar archivos.')) {
+        return;
+    }
+
+    const input = document.getElementById('archivoSolicitudUrl');
+    const url = (input?.value || '').trim();
+    if (!url) return;
+
+    await guardarAdjuntoSolicitud(codigo, {
+        tipo: 'link',
+        nombre: url,
+        url
+    });
+
+    if (input) input.value = '';
+    verExpedientePedido(codigo);
+}
+
+async function guardarAdjuntoSolicitud(codigo, adjunto) {
+    const comanda = obtenerComandaDelHistorial(codigo);
+    if (!comanda) {
+        alert('Solicitud no encontrada.');
+        return false;
+    }
+
+    const nuevoAdjunto = {
+        tipo: adjunto.tipo,
+        nombre: adjunto.nombre,
+        url: adjunto.url || '',
+        path: '',
+        mime_type: adjunto.mime_type || '',
+        size: adjunto.size || 0,
+        created_at: new Date().toISOString()
+    };
+
+    if (adjunto.tipo === 'archivo' && adjunto.archivo && window.supabaseClient && window.currentUser?.id) {
+        try {
+            const safeName = adjunto.archivo.name.replace(/[^\w.\-]+/g, '_');
+            const storagePath = `orders/${window.currentUser.id}/${codigo}/adjuntos/${Date.now()}-${safeName}`;
+            const { error } = await window.supabaseClient.storage
+                .from('comandas')
+                .upload(storagePath, adjunto.archivo, {
+                    contentType: adjunto.mime_type || 'application/octet-stream',
+                    upsert: true
+                });
+
+            if (error) throw error;
+
+            nuevoAdjunto.path = storagePath;
+        } catch (error) {
+            console.warn('No se pudo subir el archivo a Storage:', error);
+        }
+    }
+
+    const adjuntos = [...(comanda.adjuntos || []), nuevoAdjunto];
+    return actualizarComandaEnHistorial(codigo, { adjuntos });
+}
+
+async function abrirDocumentoPrivado(path) {
+    if (!path || !window.supabaseClient) {
+        alert('No se pudo abrir el archivo.');
+        return;
+    }
+
+    try {
+        const { data, error } = await window.supabaseClient.storage
+            .from('comandas')
+            .createSignedUrl(path, 15 * 60);
+
+        if (error || !data?.signedUrl) throw error || new Error('Sin URL');
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+        console.warn('No se pudo crear enlace temporal:', error);
+        alert('No se pudo abrir el archivo. Revisa permisos de Storage.');
+    }
 }
 
 function _renderMenuDetalle(comanda, pax) {
@@ -317,9 +630,15 @@ function _renderDetalleComanda(comanda) {
     const menusDetalle = [];
 
     menusDetalle.push({
-        ...comanda,
+        ...(comanda.menu_principal || {}),
         nombre: nombreMenu,
-        pax: comanda.pax
+        pax: comanda.menu_principal?.pax || (!(comanda.menus_adicionales || []).length ? comanda.pax : ''),
+        menu_principal: comanda.menu_principal || { nombre: nombreMenu },
+        referencias_desayuno: comanda.menu_principal?.referencias_desayuno || comanda.referencias_desayuno || null,
+        referencias: comanda.menu_principal?.referencias || comanda.referencias || null,
+        foodbox_lunch: comanda.menu_principal?.foodbox_lunch || comanda.foodbox_lunch || null,
+        bandejas: comanda.menu_principal?.bandejas || comanda.bandejas || null,
+        multiplicadores: comanda.menu_principal?.multiplicadores || comanda.multiplicadores || null
     });
 
     (comanda.menus_adicionales || []).forEach(m => {
@@ -331,6 +650,7 @@ function _renderDetalleComanda(comanda) {
             referencias_desayuno: m.referencias_desayuno || null,
             referencias: m.referencias || null,
             foodbox_lunch: m.foodbox_lunch || null,
+            bandejas: m.bandejas || null,
             multiplicadores: m.multiplicadores || null
         });
     });
@@ -355,7 +675,7 @@ function _renderDetalleComanda(comanda) {
 
         if (menusDetalle.length > 1) {
             const cardsHtml = menusDetalle.map(menu => {
-                const paxMenu = menu.pax || comanda.pax || '';
+                const paxMenu = menu.pax || '';
 
                 return `<div class="detalle-menu-card">
                     <div class="detalle-menu-row" style="margin-bottom:6px;">
@@ -444,11 +764,14 @@ function _renderDetalleComanda(comanda) {
     if (secLog && contLog) {
         const log = comanda.material_logistica ||
             (comanda.logistica?.bebidas ? comanda.logistica : null);
+        const logNormalizado = typeof window.normalizarMaterialLogistica === 'function'
+            ? window.normalizarMaterialLogistica(log)
+            : log;
 
-        const tieneItems = log && (
-            (log.bebidas || []).some(i => i.checked !== false) ||
-            (log.menaje || []).some(i => i.checked !== false) ||
-            (log.extras || []).some(i => i.checked !== false)
+        const tieneItems = logNormalizado && (
+            (logNormalizado.bebidas || []).some(i => i.checked !== false) ||
+            (logNormalizado.menaje || []).some(i => i.checked !== false) ||
+            (logNormalizado.extras || []).some(i => i.checked !== false)
         );
 
         if (tieneItems) {
@@ -485,9 +808,9 @@ function _renderDetalleComanda(comanda) {
             }
 
             contLog.innerHTML = `<div class="dc-material-grid">
-                ${renderColMaterial('🥤', 'Bebidas', log.bebidas)}
-                ${renderColMaterial('🍽️', 'Menaje', log.menaje)}
-                ${renderColMaterial('✨', 'Extras', log.extras)}
+                ${renderColMaterial('🥤', 'Bebidas', logNormalizado.bebidas)}
+                ${renderColMaterial('🍽️', 'Menaje', logNormalizado.menaje)}
+                ${renderColMaterial('✨', 'Extras', logNormalizado.extras)}
             </div>`;
         } else {
             secLog.style.display = 'none';
@@ -529,6 +852,10 @@ function _renderDetalleComanda(comanda) {
 }
 
 function editarComanda() {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
+        return;
+    }
+
     const codigo = document.getElementById('detalleCodigo').textContent;
     window.comandaEditando = obtenerComandaDelHistorial(codigo);
 
@@ -567,6 +894,11 @@ function imprimirComanda() {
 }
 
 function eliminarComanda() {
+    if (window.AppPermissions && !AppPermissions.isAdmin()) {
+        alert('Solo un administrador puede eliminar comandas.');
+        return;
+    }
+
     const codigo = document.getElementById('detalleCodigo').textContent;
 
     if (confirm(`¿Estás seguro de que deseas eliminar la comanda ${codigo}? Esta acción no se puede deshacer.`)) {
@@ -587,7 +919,7 @@ async function verDetalleComandaPorCodigo(codigo) {
             const { data, error } = await window.supabaseClient
                 .from('orders')
                 .select('payload')
-                .contains('payload', { codigo })
+                .eq('codigo', codigo)
                 .limit(1);
 
             if (!error && data && data.length > 0) {
