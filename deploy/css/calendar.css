@@ -278,3 +278,55 @@
   transition: opacity .15s;
 }
 .event-new-btn:hover { opacity: .88; }
+
+/* Mobile calendar */
+@media (max-width: 760px) {
+  .calendar-card {
+    border-radius: 10px;
+  }
+
+  .calendar-header {
+    padding: 10px 12px;
+  }
+
+  .calendar-body {
+    padding: 10px 10px 12px;
+  }
+
+  .calendar-days {
+    gap: 3px;
+  }
+
+  .calendar-day {
+    min-height: 38px;
+    border-radius: 7px;
+  }
+
+  .day-number {
+    font-size: .78rem;
+  }
+
+  .day-badge {
+    min-width: 14px;
+    height: 14px;
+    font-size: .52rem;
+  }
+
+  .event-list {
+    max-height: none;
+  }
+
+  .event-item {
+    padding: 10px;
+  }
+
+  .event-header,
+  .event-meta {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .event-empresa {
+    white-space: normal;
+  }
+}

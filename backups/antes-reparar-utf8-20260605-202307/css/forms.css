@@ -1,0 +1,4051 @@
+/* ══════════════════════════════════════
+   FORMULARIO DE COMANDA — Two-column layout
+══════════════════════════════════════ */
+
+/* Layout principal: formulario + resumen lateral */
+.comanda-form-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+.comanda-form-main   { display: flex; flex-direction: column; gap: 12px; }
+.comanda-form-aside  { position: sticky; top: 20px; }
+
+/* Contenedor legacy (sigue funcionando para historial/logística) */
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.header {
+  background: var(--dc-negro);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 10px 10px 0 0;
+  border-bottom: 3px solid var(--dc-rojo);
+  margin-bottom: 14px;
+}
+.header h1 {
+  font-size: 1.2rem;
+  display: flex; align-items: center; gap: 8px;
+  color: white;
+}
+
+.form-container { padding: 0; }
+
+
+.form-section h3 {
+    color: #1e293b;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #3b82f6;
+    font-size: 1.3rem;
+}
+
+.form-group {
+    margin-bottom: 4px;
+}
+
+label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+    color: #475569;
+    font-size: 0.95rem;
+}
+
+.required::after {
+    content: " *";
+    color: #dc2626;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    transition: border 0.3s;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== CHECKBOXES ===== */
+.checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 0.5fr));
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.checkbox-label:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 8px;
+    height: 8px;
+}
+
+/* ===== MULTIPLICADORES ===== */
+.multiplicadores-container {
+    display: grid;
+    grid-template-columns: 0.5fr 0.5fr;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.multiplicador-section {
+    background: #f8fafc;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.multiplicador-section h4 {
+    color: #1e293b;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    text-transform: none;
+}
+
+.multiplicador-input-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.multiplicador-input {
+    flex: 1;
+    padding: 4px 8px;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    text-align: center;
+    min-width: 60px;
+}
+
+.multiplicador-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.multiplicador-label {
+    font-weight: 400;
+    color: #475569;
+    font-size: 0.78rem;
+    min-width: 60px;
+    text-transform: none;
+    font-family: 'Roboto', sans-serif;
+}
+
+.info-cantidad {
+    margin-top: 4px;
+    padding: 4px 6px;
+    background: #dbeafe;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+    text-transform: none;
+}
+
+.info-cantidad strong {
+    color: #1e40af;
+}
+
+/* ===== MENÚS ===== */
+.menu-selection {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 0.5fr));
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.menu-option {
+    padding: 4px;
+    border: 2px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.menu-option:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.menu-option.selected {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+.menu-option h4 {
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.menu-option p {
+    color: #64748b;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+/* ===== REFERENCIAS ===== */
+.referencias-container {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.referencias-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    margin-top: 5px;
+}
+
+/* === Casillas idénticas a Foodbox Lunch === */
+.referencia-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    gap: 8px;
+    min-height: 32px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.referencia-option:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.referencia-option.selected {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+/* Nombre del item */
+.referencia-option span {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+    text-transform: none;
+}
+
+.referencia-option.selected span {
+    color: #065f46;
+}
+
+.cantidad-control {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.cantidad-input {
+    width: 40px;
+    height: 22px;
+    padding: 2px 4px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: 'Roboto', sans-serif;
+    background: white;
+}
+
+.unidad-select {
+    height: 22px;
+    padding: 0 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-family: 'Roboto', sans-serif;
+    color: #64748b;
+    background: white;
+    cursor: pointer;
+    text-transform: none;
+}
+
+.unidad-select {
+    width: 70px;
+    padding:5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ===== BOTÓN AÑADIR MENÚ ===== */
+.btn-add-menu {
+    background: var(--dc-rojo);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-family: var(--font-title);
+    font-weight: 500;
+    font-size: .85rem;
+    letter-spacing: .3px;
+    width: 100%;
+    margin-top: 10px;
+    transition: opacity .15s;
+}
+
+.btn-add-menu:hover {
+    opacity: .88;
+    transform: none;
+    box-shadow: none;
+}
+
+.menus-adicionales-container {
+    margin-top: 20px;
+}
+
+.menu-adicional-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #8b5cf6;
+}
+
+.menu-adicional-info h4 {
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 1rem;
+}
+
+.menu-adicional-info p {
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.menu-adicional-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.btn-remove-menu {
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-pax-input {
+    width: 70px;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+/* ===== HISTORIAL DE COMANDA ===== */
+#historialPage {
+    display: none;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.historial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    color: white;
+}
+
+.historial-header h1 {
+    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.historial-container {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+}
+
+.historial-filters {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.historial-filters input,
+.historial-filters select {
+    padding: 10px;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.comandas-list {
+    display: grid;
+    gap: 15px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.comanda-item {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.comanda-item:hover {
+    border-color: #3b82f6;
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.comanda-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.comanda-codigo {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #1e40af;
+}
+
+.comanda-fecha {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.comanda-empresa {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 5px;
+}
+
+.comanda-info {
+    color: #475569;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.comanda-estado {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 8px;
+}
+
+.estado-creada {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.estado-proceso {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.estado-completada {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Botones de documentos en tarjetas de historial */
+.comanda-docs {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-doc {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-doc-cocina {
+    background: #131B23;
+    color: #ffffff;
+    border: 1px solid #131B23;
+}
+.btn-doc-cocina:hover {
+    background: #1e2d3d;
+}
+
+.btn-doc-logistica {
+    background: #E1342E;
+    color: #ffffff;
+    border: 1px solid #E1342E;
+}
+.btn-doc-logistica:hover {
+    background: #c62020;
+}
+
+.comanda-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
+    padding: 0;
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    color: #131B23;
+}
+
+.btn-icon-danger {
+    color: #cbd5e1;
+}
+
+.btn-icon-danger:hover {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+/* ===== LOGÍSTICA EN DETALLE ===== */
+.log-seccion {
+    margin-bottom: 12px;
+}
+.log-seccion-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    font-family: 'Roboto', sans-serif;
+    border-bottom: 1px solid #f1f5f9;
+}
+.log-item-sub {
+    padding-left: 24px;
+    color: #64748b;
+}
+.log-item-nombre {
+    color: #1e293b;
+    flex: 1;
+}
+.log-item-cantidad {
+    color: #475569;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+/* ===== DETALLE DE COMANDA ===== */
+#detalleComanda {
+    display: none;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ══════════════════════════════════════════
+   DETALLE DE COMANDA — estilo corporativo
+   ══════════════════════════════════════════ */
+
+.detalle-container {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.detalle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #E1342E;
+}
+
+.detalle-codigo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #131B23;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.detalle-fecha-sub {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-top: 3px;
+}
+
+/* Sección con banda negra tipo dc-section del formulario */
+.detalle-container .dc-section {
+    margin-bottom: 3px;
+    border-radius: 0;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+.detalle-container .dc-section:first-of-type { border-radius: 8px 8px 0 0; }
+.detalle-container .dc-section:last-of-type  { border-radius: 0 0 8px 8px; margin-bottom: 0; }
+
+.detalle-container .dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #131B23;
+    border-top: 3px solid #E1342E;
+    border-bottom: 3px solid #E1342E;
+    padding: 3px 14px;
+}
+
+.detalle-container .dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 0;
+    flex: 1;
+}
+
+/* Tipo menaje en el mismo banner */
+.detalle-container .dc-section-header .detalle-menaje-inline {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #E1342E;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-left: auto;
+    padding-left: 16px;
+}
+
+.detalle-container .dc-section-header span:not(.detalle-menaje-inline) {
+    font-size: 0.9rem;
+}
+
+/* Grid de campos info básica — compacto */
+.detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0;
+    padding: 6px 14px 8px;
+}
+
+.detalle-field {
+    padding: 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.detalle-field-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.62rem;
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.detalle-field-value {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #131B23;
+}
+
+/* Área de contenido dentro de sección */
+.detalle-body {
+    padding: 6px 14px 10px;
+}
+
+/* Badge menaje: ahora va DENTRO del banner — .detalle-menaje-inline arriba */
+
+/* Badge DESECHABLE/LOZA centrado bajo el header */
+.detalle-menaje-badge {
+    text-align: center;
+    padding: 6px 14px 4px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dc-rojo);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--dc-border);
+}
+
+/* Material en detalle — sin checkbox, texto al inicio */
+.detalle-container .dc-material-item {
+    grid-template-columns: 1fr 36px 36px;
+    cursor: default;
+}
+.detalle-container .dc-material-item:hover {
+    background: transparent;
+}
+.detalle-container .dc-material-nombre {
+    text-align: left;
+    font-size: 0.76rem;
+}
+.detalle-container .dc-material-col h5 {
+    font-size: 0.72rem;
+}
+
+/* Tag acero/desechable en termos */
+.detalle-termo-tag {
+    display: inline-block;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* Fila de item de menú */
+.detalle-menu-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 4px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-family: 'Roboto', sans-serif;
+}
+.detalle-menu-row:last-child { border-bottom: none; }
+
+.detalle-menu-nombre {
+    font-size: 0.8rem;
+    color: #131B23;
+}
+.detalle-menu-nombre.es-titulo {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #131B23;
+    font-family: 'Oswald', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.detalle-menu-cantidad {
+    font-size: 0.75rem;
+    color: #475569;
+    white-space: nowrap;
+    margin-left: 12px;
+}
+
+/* Fila de material logística */
+.log-seccion {
+    margin-bottom: 10px;
+}
+.log-seccion-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 6px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.78rem;
+    color: #131B23;
+}
+.log-item-sub {
+    padding-left: 18px;
+    font-size: 0.74rem;
+    color: #64748b;
+}
+.log-item-nombre { flex: 1; }
+.log-item-cantidad { color: #475569; white-space: nowrap; margin-left: 10px; }
+
+/* Mantener info-label/value para compatibilidad con código antiguo */
+.info-label {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    color: #94a3b8;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 3px;
+}
+.info-value {
+    font-family: 'Roboto', sans-serif;
+    color: #131B23;
+    font-size: 0.82rem;
+}
+.detalle-section {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+.detalle-section h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #e2e8f0;
+}
+.detalle-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+}
+.info-item { margin-bottom: 6px; }
+
+/* ===== ESTILOS PARA DESAYUNOS - DESPLEGABLE CON CHECKBOXES ===== */
+
+.desayuno-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 4px 6px;
+    margin-bottom: 5px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+
+.desayuno-fila:hover {
+    border-color: #3b82f6;
+    background: #f8fafc;
+}
+
+.desayuno-info {
+    flex: 1;
+    min-width: 120px;
+}
+
+.desayuno-nombre {
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+}
+
+.desayuno-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* Dropdown de bollería */
+.dropdown-bolleria {
+    position: relative;
+    display: block;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.dropdown-btn {
+    width: 100%;
+    padding: 5px 10px;
+    background: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.78rem;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.dropdown-btn:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.dropdown-arrow {
+    font-size: 0.65rem;
+    color: #64748b;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+.dropdown-content {
+    display: none;
+    position: fixed;
+    min-width: 220px;
+    max-width: 280px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    z-index: 9999;
+    padding: 6px;
+}
+
+.bolleria-checkbox-group {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.checkbox-bolleria {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-transform: none;
+}
+
+.checkbox-bolleria:hover {
+    background: #f0f9ff;
+}
+
+.checkbox-bolleria input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Select de sandwiches */
+.sandwich-select {
+    margin-top: 5px;
+    width: 100%;
+}
+
+.select-sandwich {
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    font-size: 0.78rem;
+    background: white;
+    color: #475569;
+    text-transform: none;
+}
+
+.select-sandwich:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* Cantidad */
+.desayuno-cantidad {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 10px;
+    min-width: 50px;
+    justify-content: flex-end;
+}
+
+.cantidad-input-compact {
+    width: 50px;
+    padding: 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.cantidad-input-compact:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.select-termo {
+    width: 110px !important; /* Ancho fijo */
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: white;
+    color: #475569;
+}
+
+.desayuno-unidad {
+    font-size: 0.8rem;
+    color: #64748b;
+    min-width: 30px;
+}
+
+/* ===== ESTILOS MEJORADOS PARA DESAYUNOS ===== */
+
+.leche-especial-header {
+    background: #f0f9ff !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+.desayuno-fila.leche-especial {
+    background: #f0f9ff;
+    border-color: #93c5fd;
+}
+
+.termo-selector {
+    margin-top: 8px;
+}
+
+.select-termo {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: white;
+    color: #475569;
+}
+
+.select-termo:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== ESTILOS PARA FOODBOX LUNCH ===== */
+
+#foodboxLunchSection .dc-section-header ~ * {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+#foodboxLunchSection > p {
+    padding: 0 14px;
+    margin-top: 8px;
+}
+
+#foodboxLunchSection > div {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.foodbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.foodbox-option-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.foodbox-option-label:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+
+.foodbox-option-label input[type="radio"]:checked + span {
+    font-weight: 600;
+}
+
+.foodbox-adicional-item {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.foodbox-adicional-select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    color: #475569;
+}
+
+.foodbox-adicional-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-add-foodbox {
+    background: #8b5cf6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-add-foodbox:hover {
+    background: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+
+/* ============================================================
+   SISTEMA DE CAMPOS COMPACTO — IDENTIDAD CORPORATIVA DECUATRO
+   Oswald (títulos) · Roboto (cuerpo)
+   Acento: --dc-rojo #E1342E
+   ============================================================ */
+
+/* ── Sección wrapper ── */
+.dc-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(19,27,35,0.06);
+    margin-bottom: 14px;
+}
+
+/* ── Header de sección ── */
+.dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 14px;
+    background: #131B23;
+    border-bottom: 3px solid #E1342E;
+}
+
+.dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.dc-section-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+/* Variante logística: acento verde oscuro en la línea inferior */
+.dc-section--logistics .dc-section-header {
+    border-bottom-color: #10b981;
+}
+
+/* ── Grid de campos genérico ── */
+.dc-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 14px;
+    padding: 12px 14px 14px;
+    background: #ffffff;
+}
+
+/* Grid de 2 columnas iguales */
+.dc-fields-grid--2col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* ── Modificadores de ancho ── */
+.dc-field--wide {
+    grid-column: span 2;
+}
+
+.dc-field--full {
+    grid-column: 1 / -1;
+}
+
+/* ── Fila inline: 3 campos en una sola línea ── */
+.dc-inline-group {
+    display: grid;
+    grid-template-columns: 100px 1fr 120px;
+    gap: 10px 14px;
+}
+
+/* ── Grid específico de Información Básica ──
+   Fila 1: Empresa (flexible) │ PAX (90px)
+   Fila 2: Responsable (flex) │ Fecha (160px) │ Hora (120px)
+*/
+.dc-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 90px 160px 120px;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+        "empresa  empresa  pax      pax"
+        "resp     resp     fecha    hora";
+    gap: 6px 10px;
+    padding: 10px 12px 12px;
+    background: #ffffff;
+}
+
+.dc-info-empresa    { grid-area: empresa; }
+.dc-info-pax        { grid-area: pax; }
+.dc-info-responsable{ grid-area: resp; }
+.dc-info-fecha      { grid-area: fecha; }
+.dc-info-hora       { grid-area: hora; }
+
+@media (max-width: 600px) {
+    .dc-info-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "empresa  empresa"
+            "pax      pax"
+            "resp     resp"
+            "fecha    hora";
+    }
+}
+
+/* ── Campo individual ── */
+.dc-field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* ── Label ── */
+.dc-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin: 0;
+}
+
+.dc-label.required::after {
+    content: " *";
+    color: #E1342E;
+}
+
+/* ── Input / select / textarea ── */
+.dc-input {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.9rem;
+    color: #131B23;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 3px 7px;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.dc-input:focus {
+    outline: none;
+    border-color: #E1342E;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(225,52,46,0.08);
+}
+
+.dc-input::placeholder {
+    color: #94a3b8;
+    font-size: 0.85rem;
+}
+
+textarea.dc-input {
+    resize: vertical;
+    min-height: 40px;
+}
+
+/* ── Mensaje de error bajo campo ── */
+.dc-field-error {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.72rem;
+    color: #dc2626;
+    min-height: 14px;
+    display: block;
+}
+
+/* ── Responsive: 2 cols en tablet, 1 col en móvil ── */
+@media (max-width: 700px) {
+    .dc-fields-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dc-field--wide,
+    .dc-field--full {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 480px) {
+    .dc-fields-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Grid específico de Datos de Logística ──
+   Fila 1: Nombre contacto (flex) │ Teléfono (150px) │ Hora entrega (120px)
+   Fila 2: Dirección (flex)       │ CP (110px)        │ Hora evento  (120px)
+   Fila 3: Notas (full width)
+*/
+.dc-log-grid {
+    display: grid;
+    grid-template-columns: 1fr 150px 120px;
+    grid-template-areas:
+        "contacto   telefono   hora-entrega"
+        "direccion  cp         hora-evento";
+    gap: 6px 10px;
+    padding: 10px 12px 12px;
+    background: #ffffff;
+}
+
+.dc-log-contacto     { grid-area: contacto; }
+.dc-log-telefono     { grid-area: telefono; }
+.dc-log-hora-entrega { grid-area: hora-entrega; }
+.dc-log-direccion    { grid-area: direccion; }
+.dc-log-cp           { grid-area: cp; }
+.dc-log-hora-evento  { grid-area: hora-evento; }
+
+@media (max-width: 600px) {
+    .dc-log-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+            "contacto    contacto"
+            "telefono    hora-entrega"
+            "direccion   direccion"
+            "cp          hora-evento";
+    }
+}
+
+/* ============================================================
+   MATERIAL DE LOGÍSTICA - Tabla de 3 columnas con checkboxes
+   ============================================================ */
+
+.dc-material-section {
+    margin-top: 12px;
+    border: 1px solid #d9e2ec;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(19,27,35,0.05);
+}
+
+.dc-material-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #131B23;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 12px;
+    border-bottom: 3px solid #10b981;
+    margin-bottom: 0;
+}
+
+.dc-material-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.dc-material-header-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.dc-material-title {
+    font-family: 'Oswald', sans-serif;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+}
+
+.dc-material-subtitle {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.68rem;
+    color: #cbd5e1;
+    line-height: 1.2;
+}
+
+.dc-material-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+    background: #f8fafc;
+}
+
+.dc-material-col {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    overflow: hidden;
+}
+
+.dc-material-col--bebidas {
+    border-top: 3px solid #38bdf8;
+}
+
+.dc-material-col--menaje {
+    border-top: 3px solid #10b981;
+}
+
+.dc-material-col--extras {
+    border-top: 3px solid #f59e0b;
+}
+
+.dc-material-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.dc-material-col-header i {
+    font-size: 14px;
+    color: #C0392B;
+}
+
+.dc-material-col-header span {
+    display: block;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+}
+
+.dc-material-col-header small {
+    display: block;
+    margin-top: 1px;
+    font-size: 0.64rem;
+    color: #94a3b8;
+    line-height: 1.2;
+    text-transform: none;
+    letter-spacing: 0;
+}
+
+.dc-material-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.dc-material-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 7px 9px;
+    border-bottom: 1px solid #edf2f7;
+    background: transparent;
+    transition: background 0.12s, border-color 0.12s;
+    cursor: default;
+}
+
+.dc-material-item:last-child {
+    border-bottom: none;
+}
+
+.dc-material-item--active {
+    background: #f0fdf4;
+}
+
+.dc-material-item--clickable {
+    cursor: pointer;
+}
+
+.dc-material-item--clickable:hover,
+.dc-material-item:hover {
+    background: #f8fafc;
+}
+
+.dc-material-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.dc-material-nombre {
+    color: #1e293b;
+    font-size: 0.76rem;
+    font-family: 'Roboto', sans-serif;
+    font-weight: 500;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dc-material-precio {
+    font-size: 0.66rem;
+    color: #94a3b8;
+    font-family: 'Roboto', sans-serif;
+}
+
+.dc-material-precio--sin-precio {
+    color: #cbd5e1;
+}
+
+.dc-material-incluido {
+    display: inline-block;
+    font-size: 0.62rem;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 20px;
+    background: #dcfce7;
+    color: #15803d;
+    border: 0.5px solid #bbf7d0;
+    width: fit-content;
+}
+
+.dc-material-item-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.dc-material-cantidad {
+    width: 42px;
+    padding: 2px 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 0.73rem;
+    font-family: 'Roboto', sans-serif;
+    background: white;
+    flex-shrink: 0;
+}
+
+.dc-material-cantidad:focus {
+    outline: none;
+    border-color: #10b981;
+}
+
+.dc-material-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.dc-material-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.dc-material-btn--active {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #15803d;
+}
+
+.dc-material-btn--active:hover {
+    background: #bbf7d0;
+}
+
+.dc-material-empty {
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-style: italic;
+    text-align: center;
+    padding: 12px 8px;
+}
+
+@media (max-width: 900px) {
+    .dc-material-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   SUBITEMS DESPLEGABLES EN MATERIAL DE LOGÍSTICA
+   ============================================================ */
+
+.dc-material-item-expandable {
+    border-bottom: 0.5px solid #E8E6E1;
+}
+
+.dc-material-item-expandable:last-child {
+    border-bottom: none;
+}
+
+.dc-material-item-expandable .dc-material-item {
+    border-bottom: none;
+}
+
+.dc-material-expand-btn {
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+.dc-material-expand-btn:hover {
+    color: #475569;
+}
+
+.dc-material-subitems {
+    background: rgba(255,255,255,0.5);
+    border-top: 0.5px solid #E8E6E1;
+}
+
+.dc-material-subitem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px 7px 20px;
+    border-bottom: 0.5px solid #E8E6E1;
+    transition: background 0.12s;
+}
+
+.dc-material-subitem:last-child {
+    border-bottom: none;
+}
+
+.dc-material-subitem--active {
+    background: rgba(255,255,255,0.7);
+}
+
+.dc-material-subitem .dc-material-nombre {
+    font-size: 0.75rem;
+    color: #475569;
+    font-weight: 400;
+}
+
+.dc-material-subitem .dc-material-cantidad {
+    width: 44px;
+    padding: 2px 4px;
+    font-size: 0.7rem;
+}
+
+.dc-material-modal-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    border-radius: 7px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.dc-material-modal-option--active {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.dc-material-modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.btn-material-admin {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.28);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: #ffffff;
+}
+
+.btn-material-admin:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.5);
+}
+
+/* ============================================================
+   SELECTORES EXPANDIBLES EN DESAYUNOS (estilo logística)
+   ============================================================ */
+
+.desayuno-selector-expandable {
+    margin-top: 6px;
+}
+
+.desayuno-expand-btn {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.desayuno-expand-btn:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.desayuno-subitems {
+    margin-top: 4px;
+    padding: 4px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.desayuno-subitem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.75rem;
+    margin-bottom: 2px;
+}
+
+.desayuno-subitem:hover {
+    background: #f0fdf4;
+}
+
+.desayuno-subitem input[type="checkbox"],
+.desayuno-subitem input[type="radio"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+/* ============================================================
+   FUENTES CORPORATIVAS GLOBALES - Oswald + Roboto
+   ============================================================ */
+
+/* Importar fuentes de Google */
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Aplicar Roboto como base global */
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Oswald para títulos y headers */
+h1, h2, h3, h4, h5, h6,
+.dc-section-header,
+.form-section h3,
+.modal-content h2,
+.desayuno-nombre,
+button.primary,
+.btn-guardar {
+    font-family: 'Oswald', sans-serif;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Roboto para todo el texto del cuerpo */
+body,
+input,
+select,
+textarea,
+label,
+p,
+span,
+.dc-label,
+.dc-input,
+.desayuno-proporcion,
+.dc-material-nombre,
+.dc-material-unidad {
+    font-family: 'Roboto', sans-serif;
+}
+
+/* Ajustar pesos específicos */
+label,
+.dc-label {
+    font-weight: 500;
+}
+
+input,
+select,
+textarea {
+    font-weight: 400;
+}
+
+/* Títulos de secciones más prominentes */
+h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.dc-section-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* ============================================================
+   HEADERS DELGADOS Y COMPACTOS - SIN LÍNEAS BAJO TEXTO
+   ============================================================ */
+
+/* Headers principales - Barra negra delgada sin línea bajo texto */
+.dc-section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: #131B23;
+    border-bottom: 3px solid #E1342E;
+    margin-bottom: 10px;
+}
+
+.dc-section-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #ffffff;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+/* Headers de logística - Barra negra con línea VERDE */
+.dc-section--logistics .dc-section-header {
+    border-bottom: 3px solid #10b981;
+}
+
+/* Sub-headers (Bebidas, Menaje, Extras) - MÁS PEQUEÑOS */
+.dc-material-col h5 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #475569;
+    margin: 0 0 6px 0;
+    padding: 0;
+}
+
+/* Títulos de secciones generales - compactos */
+.form-section h3,
+h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Labels - pequeñas y discretas */
+label,
+.dc-label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #64748b;
+}
+
+/* Inputs - tamaño normal */
+input,
+select,
+textarea,
+.dc-input {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 400;
+}
+
+/* Textos pequeños */
+.desayuno-proporcion,
+.dc-material-unidad,
+p {
+    font-size: 0.7rem;
+}
+
+/* Quitar bordes innecesarios de los h3 dentro de secciones */
+.form-section h3:not(.dc-section-header h3) {
+    border: none;
+    background: none;
+    color: #131B23;
+    padding: 6px 12px;
+}
+
+/* Asegurar que NO haya líneas bajo los h3 que no están en dc-section-header */
+h3 {
+    border-bottom: none !important;
+}
+
+/* Solo los dc-section-header tienen la línea de color */
+.dc-section-header {
+    border-bottom: 3px solid #E1342E;
+}
+
+.dc-section--logistics .dc-section-header {
+    border-bottom: 3px solid #10b981 !important;
+}
+
+/* ============================================================
+   FOODBOX LUNCH - ESTILOS COMPACTOS
+   ============================================================ */
+
+/* Cajitas más pequeñas y compactas */
+.foodbox-item-con-cantidad {
+    padding: 6px 10px !important;
+    min-height: auto !important;
+}
+
+/* Nombre de la opción - tamaño pequeño */
+.foodbox-nombre {
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: #475569 !important;
+    margin-bottom: 4px !important;
+}
+
+/* Controles de cantidad más compactos */
+.foodbox-cantidad-control {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Botones + y - más pequeños */
+.foodbox-btn {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    font-size: 0.85rem !important;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.foodbox-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+/* Input de cantidad compacto */
+.foodbox-item-con-cantidad .cantidad-input {
+    width: 45px !important;
+    height: 24px !important;
+    padding: 2px 4px !important;
+    font-size: 0.8rem !important;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+/* Grid de opciones más compacto */
+#foodboxEnsaladasGrid,
+#foodboxSandwichesGrid,
+#foodboxPostresGrid {
+    gap: 8px !important;
+}
+
+/* Secciones de opciones más compactas */
+.foodbox-opcion-principal,
+.foodbox-postres {
+    margin-bottom: 15px !important;
+}
+
+/* ============================================================
+   FOODBOX LUNCH - DISEÑO COMPACTO Y LIMPIO
+   ============================================================ */
+
+/* Subtítulos de sección */
+.foodbox-subtitle {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    margin: 0 0 6px 0;
+    padding: 0;
+}
+
+/* Item individual - MUY COMPACTO */
+.foodbox-item-compacto {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.foodbox-item-compacto:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* Nombre de la opción - PEQUEÑO */
+.foodbox-nombre-compacto {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+}
+
+/* Controles de cantidad */
+.foodbox-controles {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+/* Botones +/- MINI */
+.foodbox-btn-mini {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.foodbox-btn-mini:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.foodbox-btn-mini:active {
+    transform: scale(0.95);
+}
+
+/* Input de cantidad MINI */
+.foodbox-input-mini {
+    width: 40px !important;
+    height: 22px !important;
+    padding: 2px 4px !important;
+    font-size: 0.75rem !important;
+    text-align: center;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 4px;
+    background: white;
+}
+
+/* Grid de referencias para foodbox */
+#foodboxEnsaladasGrid,
+#foodboxSandwichesGrid,
+#foodboxPostresGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 6px;
+}
+
+@media (max-width: 768px) {
+    #foodboxEnsaladasGrid,
+    #foodboxSandwichesGrid,
+    #foodboxPostresGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   FOODBOX LUNCH - ESTILOS COMPACTOS
+   ============================================================ */
+
+.foodbox-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+#foodboxLunchSection .dc-section-header ~ * {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+#foodboxLunchSection > p {
+    padding: 0 14px;
+    margin-top: 8px;
+}
+
+#foodboxLunchSection > div {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+.foodbox-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+/* Cards dentro de foodbox no deben desbordar */
+.foodbox-grid .referencia-option {
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.foodbox-grid .referencia-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.foodbox-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.foodbox-item:hover {
+    background: #f1f5f9;
+}
+/* ============================================================
+   DISEÑO UNIFICADO - DECUATRO BUBBLES
+   Sistema de tarjetas compactas para todos los módulos
+   ============================================================ */
+
+/* --- CONTAINER GRID --- */
+.dc-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+/* --- ITEM INDIVIDUAL --- */
+.dc-item-bubble {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    transition: all 0.15s;
+    overflow: visible;
+    position: relative;
+}
+
+.dc-item-bubble:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* --- NOMBRE DEL ITEM --- */
+.dc-item-nombre {
+    font-family: 'Roboto', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: #475569;
+    flex: 1;
+    margin-right: 8px;
+}
+
+/* --- CONTROLES (botones + input) --- */
+.dc-item-controles {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* --- BOTONES +/- --- */
+.dc-btn-qty {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    color: #64748b;
+}
+
+.dc-btn-qty:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #475569;
+}
+
+.dc-btn-qty:active {
+    transform: scale(0.95);
+}
+
+.dc-btn-qty:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- INPUT DE CANTIDAD --- */
+.dc-input-qty {
+    width: 45px;
+    height: 24px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: white;
+    color: #131B23;
+}
+
+.dc-input-qty:focus {
+    outline: none;
+    border-color: #E1342E;
+    box-shadow: 0 0 0 2px rgba(225, 52, 46, 0.1);
+}
+
+/* --- TÍTULOS DE SECCIÓN --- */
+.dc-section-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* --- VARIANTE: Item seleccionado/destacado --- */
+.dc-item-bubble.selected {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.dc-item-bubble.selected .dc-item-nombre {
+    color: #166534;
+    font-weight: 500;
+}
+
+/* --- VARIANTE: Item con checkbox --- */
+.dc-item-bubble.with-checkbox {
+    cursor: pointer;
+}
+
+.dc-item-bubble.with-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 768px) {
+    .dc-items-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- COMPATIBILIDAD CON CLASES ANTERIORES --- */
+/* Para que los módulos existentes sigan funcionando */
+.foodbox-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.foodbox-item:hover {
+    background: #f1f5f9;
+}
+
+.foodbox-titulo {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #475569;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+}
+
+/* Grid de 2 columnas para Desayunos */
+#desayunoReferencesSection {
+    padding: 0;
+    overflow: hidden;
+}
+
+#desayunoReferencesSection h3,
+#desayunoReferencesSection > p {
+    padding-left: 14px;
+    padding-right: 14px;
+}
+
+#desayunoReferencesSection > p {
+    padding-top: 10px;
+}
+
+#referenciasDesayunoGrid.dc-items-grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 12px 12px;
+}
+
+@media (max-width: 768px) {
+    #referenciasDesayunoGrid.dc-items-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ══════════════════════════════════════
+   RESUMEN LATERAL DE COMANDA
+══════════════════════════════════════ */
+.comanda-resumen {
+  background: white;
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  box-shadow: var(--dc-shadow);
+  overflow: hidden;
+}
+.comanda-resumen-header {
+  background: var(--dc-negro);
+  border-bottom: 3px solid var(--dc-rojo);
+  padding: 10px 14px;
+}
+.comanda-resumen-header h4 {
+  font-family: var(--font-title);
+  font-size: .82rem;
+  font-weight: 500;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin: 0;
+}
+.comanda-resumen-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.resumen-empty {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--dc-muted);
+  font-size: .78rem;
+}
+.resumen-menu-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--dc-crema);
+  border-radius: 7px;
+  border: 1px solid var(--dc-border);
+}
+.resumen-chip-nombre {
+  font-family: var(--font-title);
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--dc-negro);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  flex: 1;
+}
+.resumen-chip-pax {
+  font-size: .72rem;
+  color: var(--dc-muted);
+  white-space: nowrap;
+}
+.resumen-chip-x {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--dc-border);
+  color: #94a3b8;
+  font-size: .7rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.resumen-chip-x:hover {
+  background: #fef2f2; border-color: var(--dc-rojo); color: var(--dc-rojo);
+  transform: none; box-shadow: none;
+}
+/* ── Ítems del resumen ── */
+.resumen-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--dc-crema);
+  border-radius: 7px;
+  border-left: 3px solid var(--dc-rojo);
+}
+.resumen-item-nombre {
+  font-family: var(--font-title);
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--dc-negro);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  flex: 1;
+}
+.resumen-item-pax {
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--dc-rojo);
+  white-space: nowrap;
+}
+
+/* ── Total ── */
+.resumen-menu-card {
+  background: var(--dc-crema);
+  border: 1px solid var(--dc-border);
+  border-left: 3px solid var(--dc-rojo);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.resumen-menu-card .resumen-item {
+  border: 0;
+  border-radius: 0;
+  border-left: 0;
+  background: transparent;
+  padding: 7px 10px 5px;
+}
+
+.resumen-menu-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px 8px 12px;
+}
+
+.resumen-detalle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  font-size: .71rem;
+  line-height: 1.25;
+  color: #64748b;
+}
+
+.resumen-detalle-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.resumen-detalle-row b {
+  color: var(--dc-negro);
+  font-size: .7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.resumen-detalle-row--title {
+  margin-top: 4px;
+  color: var(--dc-negro);
+  font-family: var(--font-title);
+  font-size: .68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+.resumen-divider {
+  height: 1px;
+  background: var(--dc-border);
+  margin: 2px 0;
+}
+.resumen-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px;
+}
+.resumen-total-row span:first-child {
+  font-family: var(--font-title);
+  font-size: .75rem;
+  font-weight: 500;
+  color: var(--dc-muted);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+.resumen-total-num {
+  font-family: var(--font-title);
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--dc-negro);
+}
+
+/* ── Footer guardar ── */
+.resumen-footer {
+  padding-top: 8px;
+  border-top: 1px solid var(--dc-border);
+  margin-top: 4px;
+}
+
+.btn-guardar-comanda {
+  width: 100%;
+  padding: 10px;
+  background: var(--dc-rojo);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-title);
+  font-size: .9rem;
+  font-weight: 500;
+  letter-spacing: .4px;
+  cursor: pointer;
+  transition: opacity .15s;
+  margin-top: 4px;
+}
+.btn-guardar-comanda:hover { opacity: .9; transform: none; box-shadow: none; }
+
+/* ── Menu cards mejoradas ── */
+.menu-option {
+  padding: 8px 10px;
+  border: 1px solid var(--dc-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  background: white;
+  border-left: 3px solid transparent;
+}
+.menu-option:hover {
+  border-left-color: var(--dc-rojo);
+  background: #fef9f9;
+}
+.menu-option.selected {
+  border-color: var(--dc-rojo);
+  border-left-color: var(--dc-rojo);
+  background: #fff5f5;
+}
+.menu-option h4 {
+  font-family: var(--font-title);
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--dc-negro);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 2px;
+}
+.menu-option.selected h4 { color: var(--dc-rojo); }
+.menu-option p {
+  color: var(--dc-muted);
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+/* ── PAX + botón añadir ── */
+#btnAnadirMenuWrap {
+  margin-top: 10px;
+  background: var(--dc-crema);
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* El JS setea display:block o display:flex */
+#btnAnadirMenuWrap[style*="block"],
+#btnAnadirMenuWrap[style*="flex"] {
+  display: flex !important;
+}
+
+.btn-anadir-pax-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-anadir-pax-row label {
+  font-size: .82rem;
+  color: var(--dc-muted);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.btn-anadir-pax-row input {
+  width: 72px;
+}
+
+#btnAnadirMenu {
+  width: 100%;
+  background: var(--dc-rojo);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: var(--font-title);
+  font-size: .85rem;
+  font-weight: 500;
+  letter-spacing: .3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity .15s;
+}
+
+#btnAnadirMenu:hover {
+  opacity: .88;
+}
+
+/* ── PAX total chip ── */
+#paxTotalWrap {
+  display: none !important;
+}
+
+/* Responsive: una columna en tablet */
+@media (max-width: 860px) {
+  .comanda-form-layout {
+    grid-template-columns: 1fr;
+  }
+  .comanda-form-aside { position: static; }
+}
+
+/* ══════════════════════════════════════
+   IMPRESIÓN — Diseño compacto
+══════════════════════════════════════ */
+@media print {
+
+  /* Ocultar todo excepto el detalle */
+  body * { visibility: hidden; }
+  #detalleComanda,
+  #detalleComanda * { visibility: visible; }
+
+  /* Resetear layout */
+  .dc-sidebar,
+  .dc-page-header,
+  .back-button,
+  .comanda-actions,
+  .btn-doc,
+  .btn-icon { display: none !important; }
+
+  body {
+    background: white !important;
+    margin: 0;
+    padding: 0;
+    font-size: 10pt;
+    font-family: 'Roboto', sans-serif;
+  }
+
+  #detalleComanda {
+    position: absolute;
+    inset: 0;
+    display: block !important;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dc-main { margin-left: 0 !important; }
+
+  .dc-page-content { padding: 0 !important; }
+
+  /* Contenedor principal */
+  .detalle-container {
+    max-width: 100%;
+    padding: 10mm 12mm;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  /* Encabezado */
+  .detalle-header {
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #E1342E;
+  }
+  .detalle-codigo {
+    font-size: 14pt;
+    font-weight: 700;
+  }
+  .detalle-fecha-sub { font-size: 8pt; }
+
+  /* Secciones */
+  .dc-section {
+    margin-bottom: 2px !important;
+    border: 0.5px solid #ccc !important;
+    border-radius: 4px !important;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+
+  .dc-section-header {
+    padding: 2px 10px !important;
+    background: transparent !important;
+    border-bottom: 1px solid #ccc !important;
+    border-top: none !important;
+  }
+  .dc-section-header h3 {
+    font-size: 7.5pt !important;
+    color: #131B23 !important;
+  }
+
+  /* Grid info básica */
+  .detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0;
+    padding: 2px 10px 3px !important;
+  }
+  .detalle-field { padding: 1px 4px; }
+  .detalle-field-label { font-size: 6.5pt; }
+  .detalle-field-value { font-size: 8.5pt; }
+
+  /* Cuerpo de sección */
+  .detalle-body {
+    padding: 3px 10px 4px !important;
+  }
+
+  /* Filas de menú */
+  .detalle-menu-row {
+    padding: 2px 0;
+    border-bottom: 0.5px solid #f1f1f1;
+  }
+  .detalle-menu-nombre { font-size: 8pt; }
+  .detalle-menu-nombre.es-titulo { font-size: 9pt; }
+  .detalle-menu-cantidad { font-size: 7.5pt; }
+
+  /* Termos tag */
+  .detalle-termo-tag {
+    font-size: 6pt;
+    padding: 0 3px;
+  }
+
+  /* Material logística — 3 columnas compactas */
+  .dc-material-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+  .dc-material-col {
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 6px !important;
+    border-radius: 4px !important;
+  }
+  .dc-material-col h5 {
+    font-size: 7pt !important;
+    margin-bottom: 4px !important;
+    padding-bottom: 3px !important;
+  }
+  .dc-material-item {
+    padding: 2px 2px !important;
+    gap: 4px !important;
+  }
+  .dc-material-item input[type="checkbox"] { display: none; }
+  .dc-material-nombre { font-size: 7.5pt !important; }
+  .dc-material-cantidad {
+    font-size: 7.5pt !important;
+    width: 36px !important;
+    padding: 1px 3px !important;
+    border: 0.5px solid #ccc !important;
+    background: white !important;
+  }
+  .dc-material-unidad { font-size: 6.5pt !important; }
+
+  /* Datos logística — una sola fila con 6 columnas */
+  .dc-log-grid {
+    display: grid !important;
+    grid-template-columns: 1.8fr 1.2fr 0.9fr 2.2fr 0.8fr 0.9fr !important;
+    grid-template-rows: 1fr !important;
+    gap: 0 8px !important;
+    padding: 2px 10px 3px !important;
+  }
+  .dc-log-grid > * {
+    min-width: 0 !important;
+  }
+  .dc-label { font-size: 6.5pt !important; }
+  .dc-input, .log-readonly {
+    font-size: 8pt !important;
+    padding: 1px 5px !important;
+    border: 0.5px solid #ccc !important;
+    border-radius: 3px !important;
+  }
+
+  /* Menaje inline badge */
+  .detalle-menaje-inline {
+    font-size: 8pt !important;
+    color: #E1342E !important;
+  }
+
+  /* Notas */
+  #detalleNotas { font-size: 8pt; }
+
+  /* Saltos de página */
+  .dc-section:last-child { page-break-after: avoid; }
+}
+
+.detalle-menus-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12px;
+}
+
+.detalle-menu-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #ffffff;
+    break-inside: avoid;
+}
+
+.detalle-menu-card h4 {
+    margin-bottom: 8px;
+    color: #131B23;
+    font-size: 1rem;
+    border-bottom: 2px solid #E1342E;
+    padding-bottom: 4px;
+}
+
+.detalle-termos-total {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-top: 2px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+@media print {
+    .detalle-menus-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .detalle-menu-card {
+        page-break-inside: avoid;
+    }
+
+    .detalle-termos-total {
+        page-break-inside: avoid;
+    }
+}
+
+
+/* ══════════════════════════════════════
+   DIY — Botones de selección + Modal
+══════════════════════════════════════ */
+
+.diy-grupo {
+  margin-bottom: 20px;
+}
+
+#diyDesayunosSection,
+#diyFoodboxSection {
+  font-family: var(--font-body);
+}
+
+#diyDesayunosSection .foodbox-titulo,
+#diyFoodboxSection .foodbox-titulo {
+  font-family: var(--font-title);
+  font-size: .75rem;
+  font-weight: 500;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+  color: var(--dc-negro);
+}
+
+/* Grid de botones */
+.diy-btn-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* ── DIY lista de ítems con controles +/- ── */
+.diy-item-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.diy-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  min-height: 32px;
+  transition: background .12s, border-color .12s;
+}
+.diy-item-row:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.diy-item-row--active {
+  background: #d1fae5;
+  border-color: #10b981;
+}
+
+.diy-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.diy-item-nombre {
+  font-family: var(--font-body);
+  font-size: .75rem;
+  color: var(--dc-text);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.diy-item-precio {
+  font-family: var(--font-body);
+  font-size: .72rem;
+  color: var(--dc-muted);
+}
+
+.diy-item-variantes-sel {
+  font-family: var(--font-body);
+  font-size: .68rem;
+  color: var(--dc-rojo);
+  font-style: italic;
+}
+
+.diy-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.diy-ctrl-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid var(--dc-border);
+  background: white;
+  color: var(--dc-text);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+  padding: 0;
+  flex-shrink: 0;
+}
+.diy-ctrl-btn:hover:not(:disabled) {
+  border-color: var(--dc-rojo);
+  color: var(--dc-rojo);
+  background: #fff5f5;
+}
+.diy-ctrl-btn:disabled { opacity: .35; cursor: default; }
+.diy-ctrl-plus { border-color: var(--dc-rojo); color: var(--dc-rojo); }
+.diy-ctrl-plus:hover { background: var(--dc-rojo); color: white; }
+
+.diy-ctrl-input {
+  width: 34px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: .76rem;
+  font-weight: 400;
+  color: var(--dc-negro);
+  border: 1px solid var(--dc-border);
+  border-radius: 5px;
+  padding: 2px 3px;
+  background: white;
+  -moz-appearance: textfield;
+}
+.diy-ctrl-input::-webkit-inner-spin-button,
+.diy-ctrl-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.diy-ctrl-input:focus { outline: none; border-color: var(--dc-rojo); }
+
+/* ── Resumen DIY ── */
+.resumen-item--diy {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.resumen-diy-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.resumen-diy-sub {
+  font-size: .68rem;
+  color: var(--dc-muted);
+}
+
+.resumen-diy-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.resumen-diy-precio {
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--dc-negro);
+}
+
+.resumen-diy-trash {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: .8rem;
+  opacity: .5;
+  padding: 0;
+  transition: opacity .12s;
+}
+.resumen-diy-trash:hover { opacity: 1; }
+
+.resumen-item-variantes {
+  font-size: .68rem;
+  color: var(--dc-muted);
+  line-height: 1.3;
+}
+
+.resumen-diy-titulo {
+  font-family: var(--font-title);
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--dc-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 4px 2px 2px;
+}
+
+/* Botón individual */
+.diy-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: white;
+  border: 1.5px solid var(--dc-border);
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: .8rem;
+  color: var(--dc-text);
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+  text-align: left;
+}
+
+.diy-btn:hover {
+  border-color: var(--dc-rojo);
+  background: #fff5f5;
+  transform: none;
+  box-shadow: none;
+}
+
+.diy-btn--active {
+  border-color: var(--dc-rojo);
+  background: #fff5f5;
+  color: var(--dc-rojo);
+  font-weight: 500;
+}
+
+.diy-btn-nombre { flex: 1; }
+
+.diy-btn-chevron {
+  font-size: .7rem;
+  color: var(--dc-muted);
+  flex-shrink: 0;
+}
+
+.diy-btn-check {
+  font-size: .75rem;
+  color: var(--dc-rojo);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.diy-btn-qty {
+  font-size: .75rem;
+  font-weight: 700;
+  color: white;
+  background: var(--dc-rojo);
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+.diy-btn-remove {
+  background: none;
+  border: none;
+  color: var(--dc-muted);
+  font-size: .9rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+  transition: color .12s;
+}
+.diy-btn-remove:hover { color: var(--dc-rojo); }
+
+/* ── Modal overlay ── */
+.diy-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 8px;
+}
+
+.diy-modal {
+  background: white;
+  border: 0;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, .24);
+  overflow: hidden;
+}
+
+.diy-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px;
+  background: var(--dc-negro);
+  border-bottom: 2px solid var(--dc-rojo);
+}
+
+.diy-modal-titulo {
+  font-family: var(--font-title);
+  font-size: .68rem;
+  font-weight: 500;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  line-height: 1.2;
+}
+
+.diy-modal-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+.diy-modal-close:hover { color: white; }
+
+.diy-modal-sub {
+  font-family: var(--font-body);
+  font-size: .7rem;
+  font-weight: 400;
+  color: #64748b;
+  padding: 8px 10px 4px;
+  margin: 0;
+}
+
+.diy-modal-variantes {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.diy-modal-variante {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  border: 1px solid #E8E6E1;
+  background: white;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: .7rem;
+  font-weight: 400;
+  color: #526987;
+  transition: border-color .12s, background .12s;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.diy-modal-variante:hover {
+  border-color: #d8d4cc;
+  background: #fbfaf8;
+}
+
+.diy-modal-variante span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diy-modal-variante input[type="checkbox"] {
+  accent-color: var(--dc-rojo);
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.diy-modal-footer {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid #E8E6E1;
+}
+
+.diy-modal-btn-cancel {
+  flex: 1;
+  padding: 7px 8px;
+  border: 1px solid var(--dc-border);
+  border-radius: 6px;
+  background: white;
+  color: var(--dc-muted);
+  font-family: var(--font-body);
+  font-size: .68rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.diy-modal-btn-cancel:hover { border-color: #94a3b8; color: var(--dc-negro); }
+
+.diy-modal-btn-ok {
+  flex: 1;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 6px;
+  background: var(--dc-rojo);
+  color: white;
+  font-family: var(--font-title);
+  font-size: .68rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.diy-modal-btn-ok:hover { opacity: .88; }
+
+/* ── Resumen DIY ── */
+.resumen-diy-titulo {
+  font-family: var(--font-title);
+  font-size: .68rem;
+  font-weight: 600;
+  color: var(--dc-muted);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 4px 2px 2px;
+}
+
+.resumen-item--diy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.resumen-item-variantes {
+  font-size: .68rem;
+  color: var(--dc-muted);
+  line-height: 1.3;
+}
+
+/* ══════════════════════════════════════════════════
+   MODAL OPCIONES DESAYUNO — overrides específicos
+   ══════════════════════════════════════════════════ */
+#modalDesayunoOpciones.modal {
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+#modalDesayunoOpciones.modal .modal-content {
+    max-width: 360px !important;
+    width: 90%;
+    margin: 0 !important;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#modalDesayunoOpciones.modal .modal-header {
+    padding: 7px 12px !important;
+    border-radius: 0 !important;
+    border-bottom: 2px solid #E1342E;
+}
+
+#modalDesayunoOpciones.modal .modal-header h3 {
+    font-size: 0.75rem !important;
+    letter-spacing: 0.4px !important;
+    text-transform: uppercase;
+    color: white !important;
+    margin: 0 !important;
+}
+
+#modalDesayunoOpciones.modal .close-modal {
+    font-size: 1rem !important;
+    line-height: 1;
+}
+
+#modalDesayunoOpciones.modal .modal-body {
+    padding: 8px 10px !important;
+    max-height: none !important;
+    overflow-y: visible;
+}
+
+#modalDesayunoOpciones.modal .modal-body label,
+#modalDesayunoOpciones.modal .modal-body span,
+#modalDesayunoOpciones.modal .modal-body div {
+    font-family: 'Roboto', sans-serif !important;
+    font-size: 0.78rem !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+}
+
+#modalDesayunoOpciones.modal .modal-body label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    margin-bottom: 3px;
+    border-radius: 6px;
+    border: 1px solid #E8E6E1;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+#modalDesayunoOpciones.modal .modal-body label span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#modalDesayunoOpciones.modal .modal-body input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}
+
+#modalDesayunoOpciones.modal .modal-footer {
+    padding: 8px 10px !important;
+    border-top: 1px solid #E8E6E1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+#modalDesayunoOpciones.modal .modal-footer .btn-primary {
+    padding: 6px 14px;
+    font-size: 0.78rem;
+}
+
+/* Utilidades de maquetacion usadas por el formulario principal */
+.dc-two-column-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dc-section-body {
+  padding: 12px 14px;
+}
+
+.dc-mt-12 {
+  margin-top: 12px;
+}
+
+.dc-mt-10 {
+  margin-top: 10px;
+}
+
+.dc-mt-15 {
+  margin-top: 15px;
+}
+
+.dc-mt-20 {
+  margin-top: 20px;
+}
+
+.dc-mb-6 {
+  margin-bottom: 6px;
+}
+
+.form-actions--end {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.referencias-group {
+  margin-bottom: 20px;
+}
+
+.referencias-group--postres {
+  margin-top: 15px;
+}
+
+.referencias-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.referencias-group-title {
+  font-weight: 500;
+}
+
+.referencias-group-title--red {
+  color: #c0392b;
+}
+
+.referencias-counter {
+  font-size: .8rem;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.referencias-counter--red {
+  color: #c0392b;
+  background: #fef2f2;
+}
+
+.modal-content--compact {
+  max-width: 380px;
+}
+
+.modal-content--narrow {
+  max-width: 400px;
+}
+
+.log-readonly {
+  background: #f8fafc;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: .95rem;
+}
+
+.log-error {
+  color: #dc2626;
+  font-size: .8rem;
+  margin-top: 4px;
+  display: block;
+  min-height: 16px;
+}
+
+/* Resumen compacto de logistica */
+.logistics-summary-section {
+  margin-bottom: 8px;
+  padding: 0;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.logistics-summary-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #131B23;
+  border-bottom: 3px solid #10b981;
+  color: #ffffff;
+}
+
+.logistics-summary-header span {
+  font-size: .62rem;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.logistics-summary-header strong {
+  font-family: 'Oswald', sans-serif;
+  font-size: .76rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+#logisticaForm .logistics-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(110px, .8fr) minmax(180px, 1.4fr) minmax(150px, 1fr) 72px minmax(120px, .9fr) 80px;
+  gap: 0;
+  padding: 7px 9px;
+  background: #ffffff;
+}
+
+#logisticaForm .logistics-summary-item {
+  margin: 0;
+  min-width: 0;
+  padding: 0 8px;
+  border-right: 1px solid #edf2f7;
+}
+
+#logisticaForm .logistics-summary-item:first-child {
+  padding-left: 0;
+}
+
+#logisticaForm .logistics-summary-item:last-child {
+  padding-right: 0;
+  border-right: none;
+}
+
+#logisticaForm .logistics-summary-item--code .log-readonly,
+#logisticaForm .logistics-summary-item--company .log-readonly {
+  font-weight: 600;
+  color: #131B23;
+}
+
+#logisticaForm .logistics-summary-item--small {
+  text-align: center;
+}
+
+#logisticaForm .logistics-summary-item .info-label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: .6rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+#logisticaForm .logistics-summary-item .log-readonly {
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: .78rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+  #logisticaForm .logistics-summary-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px 0;
+  }
+
+  #logisticaForm .logistics-summary-item:nth-child(3n) {
+    border-right: none;
+  }
+}
+
+/* Ajuste compacto para formularios de logistica */
+#logisticaInlineSection,
+#logisticaForm .dc-section,
+#logisticaForm .form-section {
+  margin-bottom: 8px;
+}
+
+#logisticaInlineSection .dc-section-header,
+#logisticaForm .dc-section-header {
+  padding: 6px 10px;
+  margin-bottom: 0;
+  border-bottom-color: #10b981 !important;
+}
+
+.dc-log-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dc-log-heading h3 {
+  margin: 0;
+}
+
+.dc-log-heading span {
+  color: #cbd5e1;
+  font-size: .64rem;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.2;
+}
+
+#logisticaInlineSection .dc-log-grid,
+#logisticaForm .dc-log-grid {
+  grid-template-columns: minmax(220px, 1.2fr) minmax(140px, .8fr) minmax(120px, .65fr);
+  gap: 5px 8px;
+  padding: 7px 9px 8px;
+  background: #ffffff;
+}
+
+#logisticaInlineSection .dc-log-direccion,
+#logisticaForm .dc-log-direccion {
+  border-left: 2px solid #10b981;
+}
+
+#logisticaInlineSection .dc-log-hora-entrega,
+#logisticaInlineSection .dc-log-hora-evento,
+#logisticaForm .dc-log-hora-entrega,
+#logisticaForm .dc-log-hora-evento {
+  border-left: 2px solid #bae6fd;
+}
+
+#logisticaInlineSection .dc-field,
+#logisticaForm .dc-field {
+  gap: 1px;
+  padding: 0 0 0 7px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+#logisticaInlineSection .dc-label,
+#logisticaForm .dc-label {
+  color: #475569;
+  font-size: .68rem;
+  letter-spacing: .35px;
+}
+
+#logisticaInlineSection .dc-input,
+#logisticaForm .dc-input,
+#logisticaForm .log-readonly {
+  min-height: 27px;
+  padding: 2px 6px;
+  border-color: #dbe4ee;
+  background: #f8fafc;
+}
+
+#logisticaInlineSection .dc-input:focus,
+#logisticaForm .dc-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .1);
+}
+
+#logisticaInlineSection .dc-field-error,
+#logisticaForm .dc-field-error {
+  min-height: 4px;
+  font-size: .64rem;
+}
+
+#logisticaForm .detalle-info {
+  gap: 6px 8px;
+}
+
+#logisticaForm .info-item {
+  margin-bottom: 2px;
+}
+
+#logisticaForm .form-section h3:not(.dc-section-header h3) {
+  padding: 5px 10px;
+}
+
+#logisticaForm .form-actions--end {
+  margin-top: 14px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-section,
+#logisticaForm .dc-material-section {
+  margin-top: 8px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-header,
+#logisticaForm .dc-material-header {
+  padding: 6px 10px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-col-header,
+#logisticaForm .dc-material-col-header {
+  padding: 6px 9px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-item,
+#logisticaForm .dc-material-item {
+  gap: 6px;
+  padding: 5px 8px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-subitem,
+#logisticaForm .dc-material-subitem {
+  gap: 6px;
+  padding: 4px 8px 4px 20px;
+}
+
+#logisticaInlineSection + #materialLogisticaInline .dc-material-cantidad,
+#logisticaForm .dc-material-cantidad {
+  padding: 2px 4px;
+  width: 40px;
+}
+
+/* Mobile forms */
+@media (max-width: 760px) {
+  .comanda-form-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .comanda-form-aside {
+    position: static;
+    order: 2;
+  }
+
+  .comanda-form-main {
+    min-width: 0;
+  }
+
+  .form-section,
+  .dc-section {
+    border-radius: 9px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .dc-section-header {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .dc-section-header h3,
+  .form-section h3,
+  h3 {
+    font-size: .72rem;
+    line-height: 1.2;
+  }
+
+  .dc-info-grid,
+  .dc-fields-grid,
+  .dc-two-column-grid,
+  .multiplicadores-container,
+  .checkbox-group {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
+  }
+
+  .dc-info-grid > *,
+  .dc-field--wide,
+  .dc-log-wide,
+  .dc-log-full {
+    grid-column: auto !important;
+    grid-area: auto !important;
+  }
+
+  label,
+  .dc-label {
+    font-size: .76rem;
+  }
+
+  input,
+  select,
+  textarea,
+  .dc-input {
+    min-height: 38px;
+    font-size: .86rem;
+  }
+
+  textarea {
+    min-height: 86px;
+  }
+
+  .menu-selection,
+  #menusContainer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .menu-option {
+    padding: 10px;
+  }
+
+  .menu-option h4 {
+    font-size: .78rem;
+  }
+
+  .menu-option p {
+    font-size: .68rem;
+  }
+
+  .button-group,
+  .form-actions,
+  .form-actions--end,
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-group button,
+  .form-actions button,
+  .form-actions--end button,
+  .modal-footer button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-submit {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .comanda-resumen {
+    border-radius: 9px;
+  }
+
+  .comanda-resumen-body {
+    max-height: none;
+  }
+
+  .resumen-footer .btn-guardar-comanda,
+  .resumen-footer button {
+    width: 100%;
+  }
+
+  .dc-material-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 10px;
+  }
+
+  .dc-material-grid,
+  #logisticaForm .logistics-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dc-material-item,
+  .dc-material-subitem {
+    align-items: flex-start;
+  }
+
+  .dc-material-item-right {
+    gap: 5px;
+  }
+
+  .dc-material-cantidad,
+  #logisticaInlineSection + #materialLogisticaInline .dc-material-cantidad,
+  #logisticaForm .dc-material-cantidad {
+    width: 44px;
+    min-height: 30px;
+  }
+
+  .diy-item-list,
+  .referencias-grid,
+  .referencias-grid--compact {
+    grid-template-columns: 1fr !important;
+  }
+
+  .diy-modal {
+    max-width: none;
+    width: calc(100vw - 24px);
+  }
+
+  #modalDesayunoOpciones.modal .modal-content {
+    width: calc(100vw - 24px);
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 430px) {
+  input,
+  select,
+  textarea,
+  .dc-input {
+    font-size: .82rem;
+  }
+
+  .dc-material-item {
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .dc-material-nombre {
+    font-size: .72rem;
+  }
+}

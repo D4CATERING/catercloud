@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CaterCloud - Sistema de Comandas</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/calendar.css">
+    <link rel="stylesheet" href="css/forms.css">
+
+    <!-- Fuentes corporativas -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+</head>
+<body>
+
+<!-- Sidebar principal -->
+<aside class="dc-sidebar">
+  <div class="dc-sidebar-brand">
+    <img src="assets/images/logo.png" alt="Decuatro" class="dc-sidebar-logo">
+    <div>
+      <div class="dc-sidebar-name">DeCuatro</div>
+      <div class="dc-sidebar-sub">Sistema de Comandas</div>
+    </div>
+  </div>
+
+  <nav class="dc-nav">
+    <div class="dc-nav-item" onclick="mostrarDashboard()" id="nav-dashboard">
+      <span class="nav-icon">⊞</span> Dashboard
+    </div>
+    <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda" data-requires-write>
+      <span class="nav-icon">＋</span> Nueva Comanda
+    </div>
+    <div class="dc-nav-sep"></div>
+    <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
+      <span class="nav-icon">☰</span> Historial
+    </div>
+    <div class="dc-nav-item" onclick="mostrarLogistica()" id="nav-logistica">
+      <span class="nav-icon">◎</span> Logística
+    </div>
+  </nav>
+
+  <div class="dc-sidebar-footer">
+    <div class="dc-user-avatar" id="dcUserInitial">—</div>
+    <div class="dc-user-info">
+      <div class="dc-user-name" id="dcUserName"></div>
+      <button class="dc-logout-btn" id="btnLogout">Cerrar sesión</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Contenido principal -->
+<main class="dc-main" id="dcMain">
+
+    <!-- Vista: Dashboard -->
+    <div id="dashboard">
+      <div class="dc-page-header dash-page-header">
+        <div>
+          <h1>Calendario Pedidos</h1>
+          <p>Pedidos por fecha de evento</p>
+        </div>
+        <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()" data-requires-write>
+          <span class="btn-plus">+</span> Nueva Comanda
+        </button>
+      </div>
+      <div class="dc-page-content">
+        <div class="dashboard-layout dashboard-layout--calendar">
+
+          <!-- Calendario compacto -->
+          <div class="calendar-card">
+            <div class="calendar-header">
+              <span id="calendarMonthTitle">—</span>
+              <div class="calendar-nav">
+                <button onclick="cambiarMes(-1)">‹</button>
+                <button onclick="cambiarMes(1)">›</button>
+              </div>
+            </div>
+            <div class="calendar-body">
+              <div class="calendar-weekdays">
+                <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+              </div>
+              <div id="calendarDays" class="calendar-days"></div>
+            </div>
+          </div>
+
+          <!-- Panel lateral de eventos del día -->
+          <div class="dash-events-panel">
+            <div class="event-details">
+              <h4 id="selectedDateTitle">Hoy</h4>
+              <div id="eventList" class="event-list"></div>
+              <div id="solicitudFormCalendario" class="calendar-request-form" style="display:none;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista: Nueva comanda -->
+    <div id="comandaForm" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Nueva Comanda</h1>
+        <p>Completa los datos del pedido de catering</p>
+      </div>
+
+      <div class="dc-page-content">
+        <div class="comanda-form-layout">
+
+          <!-- Columna principal -->
+          <div class="comanda-form-main">
+            <form id="comandaCocinaForm" novalidate>
+
+                <!-- Comanda: Información básica -->
+                <div class="form-section dc-section">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">📋</span>
+                        <h3>Información Básica</h3>
+                    </div>
+
+                    <div class="dc-info-grid">
+                        <div class="dc-field dc-info-empresa">
+                            <label for="empresa" class="dc-label required">Empresa</label>
+                            <input type="text" id="empresa" class="dc-input" placeholder="Nombre de la empresa" required>
+                        </div>
+
+                        <div class="dc-field dc-info-responsable">
+                            <label for="responsable" class="dc-label required">Responsable</label>
+                            <input type="text" id="responsable" class="dc-input" placeholder="Nombre del responsable" required>
+                        </div>
+
+                        <div class="dc-field dc-info-fecha">
+                            <label for="fecha_evento" class="dc-label required">Fecha del Evento</label>
+                            <input type="date" id="fecha_evento" class="dc-input" required>
+                        </div>
+
+                        <div class="dc-field dc-info-hora">
+                            <label for="hora_salida" class="dc-label required">Hora de Salida</label>
+                            <input type="time" id="hora_salida" class="dc-input" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Comanda: Menú principal -->
+                <div class="form-section">
+                    <div class="dc-section-header">
+                        <h3>🍴 Menú Principal</h3>
+                    </div>
+
+                    <div class="dc-two-column-grid">
+                        <div class="form-group">
+                            <label for="categoria">Categoría del Menú</label>
+                            <select id="categoria" onchange="cargarMenus()">
+                                <option value="">Selecciona una categoría</option>
+                                <option value="1">Desayunos</option>
+                                <option value="2">Foodbox / Comida</option>
+                                <option value="4">Foodbox Lunch</option>
+                                <option value="5">Bandejas Preparadas</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tipo_menaje">Tipo de Menaje</label>
+                            <select id="tipo_menaje" onchange="actualizarTipoMenajeGlobal()">
+                                <option value="">Selecciona tipo</option>
+                                <option value="desechable">Menaje Desechable</option>
+                                <option value="loza">Menaje Loza (Emplatado Bonito)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="menusContainer" class="menu-selection"></div>
+                    <input type="hidden" id="menu_id" name="menu_id">
+
+                    <!-- Menús añadidos -->
+                    <div id="menusAnadidosList" class="dc-mt-12"></div>
+
+                    <!-- PAX total oculto: se muestra en el resumen lateral -->
+                    <span id="paxTotalWrap" style="display:none;">
+                        <span id="paxTotalValor">0</span>
+                    </span>
+                </div>
+                
+                <!-- Comanda: Multiplicadores de cantidades -->
+                <div id="multiplicadorSection" class="form-section dc-section" style="display: none;">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">🧮</span>
+                        <h3>Multiplicadores de Cantidades</h3>
+                    </div>
+
+                    <div class="dc-section-body">
+                        <div class="multiplicadores-container">
+                            <div class="multiplicador-section">
+                                <h4>Referencias Saladas</h4>
+
+                                <div class="multiplicador-input-group">
+                                    <span class="multiplicador-label">Multiplicador:</span>
+                                    <input type="number" id="multiplicadorSaladas" class="multiplicador-input"
+                                           value="1.5" step="0.1" min="0.1" max="10"
+                                           oninput="actualizarMultiplicador('saladas', this.value)">
+                                </div>
+
+                                <div class="info-cantidad" id="infoCantidadSaladas">
+                                    <strong>Cálculo:</strong> <span id="paxValue">0</span> PAX ×
+                                    <span id="multSaladasValue">1</span> =
+                                    <span id="totalSaladasValue">0</span> uds por referencia
+                                </div>
+                            </div>
+                            
+                            <div class="multiplicador-section" id="multiplicadorPostresSection" style="display: none;">
+                                <h4>Postres</h4>
+
+                                <div class="multiplicador-input-group">
+                                    <span class="multiplicador-label">Multiplicador:</span>
+                                    <input type="number" id="multiplicadorPostres" class="multiplicador-input"
+                                           value="1" step="0.1" min="0.1" max="10"
+                                           oninput="actualizarMultiplicador('postres', this.value)">
+                                </div>
+
+                                <div class="info-cantidad" id="infoCantidadPostres">
+                                    <strong>Cálculo:</strong> <span id="paxValue2">0</span> PAX ×
+                                    <span id="multPostresValue">1</span> =
+                                    <span id="totalPostresValue">0</span> uds por postre
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Comanda: Selección de referencias -->
+                <div id="referenciasSection" class="form-section dc-section" style="display: none;">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">📋</span>
+                        <h3>Selección de Referencias</h3>
+                    </div>
+
+                    <div class="dc-section-body">
+
+                        <!-- Referencias grises -->
+                        <div id="referenciasSaladasGroup" class="referencias-group">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title">⬜ Referencias Grises</label>
+                                <span id="contadorGris" class="referencias-counter">0 / 0</span>
+                            </div>
+
+                            <span id="minSaladas" style="display:none;">0</span>
+                            <span id="maxSaladas" style="display:none;">0</span>
+                            <div id="referenciasGrisGrid" class="referencias-grid"></div>
+                            <div id="referenciasSaladasGrid" style="display:none;"></div>
+                        </div>
+
+                        <!-- Referencias rojas -->
+                        <div id="referenciasRojasGroup" class="referencias-group" style="display:none;">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title referencias-group-title--red">🔴 Referencias Rojas</label>
+                                <span id="contadorRojo" class="referencias-counter referencias-counter--red">0 / 0</span>
+                            </div>
+
+                            <div id="referenciasRojoGrid" class="referencias-grid"></div>
+                        </div>
+
+                        <!-- Postres -->
+                        <div id="referenciasPostresGroup" class="referencias-group referencias-group--postres" style="display: none;">
+                            <div class="referencias-group-header">
+                                <label class="referencias-group-title">🍰 Postres</label>
+                                <span id="contadorPostres" class="referencias-counter">0 / 0</span>
+                            </div>
+
+                            <span id="minPostres" style="display:none;">0</span>
+                            <span id="maxPostres" style="display:none;">0</span>
+                            <div id="referenciasPostresGrid" class="referencias-grid"></div>
+                        </div>
+
+                    </div>
+                </div>
+                
+                <!-- Comanda: Notas adicionales -->
+                <div class="form-section">
+                    <h3>📝 Notas Adicionales</h3>
+
+                    <div class="form-group">
+                        <label for="alergias_notas">Información importante para la cocina</label>
+                        <textarea id="alergias_notas" rows="3" placeholder="Alergias, restricciones dietéticas, instrucciones especiales, etc..."></textarea>
+                    </div>
+                </div>
+                
+                <!-- Menús adicionales gestionados desde el resumen lateral -->
+                <div id="menusAdicionalesList" style="display:none;"></div>
+
+                <!-- Comanda: Datos de logística -->
+                <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">🚚</span>
+                        <div class="dc-log-heading">
+                            <h3>Datos de Logística</h3>
+                            <span>Contacto, dirección y horarios del servicio</span>
+                        </div>
+                    </div>
+
+                    <div class="dc-log-grid">
+                        <div class="dc-field dc-log-contacto">
+                            <label for="log_inline_nombre_contacto" class="dc-label required">Nombre de Contacto</label>
+                            <input type="text" id="log_inline_nombre_contacto" class="dc-input" placeholder="Persona que recibe el pedido">
+                            <span class="dc-field-error" id="log_inline_nombre_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-telefono">
+                            <label for="log_inline_telefono_contacto" class="dc-label required">Teléfono</label>
+                            <input type="tel" id="log_inline_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
+                            <span class="dc-field-error" id="log_inline_telefono_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-entrega">
+                            <label for="log_inline_hora_entrega" class="dc-label required">Hora de Entrega</label>
+                            <input type="time" id="log_inline_hora_entrega" class="dc-input">
+                            <span class="dc-field-error" id="log_inline_hora_entrega_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-direccion">
+                            <label for="log_inline_direccion" class="dc-label required">Dirección Completa</label>
+                            <input type="text" id="log_inline_direccion" class="dc-input" placeholder="Calle, número, piso...">
+                            <span class="dc-field-error" id="log_inline_direccion_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-cp">
+                            <label for="log_inline_codigo_postal" class="dc-label required">Código Postal</label>
+                            <input type="text" id="log_inline_codigo_postal" class="dc-input" placeholder="28001" maxlength="10">
+                            <span class="dc-field-error" id="log_inline_codigo_postal_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-evento">
+                            <label for="log_inline_hora_evento" class="dc-label required">Hora del Evento</label>
+                            <input type="time" id="log_inline_hora_evento" class="dc-input">
+                            <span class="dc-field-error" id="log_inline_hora_evento_err"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comanda: Material de logística -->
+                <div id="materialLogisticaInline" style="display: none;"></div>
+
+                <!-- Comanda: Notas adicionales logística -->
+                <div class="form-section">
+                    <h3>📝 Notas Adicionales Logística</h3>
+
+                    <div class="form-group">
+                        <label for="log_inline_notas">Información importante para logística</label>
+                        <textarea id="log_inline_notas" rows="3" placeholder="Instrucciones de entrega, acceso, montaje, parking, ascensor, persona de recepción, etc..."></textarea>
+                        <span class="dc-field-error" id="log_inline_notas_err"></span>
+                    </div>
+                </div>
+
+                <!-- Mensajes del formulario -->
+                <div id="message" class="message"></div>
+                
+                <!-- Acciones del formulario -->
+                <div class="button-group">
+                    <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
+                        ← Volver
+                    </button>
+                    <button type="submit" class="btn-primary" data-requires-write>
+                        💾 Guardar Comanda
+                    </button>
+                </div>
+
+            </form>
+          </div><!-- /comanda-form-main -->
+
+          <!-- Resumen lateral -->
+          <div class="comanda-form-aside">
+
+            <div class="comanda-resumen">
+              <div class="comanda-resumen-header">
+                <h4>Resumen de Comanda</h4>
+              </div>
+              <div class="comanda-resumen-body" id="resumenBody">
+                <div class="resumen-empty">
+                  <div>📋</div>
+                  <div>Añade menús a la comanda</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PAX y acción de añadir menú -->
+            <div id="btnAnadirMenuWrap" style="display:none;">
+              <div class="btn-anadir-pax-row">
+                <label for="pax">PAX este menú</label>
+                <input type="number" id="pax" class="dc-input" placeholder="0" min="1"
+                       oninput="actualizarCantidades(); actualizarCantidadesDesayuno();">
+              </div>
+              <button type="button" id="btnAnadirMenu" onclick="anadirMenuAComanda()">
+                + Añadir a la comanda
+              </button>
+            </div>
+
+          </div><!-- /aside -->
+
+        </div><!-- /comanda-form-layout -->
+      </div><!-- /dc-page-content -->
+    </div><!-- /comandaForm -->
+
+    <!-- Modales -->
+    <!-- Modal: Menús adicionales -->
+    <div id="modalMenus" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">➕ Añadir Menú Adicional</h3>
+                <span class="close-modal" onclick="cerrarModalMenus()">×</span>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="modalCategoria">Categoría del Menú</label>
+                    <select id="modalCategoria" onchange="cargarMenusModal()">
+                        <option value="">Selecciona una categoría</option>
+                        <option value="1">Desayunos</option>
+                        <option value="2">Foodbox / Comida</option>
+                        <option value="5">Bandejas Preparadas</option>
+                    </select>
+                </div>
+                
+                <div id="modalMenusContainer" class="menu-selection"></div>
+                
+                <div id="modalPaxSection" class="form-section dc-mt-20" style="display: none;">
+                    <h4>👥 PAX para este menú</h4>
+                    <input type="number" id="modalPaxAdicional" class="multiplicador-input" 
+                           placeholder="Número de PAX" min="1" value=""
+                           onchange="actualizarCantidadesReferenciasAdicionales()">
+                </div>
+                
+                <div id="modalMultiplicadorSection" class="form-section" style="display: none;">
+                    <h4>🧮 Multiplicadores</h4>
+
+                    <div class="multiplicadores-container">
+                        <div class="multiplicador-section">
+                            <h4>Referencias Saladas</h4>
+
+                            <div class="multiplicador-input-group">
+                                <span class="multiplicador-label">Multiplicador:</span>
+                                <input type="number" id="modalMultiplicadorSaladasAdicional" class="multiplicador-input"
+                                       value="1" step="0.1" min="0.1" max="10"
+                                       onchange="actualizarCantidadesReferenciasAdicionales()">
+                            </div>
+                        </div>
+                        
+                        <div class="multiplicador-section" id="modalPostresGroup" style="display: none;">
+                            <h4>Postres</h4>
+
+                            <div class="multiplicador-input-group">
+                                <span class="multiplicador-label">Multiplicador:</span>
+                                <input type="number" id="modalMultiplicadorPostresAdicional" class="multiplicador-input"
+                                       value="1" step="0.1" min="0.1" max="10"
+                                       onchange="actualizarCantidadesReferenciasAdicionales()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="modalReferenciasSection" class="form-section" style="display: none;">
+                    <h4>📋 Selección de Referencias</h4>
+
+                    <div>
+                        <label>Selecciona <span id="modalMinSaladas">X</span>-<span id="modalMaxSaladas">Y</span> referencias saladas:</label>
+                        <div id="modalReferenciasSaladasGrid" class="referencias-grid dc-mt-10"></div>
+                    </div>
+                    
+                    <div id="modalPostresGroupRef" class="dc-mt-15" style="display: none;">
+                        <label>Selecciona <span id="modalMinPostres">A</span>-<span id="modalMaxPostres">B</span> referencias de postres:</label>
+                        <div id="modalReferenciasPostresGrid" class="referencias-grid dc-mt-10"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalMenus()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="confirmarMenuAdicional()">Añadir Menú</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Opciones desayuno (bollería, sandwich, pulguita) -->
+    <div id="modalDesayunoOpciones" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h3 id="modalDesayunoTitle">Seleccionar opciones</h3>
+                <span class="close-modal" onclick="cerrarModalDesayunoOpciones()">×</span>
+            </div>
+            <div class="modal-body" id="modalDesayunoBody"></div>
+            <div class="modal-footer" id="modalDesayunoFooter" style="display:none;">
+                <button type="button" class="btn-primary" onclick="confirmarModalDesayunoOpciones()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Subitems de material logística -->
+    <div id="modalMaterialSubitems" class="modal">
+        <div class="modal-content modal-content--compact">
+            <div class="modal-header">
+                <h3 id="modalMaterialSubitemsTitle">Seleccionar opción</h3>
+                <span class="close-modal" onclick="cerrarModalMaterialSubitems()">×</span>
+            </div>
+            <div class="modal-body">
+                <div id="modalMaterialSubitemsOpciones"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmación para crear logística -->
+    <div id="modalConfirmacionLogistica" class="modal">
+        <div class="modal-content modal-content--narrow">
+            <div class="modal-header">
+                <h3>🚚 ¿Crear también comanda de logística?</h3>
+                <span class="close-modal" onclick="cerrarModalConfirmacion()">×</span>
+            </div>
+            
+            <div class="modal-body">
+                <p>La comanda de cocina se ha creado exitosamente. ¿Deseas crear también la comanda de logística para este evento?</p>
+                
+                <div class="form-group dc-mt-20">
+                    <label>
+                        <input type="checkbox" id="recordarPreferencia"> Recordar mi preferencia para futuras comandas
+                    </label>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cerrarModalConfirmacion()">Solo Cocina</button>
+                <button type="button" class="btn-primary" onclick="crearComandaLogistica()">Sí, crear Logística</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista: Historial -->
+    <div id="historialPage" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Historial de Comandas</h1>
+      </div>
+
+      <div class="dc-page-content">
+        <div class="historial-container">
+            <div class="historial-filters">
+                <input type="text" id="filtroBusquedaH" placeholder="Buscar por empresa o código..." onkeyup="filtrarComandas()">
+                <input type="date" id="filtroFecha" onchange="filtrarComandas()">
+                <select id="filtroEstado" onchange="filtrarComandas()">
+                    <option value="">Todos los estados</option>
+                    <option value="creada">Creada</option>
+                    <option value="proceso">En proceso</option>
+                    <option value="completada">Completada</option>
+                    <option value="negociacion">En negociación</option>
+                    <option value="por_confirmar">Por confirmar</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="anulada">Anulada</option>
+                </select>
+            </div>
+
+            <div id="comandasListHistorial" class="comandas-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vista: Expediente de pedido -->
+    <div id="expedientePedido" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver al Dashboard</button>
+        <h1>Expediente de Pedido</h1>
+      </div>
+
+      <div class="dc-page-content">
+        <div id="expedientePedidoContent" class="expediente-container"></div>
+      </div>
+    </div>
+
+    <!-- Vista: Detalle de comanda -->
+    <div id="detalleComanda" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlHistorial()">← Volver al Historial</button>
+      </div>
+
+      <div class="dc-page-content">
+
+            <!-- Detalle: Encabezado -->
+            <div class="detalle-header">
+                <div>
+                    <div id="detalleCodigo" class="detalle-codigo"></div>
+                    <div id="detalleFecha" class="detalle-fecha-sub"></div>
+                </div>
+
+                <div class="comanda-actions">
+                    <button class="btn-icon" title="Editar" onclick="editarComanda()" data-requires-write>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                    </button>
+
+                    <button class="btn-icon" title="Imprimir" onclick="imprimirComanda()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"/>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                            <rect x="6" y="14" width="12" height="8"/>
+                        </svg>
+                    </button>
+
+                    <button class="btn-icon btn-icon-danger" title="Eliminar" onclick="eliminarComanda()" data-requires-admin>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6"/>
+                            <path d="M14 11v6"/>
+                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detalle: Información del evento -->
+            <div class="dc-section">
+                <div class="dc-section-header">
+                    <span>📋</span>
+                    <h3>Información del Evento</h3>
+                </div>
+
+                <div class="detalle-grid">
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Empresa</span>
+                        <span id="detalleEmpresa" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Responsable</span>
+                        <span id="detalleResponsable" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">PAX</span>
+                        <span id="detallePax" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Fecha Evento</span>
+                        <span id="detalleFechaEvento" class="detalle-field-value"></span>
+                    </div>
+
+                    <div class="detalle-field">
+                        <span class="detalle-field-label">Hora Salida</span>
+                        <span id="detalleHoraSalida" class="detalle-field-value"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalle: Menú principal -->
+            <div class="dc-section">
+                <div class="dc-section-header">
+                    <span>🍽️</span>
+                    <h3 id="detalleMenuTitulo">Menú</h3>
+                </div>
+                <div id="detalleMenajeBadge" class="detalle-menaje-badge" style="display:none;"></div>
+                <div class="detalle-body" id="detalleMenuPrincipal"></div>
+            </div>
+
+            <!-- Detalle: Menús adicionales -->
+            <div class="dc-section" id="detalleMenusAdicionalesSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>➕</span>
+                    <h3>Menús Adicionales</h3>
+                </div>
+
+                <div class="detalle-body" id="detalleMenusAdicionales"></div>
+            </div>
+
+            <!-- Detalle: Referencias -->
+            <div class="dc-section" id="detalleReferenciasSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>📋</span>
+                    <h3>Referencias Seleccionadas</h3>
+                </div>
+
+                <div class="detalle-body">
+                    <div id="detalleMultiplicadoresSection" class="dc-mb-6" style="display:none;">
+                        <span class="detalle-field-label">Multiplicadores: </span>
+                        <span id="detalleMultiplicadores" class="detalle-field-value"></span>
+                    </div>
+
+                    <div id="detalleReferencias"></div>
+                </div>
+            </div>
+
+            <!-- Detalle: Notas adicionales -->
+            <div class="dc-section" id="detalleNotasSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>📝</span>
+                    <h3>Notas Adicionales</h3>
+                </div>
+
+                <div class="detalle-body">
+                    <div id="detalleNotas" class="detalle-field-value"></div>
+                </div>
+            </div>
+
+            <!-- Detalle: Datos de entrega -->
+            <div class="dc-section" id="detalleDatosLogisticaSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>🚚</span>
+                    <h3>Datos de Entrega</h3>
+                </div>
+
+                <div id="detalleDatosLogisticaContent"></div>
+            </div>
+
+            <!-- Detalle: Material necesario -->
+            <div class="dc-section" id="detalleLogisticaSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>📦</span>
+                    <h3>Material Necesario</h3>
+                </div>
+
+                <div class="detalle-body" id="detalleLogisticaContent"></div>
+            </div>
+
+      </div>
+    </div>
+
+    <!-- Vista: Formulario de logística -->
+    <div id="logisticaForm" style="display: none;">
+        <button class="back-button" onclick="volverDesdeCancelLogistica()">
+            ← Cancelar y volver al Inicio
+        </button>
+
+        <div class="container">
+            <div class="header">
+                <h1>
+                    <span>🚚</span>
+                    Comanda de Logística
+                </h1>
+                <p>Completa los datos de entrega para la comanda de cocina</p>
+            </div>
+
+            <div class="form-container">
+
+                <!-- Logística: Datos heredados de cocina -->
+                <div class="form-section logistics-summary-section">
+                    <div class="logistics-summary-header">
+                        <span>Resumen</span>
+                        <strong>Comanda de cocina</strong>
+                    </div>
+
+                    <div class="detalle-info logistics-summary-grid">
+                        <div class="info-item logistics-summary-item logistics-summary-item--code">
+                            <div class="info-label">Código Cocina</div>
+                            <div id="log_codigo_cocina" class="info-value log-readonly">—</div>
+                        </div>
+
+                        <div class="info-item logistics-summary-item logistics-summary-item--company">
+                            <div class="info-label">Empresa</div>
+                            <div id="log_empresa" class="info-value log-readonly">—</div>
+                        </div>
+
+                        <div class="info-item logistics-summary-item">
+                            <div class="info-label">Responsable</div>
+                            <div id="log_responsable" class="info-value log-readonly">—</div>
+                        </div>
+
+                        <div class="info-item logistics-summary-item logistics-summary-item--small">
+                            <div class="info-label">PAX</div>
+                            <div id="log_pax" class="info-value log-readonly">—</div>
+                        </div>
+
+                        <div class="info-item logistics-summary-item">
+                            <div class="info-label">Fecha del Evento</div>
+                            <div id="log_fecha_evento" class="info-value log-readonly">—</div>
+                        </div>
+
+                        <div class="info-item logistics-summary-item logistics-summary-item--small">
+                            <div class="info-label">Hora de Salida</div>
+                            <div id="log_hora_salida" class="info-value log-readonly">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logística: Datos de entrega -->
+                <div class="form-section dc-section dc-section--logistics">
+                    <div class="dc-section-header">
+                        <span class="dc-section-icon">🚚</span>
+                        <div class="dc-log-heading">
+                            <h3>Datos de Entrega</h3>
+                            <span>Contacto, dirección y horarios del servicio</span>
+                        </div>
+                    </div>
+
+                    <div class="dc-log-grid">
+                        <div class="dc-field dc-log-contacto">
+                            <label for="log_nombre_contacto" class="dc-label required">Nombre de Contacto</label>
+                            <input type="text" id="log_nombre_contacto" class="dc-input" placeholder="Persona que recibe el pedido">
+                            <span class="dc-field-error" id="log_nombre_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-telefono">
+                            <label for="log_telefono_contacto" class="dc-label required">Teléfono</label>
+                            <input type="tel" id="log_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
+                            <span class="dc-field-error" id="log_telefono_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-entrega">
+                            <label for="log_hora_entrega" class="dc-label required">Hora de Entrega</label>
+                            <input type="time" id="log_hora_entrega" class="dc-input">
+                            <span class="dc-field-error" id="log_hora_entrega_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-direccion">
+                            <label for="log_direccion" class="dc-label required">Dirección Completa</label>
+                            <input type="text" id="log_direccion" class="dc-input" placeholder="Calle, número, piso...">
+                            <span class="dc-field-error" id="log_direccion_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-cp">
+                            <label for="log_codigo_postal" class="dc-label required">Código Postal</label>
+                            <input type="text" id="log_codigo_postal" class="dc-input" placeholder="28001" maxlength="10">
+                            <span class="dc-field-error" id="log_codigo_postal_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-hora-evento">
+                            <label for="log_hora_evento" class="dc-label required">Hora del Evento</label>
+                            <input type="time" id="log_hora_evento" class="dc-input">
+                            <span class="dc-field-error" id="log_hora_evento_err"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logística: Material necesario -->
+                <div id="materialLogisticaPage"></div>
+
+                <!-- Logística: Acciones -->
+                <div class="form-actions form-actions--end">
+                    <button type="button" class="btn-secondary" onclick="volverDesdeCancelLogistica()">
+                        Cancelar
+                    </button>
+
+                    <button type="button" id="btnGuardarLogistica"
+                            class="btn-submit"
+                            data-requires-write
+                            onclick="guardarComandaLogistica()">
+                        🚚 Guardar Comanda de Logística
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts: Autenticación -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+      if (!window.supabase) {
+        document.write('<script src="vendor/supabase.min.js"><\\/script>');
+      }
+    </script>
+    <script src="js/auth.js?v=20260605b"></script>
+    <script src="js/permissions.js"></script>
+
+    <!-- Control de acceso -->
+    <script>
+      (async () => {
+        try {
+          if (window.AuthReady) await window.AuthReady;
+          if (!window.Auth) return window.location.href = "login.html";
+          const u = await Auth.getUser();
+          if (!u) window.location.href = "login.html";
+          window.currentUser = u;
+          if (window.AppPermissions) await AppPermissions.load();
+        } catch (e) {
+          window.location.href = "login.html";
+        }
+      })();
+    </script>
+
+    <!-- Scripts: Aplicación -->
+    <script src="js/storage.js"></script>
+    <script src="js/clients.js"></script>
+    <script src="js/calendar.js?v=20260605"></script>
+    <script src="js/dashboard.js?v=20260605"></script>
+    <script src="js/dom-utils.js"></script>
+    <script src="js/desayunos.js"></script>
+    <script src="js/referencias.js"></script>
+    <script src="js/menus-adicionales.js"></script>
+    <script src="js/multiplicadores.js"></script>
+    <script src="js/bandejas-preparadas.js"></script>
+    <script src="js/foodbox-lunch.js"></script>
+    <script src="js/comanda-form.js"></script>
+    <script src="js/historial.js?v=20260605"></script>
+    <script src="js/main.js?v=20260605"></script>
+    <script src="js/preferencias.js"></script>
+    <script src="js/logistics.js"></script>
+    <script src="js/generar-comandas.js"></script>
+
+    <!-- Scripts: Sidebar y navegación -->
+    <script>
+      function actualizarSidebar() {
+        const u = window.currentUser;
+        const name = u?.user_metadata?.full_name || u?.email || '';
+        const el = document.getElementById('dcUserName');
+        const av = document.getElementById('dcUserInitial');
+        if (el) el.textContent = name;
+        if (av) av.textContent = (name[0] || 'D').toUpperCase();
+      }
+
+      document.addEventListener('user:changed', actualizarSidebar);
+      document.addEventListener('DOMContentLoaded', actualizarSidebar);
+
+      document.getElementById('btnLogout')?.addEventListener('click', async () => {
+        try { await Auth.signOut(); } finally { window.location.href = 'login.html'; }
+      });
+
+      function setNavActive(id) {
+        document.querySelectorAll('.dc-nav-item').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+      }
+
+      function filtrarPorEstado(estado) {
+        document.querySelectorAll('.dash-filter-pill').forEach(p => p.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('filtroEstado') && (document.getElementById('filtroEstado').value = estado);
+        if (typeof filtrarComandas === 'function') filtrarComandas();
+      }
+
+      function mostrarDashboard() {
+        document.getElementById('dashboard').style.display = '';
+        document.getElementById('comandaForm').style.display = 'none';
+        document.getElementById('historialPage').style.display = 'none';
+        document.getElementById('expedientePedido').style.display = 'none';
+        document.getElementById('detalleComanda').style.display = 'none';
+        setNavActive('nav-dashboard');
+        if (typeof cargarCalendario === 'function') cargarCalendario();
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        setNavActive('nav-dashboard');
+        if (typeof cargarCalendario === 'function') cargarCalendario();
+      });
+    </script>
+
+</main>
+</body>
+</html>

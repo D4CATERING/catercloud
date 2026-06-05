@@ -143,15 +143,10 @@ function _renderExpedientePedido(comanda) {
         : 'Sin fecha';
     const estado = comanda.estado || 'creada';
     const estadoLabel = getEstadoPedidoLabel(estado);
-    const documentos = comanda.documentos || {};
-    const tieneCocina = documentos.cocina_path;
-    const tieneLogistica = documentos.logistica_path;
     const esSolicitud = comanda.tipo_registro === 'solicitud' || ['negociacion', 'por_confirmar', 'confirmado'].includes(estado);
     const puedeCrearComanda = estado !== 'anulada';
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
-    const archivosHtml = esSolicitud
-        ? _renderArchivosSolicitud(comanda)
-        : _renderArchivosComanda(documentos, tieneCocina, tieneLogistica);
+    const archivosHtml = _renderArchivosSolicitud(comanda);
 
     cont.innerHTML = `
         <div class="expediente-header">
@@ -198,23 +193,6 @@ function _renderExpedientePedido(comanda) {
         </div>`;
 }
 
-function _renderArchivosComanda(documentos, tieneCocina, tieneLogistica) {
-    return `<div class="expediente-files">
-        <div class="expediente-file">
-            <span>Comanda cocina</span>
-            ${tieneCocina
-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.cocina_path}')">Abrir</button>`
-                : `<em>Pendiente</em>`}
-        </div>
-        <div class="expediente-file">
-            <span>Comanda logistica</span>
-            ${tieneLogistica
-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.logistica_path}')">Abrir</button>`
-                : `<em>Pendiente</em>`}
-        </div>
-    </div>`;
-}
-
 function _renderArchivosSolicitud(comanda) {
     const adjuntos = comanda.adjuntos || [];
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
@@ -228,9 +206,7 @@ function _renderArchivosSolicitud(comanda) {
                         : (a.path
                             ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${a.path}')">Abrir</button>`
                             : `<em>Guardado</em>`)}
-                    ${puedeEditar
-                        ? `<button type="button" class="expediente-file-delete" onclick="eliminarAdjuntoSolicitud('${comanda.codigo}', ${index})">Eliminar</button>`
-                        : ''}
+                    ${puedeEditar ? `<button type="button" class="expediente-file-delete" onclick="eliminarAdjuntoSolicitud('${comanda.codigo}', ${index})">Eliminar</button>` : ''}
                 </div>
             </div>
         `).join('')
@@ -427,35 +403,34 @@ async function eliminarAdjuntoSolicitud(codigo, index) {
 
     const comanda = obtenerComandaDelHistorial(codigo);
     if (!comanda) {
-        alert('Solicitud no encontrada.');
+        alert('Pedido no encontrado.');
         return;
     }
 
     const adjuntos = [...(comanda.adjuntos || [])];
     const adjunto = adjuntos[index];
-    if (!adjunto) {
-        alert('Archivo no encontrado.');
-        return;
-    }
+    if (!adjunto) return;
 
-    const nombre = adjunto.nombre || `Archivo ${index + 1}`;
-    if (!confirm(`Quieres eliminar "${nombre}"?`)) return;
+    if (!confirm(`Eliminar el archivo "${adjunto.nombre || 'Archivo'}"?`)) return;
 
     if (adjunto.path && window.supabaseClient) {
         try {
             const { error } = await window.supabaseClient.storage
                 .from('comandas')
                 .remove([adjunto.path]);
-            if (error) console.warn('No se pudo eliminar el archivo de Storage:', error);
+
+            if (error) throw error;
         } catch (error) {
             console.warn('No se pudo eliminar el archivo de Storage:', error);
+            alert('No se pudo eliminar el archivo del almacenamiento. Revisa permisos de Storage.');
+            return;
         }
     }
 
     adjuntos.splice(index, 1);
     const ok = await actualizarComandaEnHistorial(codigo, { adjuntos });
     if (!ok) {
-        alert('No se pudo eliminar el archivo.');
+        alert('No se pudo actualizar el expediente.');
         return;
     }
 
@@ -503,13 +478,13 @@ function _renderMenuDetalle(comanda, pax) {
             }
 
             if (ref.tipo === 'sandwich' && ref.sabor) {
-                extra = ' - ' + ref.sabor;
+                extra = ' — ' + ref.sabor;
             }
 
             if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
                 extra = ': ' + ref.sandwiches
                     .filter(s => s.sabor)
-                    .map(s => `${s.sabor} x${s.cantidad || ''}`)
+                    .map(s => `${s.sabor} ×${s.cantidad || ''}`)
                     .join(', ');
             }
 
@@ -527,29 +502,29 @@ function _renderMenuDetalle(comanda, pax) {
         if (ensaladas.length || sandwiches.length || postres.length) {
             ensaladas.forEach(e => {
                 if ((e.cantidad || 1) > 0) {
-                    html += fila('Ensalada: ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
+                    html += fila('🥗 ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
                 }
             });
 
             sandwiches.forEach(s => {
                 if ((s.cantidad || 1) > 0) {
-                    html += fila('Sandwich: ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
+                    html += fila('🥪 ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
                 }
             });
 
             postres.forEach(p => {
                 if ((p.cantidad || 1) > 0) {
-                    html += fila('Postre: ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
+                    html += fila('🍰 ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
                 }
             });
         } else {
-            if (fl.ensalada_principal) html += fila('Ensalada: ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
-            if (fl.sandwich_principal) html += fila('Sandwich: ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
-            if (fl.postre_principal) html += fila('Postre: ' + (fl.postre_principal.nombre || fl.postre_principal), '', '', false);
+            if (fl.ensalada_principal) html += fila('🥗 ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
+            if (fl.sandwich_principal) html += fila('🥪 ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
+            if (fl.postre_principal) html += fila('🍰 ' + (fl.postre_principal.nombre || fl.postre_principal), '', '', false);
 
             if (fl.adicionales?.length) {
                 fl.adicionales.forEach(a => {
-                    html += fila('Adicional: ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
+                    html += fila('➕ ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
                 });
             }
         }
@@ -561,29 +536,29 @@ function _renderMenuDetalle(comanda, pax) {
         const mul = comanda.multiplicadores;
 
         if (saladas.length) {
-            const mulLabel = mul?.saladas ? ` x${mul.saladas}` : '';
+            const mulLabel = mul?.saladas ? ` ×${mul.saladas}` : '';
             html += fila('Saladas' + mulLabel, '', '', true);
             saladas.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
 
         if (postres.length) {
-            const mulLabel = mul?.postres ? ` x${mul.postres}` : '';
+            const mulLabel = mul?.postres ? ` ×${mul.postres}` : '';
             html += fila('Postres' + mulLabel, '', '', true);
             postres.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
     }
 
-    // DIY Desayunos (cat 5) y Foodbox (cat 6)
+    // ── DIY Desayunos (cat 5) y Foodbox (cat 6) ──
     if (comanda.bandejas) {
         const b = comanda.bandejas;
         const grupos = [
-            { icono: 'Cafe', label: 'Termos y Bebidas',  items: b.termos     || [] },
-            { icono: 'Servicio', label: 'Servicio',      items: b.servicio   || [] },
-            { icono: 'Dulces', label: 'Dulces y Bolleria', items: b.dulces   || [] },
-            { icono: 'Salados', label: 'Salados y Bebidas', items: b.salados || [] },
-            { icono: 'Saladas', label: 'Saladas',        items: b.saladas    || [] },
-            { icono: 'Sandwiches', label: 'Sandwiches',  items: b.sandwiches || [] },
-            { icono: 'Postres', label: 'Postres',        items: b.postres    || [] },
+            { icono: '☕', label: 'Termos y Bebidas',  items: b.termos     || [] },
+            { icono: '🍽️', label: 'Servicio',          items: b.servicio   || [] },
+            { icono: '🍰', label: 'Dulces y Bollería', items: b.dulces     || [] },
+            { icono: '🥪', label: 'Salados y Bebidas', items: b.salados    || [] },
+            { icono: '🥗', label: 'Saladas',           items: b.saladas    || [] },
+            { icono: '🥪', label: 'Sándwiches',        items: b.sandwiches || [] },
+            { icono: '🍰', label: 'Postres',           items: b.postres    || [] },
         ].filter(g => g.items.length > 0);
 
         grupos.forEach(g => {
@@ -633,18 +608,25 @@ function _renderTotalTermosDetalle(comanda) {
             .replace(/^Termo de?\s*/i, '')
             .replace(/^Termo\s*/i, '');
 
-        return `${nombreCorto} x${r.cantidad}`;
-    }).join('  -  ');
+        return `${nombreCorto} ×${r.cantidad}`;
+    }).join('  ·  ');
 
     return `<div class="detalle-termos-total">
         <div class="detalle-menu-row">
-            <span class="detalle-menu-nombre" style="font-weight:600;">Total termos: ${partes}${tag}</span>
+            <span class="detalle-menu-nombre" style="font-weight:600;">☕ Total termos: ${partes}${tag}</span>
         </div>
     </div>`;
 }
 
 function _renderDetalleComanda(comanda) {
     const el = (id) => document.getElementById(id);
+    const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[char]);
 
     if (el('detalleCodigo')) el('detalleCodigo').textContent = comanda.codigo || '';
 
@@ -654,18 +636,18 @@ function _renderDetalleComanda(comanda) {
             : '';
     }
 
-    if (el('detalleEmpresa')) el('detalleEmpresa').textContent = comanda.empresa || '-';
-    if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '-';
+    if (el('detalleEmpresa')) el('detalleEmpresa').textContent = comanda.empresa || '—';
+    if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '—';
     if (el('detallePax')) el('detallePax').textContent = comanda.pax || '0';
 
     if (el('detalleFechaEvento')) {
         const fe = comanda.fecha_evento ? new Date(comanda.fecha_evento + 'T00:00:00') : null;
-        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '-';
+        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '—';
     }
 
-    if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '-';
+    if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '—';
 
-    const nombreMenu = comanda.menu_principal?.nombre || 'Menu';
+    const nombreMenu = comanda.menu_principal?.nombre || 'Menú';
     const tipoMenaje = comanda.tipo_menaje;
 
     const labelMenaje = tipoMenaje === 'loza'
@@ -691,9 +673,9 @@ function _renderDetalleComanda(comanda) {
     (comanda.menus_adicionales || []).forEach(m => {
         menusDetalle.push({
             ...m,
-            nombre: m.nombre || m.menu_principal?.nombre || 'Menu adicional',
+            nombre: m.nombre || m.menu_principal?.nombre || 'Menú adicional',
             pax: m.pax_adicional || m.pax || '',
-            menu_principal: { nombre: m.nombre || m.menu_principal?.nombre || 'Menu adicional' },
+            menu_principal: { nombre: m.nombre || m.menu_principal?.nombre || 'Menú adicional' },
             referencias_desayuno: m.referencias_desayuno || null,
             referencias: m.referencias || null,
             foodbox_lunch: m.foodbox_lunch || null,
@@ -703,7 +685,7 @@ function _renderDetalleComanda(comanda) {
     });
 
     if (el('detalleMenuTitulo')) {
-        const titulo = menusDetalle.length > 1 ? 'Menus de la comanda' : nombreMenu;
+        const titulo = menusDetalle.length > 1 ? 'Menús de la comanda' : nombreMenu;
         el('detalleMenuTitulo').innerHTML = titulo;
     }
     // Badge DESECHABLE/LOZA centrado debajo del header
@@ -726,7 +708,7 @@ function _renderDetalleComanda(comanda) {
 
                 return `<div class="detalle-menu-card">
                     <div class="detalle-menu-row" style="margin-bottom:6px;">
-                        <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${menu.nombre || 'Menu'}</span>
+                        <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${menu.nombre || 'Menú'}</span>
                         <span class="detalle-menu-cantidad">${paxMenu ? paxMenu + ' pax' : ''}</span>
                     </div>
                     ${_renderMenuDetalle(menu, paxMenu)}
@@ -775,12 +757,11 @@ function _renderDetalleComanda(comanda) {
 
         const campos = [
             { label: 'Contacto', valor: logInline?.nombre_contacto },
-            { label: 'Telefono', valor: logInline?.telefono_contacto },
+            { label: 'Teléfono', valor: logInline?.telefono_contacto },
             { label: 'Hora Entrega', valor: logInline?.hora_entrega },
             { label: 'Hora Evento', valor: logInline?.hora_evento },
-            { label: 'Direccion', valor: logInline?.direccion },
-            { label: 'Cod. Postal', valor: logInline?.codigo_postal },
-            { label: 'Notas', valor: logInline?.notas_logistica },
+            { label: 'Dirección', valor: logInline?.direccion },
+            { label: 'Cód. Postal', valor: logInline?.codigo_postal },
         ].filter(c => c.valor);
 
         if (campos.length) {
@@ -793,9 +774,9 @@ function _renderDetalleComanda(comanda) {
             contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
                 <tr>
                     ${li?.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:22%;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value" style="word-break:break-word;">${li.nombre_contacto}</div></td>` : ''}
-                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Telefono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
-                    ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Direccion</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
-                    ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cod. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
+                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Teléfono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
+                    ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Dirección</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
+                    ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cód. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
                     ${li?.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${li.hora_entrega}</div></td>` : ''}
                     ${li?.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${li.hora_evento}</div></td>` : ''}
                 </tr>
@@ -843,7 +824,7 @@ function _renderDetalleComanda(comanda) {
 
                     (it.subitems_selected || []).forEach(sub => {
                         h += `<div class="dc-material-item" style="padding-left:10px; opacity:0.85;">
-                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">- ${sub.nombre}</span>
+                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">↳ ${sub.nombre}</span>
                             <span class="dc-material-cantidad" style="font-size:0.72rem;">${sub.cantidad ?? 0}</span>
                             <span class="dc-material-unidad" style="font-size:0.72rem;">${sub.unidad || 'uds'}</span>
                         </div>`;
@@ -855,19 +836,33 @@ function _renderDetalleComanda(comanda) {
             }
 
             contLog.innerHTML = `<div class="dc-material-grid">
-                ${renderColMaterial('Bebidas', 'Bebidas', logNormalizado.bebidas)}
-                ${renderColMaterial('Menaje', 'Menaje', logNormalizado.menaje)}
-                ${renderColMaterial('Extras', 'Extras', logNormalizado.extras)}
+                ${renderColMaterial('🥤', 'Bebidas', logNormalizado.bebidas)}
+                ${renderColMaterial('🍽️', 'Menaje', logNormalizado.menaje)}
+                ${renderColMaterial('✨', 'Extras', logNormalizado.extras)}
             </div>`;
         } else {
             secLog.style.display = 'none';
         }
     }
 
+    const secNotasLogistica = el('detalleNotasLogisticaSection');
+    const divNotasLogistica = el('detalleNotasLogistica');
+    const notasLogistica = (comanda.logistica_inline || comanda.logistica || {}).notas_logistica || '';
+
+    if (secNotasLogistica && divNotasLogistica) {
+        if (notasLogistica) {
+            secNotasLogistica.style.display = '';
+            divNotasLogistica.innerHTML = `<div class="detalle-logistica-notas">${textoSeguro(notasLogistica)}</div>`;
+        } else {
+            secNotasLogistica.style.display = 'none';
+            divNotasLogistica.innerHTML = '';
+        }
+    }
+
     if (el('detalleEstado')) {
         el('detalleEstado').textContent = comanda.estado
             ? comanda.estado.charAt(0).toUpperCase() + comanda.estado.slice(1)
-            : '-';
+            : '—';
     }
 
     if (el('detalleVersion')) {
@@ -898,217 +893,176 @@ function _renderDetalleComanda(comanda) {
     }
 }
 
-function _cloneComandaValue(value) {
-    try { return JSON.parse(JSON.stringify(value || null)); }
-    catch (e) { return value; }
+function _clonarValorComanda(valor) {
+    try {
+        return JSON.parse(JSON.stringify(valor || null));
+    } catch (error) {
+        return valor;
+    }
 }
 
-function _inferirCategoriaMenu(menu) {
-    if (!menu) return 0;
-    if (menu.categoriaId) return Number(menu.categoriaId) || 0;
-    if (menu._cat) return Number(menu._cat) || 0;
-    if (menu.referencias_desayuno) return 1;
-    if (menu.foodbox_lunch) return 4;
-    if (menu.bandejas) return 5;
-    if (menu.referencias || menu.multiplicadores) return 2;
-    const id = Number(menu.id);
-    if ([1, 2, 3, 4, 17].includes(id)) return 1;
-    if ([5, 6, 7, 8, 18].includes(id)) return 2;
-    if (id >= 9 && id <= 14) return 3;
-    if (id === 15) return 4;
-    if (id === 16) return 5;
-    return 0;
+function _inferirCategoriaMenuEdicion(menu) {
+    if (menu?.categoriaId) return Number(menu.categoriaId);
+    if (menu?._cat) return Number(menu._cat);
+    const texto = String(menu?.categoria || '').toLowerCase();
+    if (texto.includes('desayuno')) return 1;
+    if (texto.includes('foodbox lunch')) return 4;
+    if (texto.includes('bandeja') || texto.includes('diy')) return 5;
+    if (texto.includes('foodbox') || texto.includes('comida')) return 2;
+    return Number(document.getElementById('categoria')?.value) || 0;
 }
 
-function _normalizarMenuParaEdicion(menu, fallbackCategoria) {
-    const copia = _cloneComandaValue(menu) || {};
-    const base = copia.menu_principal && !copia.nombre ? { ...copia.menu_principal, ...copia } : copia;
-    const categoriaId = Number(base.categoriaId || fallbackCategoria || _inferirCategoriaMenu(base)) || 0;
-    return {
-        ...base,
-        id: base.id || base.menu_id || '',
-        nombre: base.nombre || base.menu_principal?.nombre || 'Menu',
+function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
+    const categoriaId = _inferirCategoriaMenuEdicion(menu);
+    const item = {
+        ..._clonarValorComanda(menu),
+        id: menu?.id || menu?.menu_id || '',
+        nombre: menu?.nombre || menu?.menu_principal?.nombre || 'Menu',
         categoriaId,
-        categoria: base.categoria || '',
-        pax: Number(base.pax || base.pax_adicional || 0) || 0,
-        tipo_menaje: base.tipo_menaje || null,
-        material: base.material || null,
-        referencias_desayuno: base.referencias_desayuno || null,
-        referencias: base.referencias || null,
-        foodbox_lunch: base.foodbox_lunch || null,
-        bandejas: base.bandejas || null,
-        multiplicadores: base.multiplicadores || null
+        categoria: menu?.categoria || '',
+        pax: Number(menu?.pax || menu?.pax_adicional || (esPrincipal ? comanda?.pax : 0)) || 0,
+        tipo_menaje: menu?.tipo_menaje || comanda?.tipo_menaje || null,
+        material: _clonarValorComanda(menu?.material || null)
     };
+
+    if (esPrincipal) {
+        if (!item.referencias_desayuno && comanda?.referencias_desayuno) {
+            item.referencias_desayuno = _clonarValorComanda(comanda.referencias_desayuno);
+        }
+        if (!item.referencias && comanda?.referencias) {
+            item.referencias = _clonarValorComanda(comanda.referencias);
+        }
+        if (!item.multiplicadores && comanda?.multiplicadores) {
+            item.multiplicadores = _clonarValorComanda(comanda.multiplicadores);
+        }
+        if (!item.foodbox_lunch && comanda?.foodbox_lunch) {
+            item.foodbox_lunch = _clonarValorComanda(comanda.foodbox_lunch);
+        }
+        if (!item.bandejas && comanda?.bandejas) {
+            item.bandejas = _clonarValorComanda(comanda.bandejas);
+        }
+    }
+
+    return item;
 }
 
-function _sumarMaterialEdicion(acumulado, material) {
-    const res = acumulado || { bebidas: [], menaje: [], extras: [] };
+function _sumarMaterialParaEdicion(base, nuevo) {
+    const result = {
+        bebidas: [...(base?.bebidas || [])],
+        menaje: [...(base?.menaje || [])],
+        extras: [...(base?.extras || [])]
+    };
+
     ['bebidas', 'menaje', 'extras'].forEach(tipo => {
-        (material?.[tipo] || []).forEach(item => {
-            const nombre = item.nombre || '';
-            if (!nombre) return;
-            const existente = res[tipo].find(i => i.nombre === nombre && (i.unidad || '') === (item.unidad || ''));
+        (nuevo?.[tipo] || []).forEach(item => {
+            const nombre = item?.nombre || item?.id || '';
+            const unidad = item?.unidad || '';
+            const existente = result[tipo].find(i => (i.nombre || i.id || '') === nombre && (i.unidad || '') === unidad);
             if (existente) {
                 existente.cantidad = (Number(existente.cantidad) || 0) + (Number(item.cantidad) || 0);
+                existente.checked = existente.checked !== false || item.checked !== false;
             } else {
-                res[tipo].push({ ...item });
+                result[tipo].push(_clonarValorComanda(item));
             }
         });
     });
-    return res;
+
+    return result;
+}
+
+function _rellenarCampoEdicion(id, valor) {
+    const el = document.getElementById(id);
+    if (el) el.value = valor || '';
 }
 
 async function _activarPrimerMenuEdicion(menu) {
-    if (!menu?.categoriaId) return;
+    if (!menu) return;
 
-    const catSelect = document.getElementById('categoria');
-    if (!catSelect) return;
+    const categoriaId = Number(menu.categoriaId || menu._cat || 0);
+    const categoriaSelect = document.getElementById('categoria');
+    if (!categoriaSelect) return;
 
-    catSelect.value = String(menu.categoriaId === 6 ? 5 : menu.categoriaId);
-
+    categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
     if (typeof cargarMenus === 'function') {
         await cargarMenus();
     }
 
-    const opciones = Array.from(document.querySelectorAll('#menusContainer .menu-option'));
-    const opcion = opciones.find(opt => {
+    const nodes = document.querySelectorAll('#menusContainer .menu-option');
+    let nodeEncontrado = null;
+    nodes.forEach(node => {
+        if (nodeEncontrado) return;
         try {
-            const data = JSON.parse(opt.dataset.menu || '{}');
-            return String(data.id) === String(menu.id) || (data.nombre || '').toLowerCase() === (menu.nombre || '').toLowerCase();
-        } catch (e) {
-            return false;
-        }
+            const data = JSON.parse(node.dataset.menu || '{}');
+            if (String(data.id) === String(menu.id)) nodeEncontrado = node;
+        } catch (error) {}
     });
 
-    if (!opcion || typeof seleccionarMenu !== 'function') return;
-
-    const paxInput = document.getElementById('pax');
-    if (paxInput) paxInput.value = menu.pax || '';
-
-    await seleccionarMenu(menu.id, opcion);
-
-    const categoriaId = Number(menu.categoriaId || 0);
-    if (categoriaId === 1 && menu.referencias_desayuno) {
-        window.referenciasDesayuno = _cloneComandaValue(menu.referencias_desayuno) || {};
-        setTimeout(() => {
-            Object.entries(window.referenciasDesayuno || {}).forEach(([id, ref]) => {
-                const input = document.querySelector(`[data-ref-id="${id}"] input[type="number"], #cantidad_${id}, #ref_${id}`);
-                if (input && ref?.cantidad !== undefined) input.value = ref.cantidad;
-            });
-            if (typeof actualizarCantidadesDesayuno === 'function') actualizarCantidadesDesayuno();
-        }, 250);
+    if (nodeEncontrado && typeof seleccionarMenu === 'function') {
+        await seleccionarMenu(menu.id, nodeEncontrado);
+    } else {
+        window.menuSeleccionado = { ...menu, _cat: categoriaId };
+        _rellenarCampoEdicion('menu_id', menu.id || '');
     }
-
-    if ([2, 3].includes(categoriaId) && menu.referencias) {
-        window.multiplicadores = { ...(menu.multiplicadores || window.multiplicadores || { saladas: 1, postres: 1 }) };
-        window.referenciasSeleccionadas = {
-            gris: [...(menu.referencias.saladas || [])],
-            rojo: [],
-            postres: [...(menu.referencias.postres || [])]
-        };
-        if (typeof renderReferenciasPagina === 'function') {
-            ['gris', 'rojo', 'postres'].forEach(tipo => renderReferenciasPagina(tipo));
-        }
-        if (typeof actualizarContadoresSeleccion === 'function') actualizarContadoresSeleccion();
-    }
-
-    if (categoriaId === 4 && menu.foodbox_lunch) {
-        window.foodboxSelecciones = _cloneComandaValue(menu.foodbox_lunch.selecciones || {
-            ensaladas: menu.foodbox_lunch.ensaladas || [],
-            sandwiches: menu.foodbox_lunch.sandwiches || [],
-            postres: menu.foodbox_lunch.postres || []
-        }) || { ensaladas: [], sandwiches: [], postres: [] };
-        setTimeout(() => {
-            ['ensaladas', 'sandwiches', 'postres'].forEach(tipo => {
-                (window.foodboxSelecciones[tipo] || []).forEach(item => {
-                    const input = document.getElementById('fb_' + item.id);
-                    if (input) input.value = item.cantidad || 0;
-                });
-            });
-        }, 350);
-    }
-
-    if ([5, 6].includes(categoriaId) && menu.bandejas && window.BandejasState) {
-        const b = menu.bandejas;
-        if (categoriaId === 5) {
-            if (window.BandejasState.diy_termos) window.BandejasState.diy_termos.selected = [...(b.termos || [])];
-            if (window.BandejasState.diy_servicio) window.BandejasState.diy_servicio.selected = [...(b.servicio || [])];
-            if (window.BandejasState.diy_dulces) window.BandejasState.diy_dulces.selected = [...(b.dulces || [])];
-            if (window.BandejasState.diy_salados) window.BandejasState.diy_salados.selected = [...(b.salados || [])];
-        }
-        if (categoriaId === 6) {
-            if (window.BandejasState.diy_fb_saladas) window.BandejasState.diy_fb_saladas.selected = [...(b.saladas || [])];
-            if (window.BandejasState.diy_fb_postres) window.BandejasState.diy_fb_postres.selected = [...(b.postres || [])];
-        }
-        if (typeof window.renderDIYGrupos === 'function') window.renderDIYGrupos(categoriaId);
-    }
-
-    window.menuSeleccionado = null;
-    const menuIdInput = document.getElementById('menu_id');
-    if (menuIdInput) menuIdInput.value = '';
 }
 
 async function cargarComandaEnFormularioEdicion(comanda) {
-    const form = document.getElementById('comandaCocinaForm');
-    if (form) form.reset();
+    _rellenarCampoEdicion('empresa', comanda.empresa || '');
+    _rellenarCampoEdicion('responsable', comanda.responsable || '');
+    _rellenarCampoEdicion('pax', comanda.pax || '');
+    _rellenarCampoEdicion('hora_salida', comanda.hora_salida || '');
+    _rellenarCampoEdicion('fecha_evento', (comanda.fecha_evento || '').split('T')[0]);
+    _rellenarCampoEdicion('tipo_menaje', comanda.tipo_menaje || '');
+    _rellenarCampoEdicion('alergias_notas', comanda.alergias?.notas || '');
 
-    const setVal = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.value = value || '';
-    };
-
-    setVal('empresa', comanda.empresa);
-    setVal('responsable', comanda.responsable);
-    setVal('pax', '');
-    setVal('hora_salida', comanda.hora_salida);
-    setVal('fecha_evento', comanda.fecha_evento);
-    setVal('alergias_notas', comanda.alergias?.notas);
-
-    const log = comanda.logistica_inline || comanda.logistica || {};
-    setVal('log_inline_hora_entrega', log.hora_entrega);
-    setVal('log_inline_hora_evento', log.hora_evento);
-    setVal('log_inline_nombre_contacto', log.nombre_contacto);
-    setVal('log_inline_telefono_contacto', log.telefono_contacto);
-    setVal('log_inline_direccion', log.direccion);
-    setVal('log_inline_codigo_postal', log.codigo_postal);
-    setVal('log_inline_notas', log.notas_logistica);
-    setVal('tipo_menaje', comanda.tipo_menaje);
+    const logistica = comanda.logistica_inline || comanda.logistica || {};
+    _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
+    _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
+    _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
+    _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
+    _rellenarCampoEdicion('log_inline_direccion', logistica.direccion || '');
+    _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
+    _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
 
     const menus = [];
-    if (comanda.menu_principal) menus.push(_normalizarMenuParaEdicion(comanda.menu_principal, comanda.menu_principal?.categoriaId));
-    (comanda.menus_adicionales || []).forEach(menu => menus.push(_normalizarMenuParaEdicion(menu, menu?.categoriaId)));
+    if (comanda.menu_principal) {
+        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
+    }
+    (comanda.menus_adicionales || []).forEach(menu => {
+        menus.push(_normalizarMenuEdicion(menu, comanda, false));
+    });
+
+    if (!menus.length && comanda.menu_principal?.nombre) {
+        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
+    }
 
     window.MenusAdicionalesState = window.MenusAdicionalesState || { menusAdicionales: [] };
     window.MenusAdicionalesState.menusAdicionales = menus;
-    window.menusAdicionales = window.MenusAdicionalesState.menusAdicionales;
-    window.menuSeleccionado = null;
-    window.pax = 0;
+    window.menusAdicionales = menus;
+    window._materialAcumulado = _clonarValorComanda(comanda.material_logistica) || { bebidas: [], menaje: [], extras: [] };
 
-    window._materialAcumulado = comanda.material_logistica || { bebidas: [], menaje: [], extras: [] };
-    if (!window._materialAcumulado?.bebidas?.length && !window._materialAcumulado?.menaje?.length && !window._materialAcumulado?.extras?.length) {
-        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
+    if (!window._materialAcumulado.bebidas?.length && !window._materialAcumulado.menaje?.length && !window._materialAcumulado.extras?.length) {
+        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialParaEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
     }
 
-    const paxTotal = menus.reduce((s, m) => s + (Number(m.pax) || 0), 0);
+    const paxTotal = menus.reduce((total, menu) => total + (Number(menu.pax) || 0), 0);
     const paxTotalEl = document.getElementById('paxTotalValor');
     if (paxTotalEl) paxTotalEl.textContent = paxTotal;
     const paxWrap = document.getElementById('paxTotalWrap');
     if (paxWrap) paxWrap.style.display = menus.length ? 'block' : 'none';
-
-    setVal('categoria', '');
-    setVal('menu_id', '');
 
     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
 
     try {
         await _activarPrimerMenuEdicion(menus[0]);
     } catch (error) {
-        console.warn('No se pudo activar el menu en edicion:', error);
+        console.warn('No se pudo activar el menu al editar:', error);
     }
+
     window.MenusAdicionalesState.menusAdicionales = menus;
-    window.menusAdicionales = window.MenusAdicionalesState.menusAdicionales;
+    window.menusAdicionales = menus;
     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
 }
+
 async function editarComanda() {
     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
         return;
@@ -1131,12 +1085,16 @@ async function editarComanda() {
     if (historialPage) historialPage.style.display = 'none';
 
     const submitBtn = document.querySelector('#comandaCocinaForm button[type="submit"]');
-    if (submitBtn) submitBtn.innerHTML = '&#128190; Guardar Cambios';
+
+    if (submitBtn) {
+        submitBtn.textContent = '💾 Guardar Cambios';
+    }
 
     await cargarComandaEnFormularioEdicion(window.comandaEditando);
 
-    console.log('Comanda cargada para edicion:', window.comandaEditando.codigo);
+    console.log('Comanda cargada para edición:', window.comandaEditando.codigo);
 }
+
 function imprimirComanda() {
     window.print();
 }
@@ -1149,7 +1107,7 @@ function eliminarComanda() {
 
     const codigo = document.getElementById('detalleCodigo').textContent;
 
-    if (confirm(`Estas seguro de que deseas eliminar la comanda ${codigo}? Esta accion no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro de que deseas eliminar la comanda ${codigo}? Esta acción no se puede deshacer.`)) {
         eliminarComandaDelHistorial(codigo);
         alert(`Comanda ${codigo} eliminada correctamente`);
 
@@ -1200,5 +1158,3 @@ async function verDetalleComandaPorCodigo(codigo) {
 
     _renderDetalleComanda(comanda);
 }
-
-

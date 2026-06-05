@@ -614,15 +614,14 @@
 .expediente-file span {
   color: var(--dc-text);
   font-weight: 600;
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .expediente-file-actions {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .expediente-file a,
@@ -644,14 +643,14 @@
   border: 0;
   background: transparent;
   color: #64748b;
-  cursor: pointer;
-  font-size: .82rem;
+  font-size: .78rem;
   font-weight: 700;
   padding: 0;
+  cursor: pointer;
 }
 
 .expediente-file-delete:hover {
-  color: #dc2626;
+  color: #b91c1c;
 }
 
 .expediente-upload {
@@ -728,4 +727,91 @@
   .calendar-request-grid,
   .event-actions,
   .expediente-link-upload { grid-template-columns: 1fr; }
+}
+
+/* Mobile dashboard and expediente */
+@media (max-width: 760px) {
+  .dash-page-header {
+    align-items: stretch;
+    gap: 10px;
+    flex-direction: column;
+  }
+
+  .btn-nueva-comanda {
+    width: 100%;
+    justify-content: center;
+    min-height: 40px;
+  }
+
+  .dashboard-layout,
+  .dashboard-layout--calendar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dash-events-panel {
+    position: static;
+    border-radius: 10px;
+  }
+
+  .dash-events-panel .event-list {
+    max-height: none;
+  }
+
+  .calendar-request-form {
+    padding: 10px;
+  }
+
+  .calendar-request-actions {
+    flex-direction: column;
+  }
+
+  .calendar-request-actions .event-secondary-btn,
+  .calendar-request-actions button {
+    width: 100%;
+    max-width: none;
+  }
+
+  .expediente-container {
+    max-width: none;
+  }
+
+  .expediente-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .expediente-grid,
+  .expediente-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .expediente-section {
+    padding: 12px;
+  }
+
+  .expediente-status-actions,
+  .expediente-actions {
+    flex-direction: column;
+  }
+
+  .expediente-status-btn,
+  .expediente-actions .btn-submit {
+    width: 100%;
+  }
+
+  .expediente-file {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .expediente-file-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .expediente-upload {
+    padding: 12px;
+  }
 }

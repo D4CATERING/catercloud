@@ -1,0 +1,12 @@
+Filas que quedaran en Supabase segun Excel: 49
+Con id: 49
+Nuevas sin id: 0
+
+Por tipo:
+tipo
+bebidas    17
+extras     15
+menaje     17
+
+Notas:
+Sin notas.

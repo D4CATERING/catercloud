@@ -1,0 +1,18 @@
+﻿ M css/calendar.css
+ M css/dashboard.css
+ M css/forms.css
+ M css/styles.css
+ M deploy/css/calendar.css
+ M deploy/css/dashboard.css
+ M deploy/css/forms.css
+ M deploy/css/styles.css
+ M deploy/index.html
+ M deploy/js/historial.js
+ M deploy/js/logistics-material.js
+ M deploy/js/main.js
+ M index.html
+ M js/historial.js
+ M js/logistics-material.js
+ M js/main.js
+?? backups/antes-reparar-utf8-20260605-202307/
+?? backups/backup-desarrollo-20260605-220526/

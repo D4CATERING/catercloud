@@ -1,0 +1,23 @@
+Filas totales: 47
+Items principales: 30
+Subitems/opciones: 17
+
+Item IDs corregidos:
+Fila Excel 45: item_id duplicado 'ext_mantel_algodon' cambiado a 'ext_mantel_algodon_mantel_velador'
+
+Padres resueltos:
+Fila Excel 36: padre resuelto como Cristal (ext_cristal)
+Fila Excel 37: padre resuelto como Cristal (ext_cristal)
+Fila Excel 38: padre resuelto como Cristal (ext_cristal)
+Fila Excel 39: padre resuelto como Cristal (ext_cristal)
+
+Filas nuevas sin id que usaran gen_random_uuid():
+- Excel 27: extras / Mesa velador / item_id=ext_mesa_velador
+- Excel 35: menaje / Cristal / item_id=ext_cristal
+- Excel 36: menaje / Barca Vaso on the rock / item_id=men_vasos_bajos
+- Excel 37: menaje / Barca Vaso alto / item_id=men_vasos_altos
+- Excel 44: extras / Mantel velador / item_id=ext_mantel_velador
+- Excel 45: extras / Mantel de AlgodÃ³n / item_id=ext_mantel_algodon_mantel_velador
+- Excel 46: extras / Mantel Desechable / item_id=ext_mantel_cubre_velador
+- Excel 47: extras / Bandeja camarero + Lito / item_id=ext_bandeja_camarero
+- Excel 48: extras / Mandil / item_id=ext_mandil

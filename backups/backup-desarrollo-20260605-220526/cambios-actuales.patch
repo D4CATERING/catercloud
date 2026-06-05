@@ -1,0 +1,4147 @@
+﻿diff --git a/css/calendar.css b/css/calendar.css
+index 06fe3a6..d6472a0 100644
+--- a/css/calendar.css
++++ b/css/calendar.css
+@@ -278,3 +278,55 @@
+   transition: opacity .15s;
+ }
+ .event-new-btn:hover { opacity: .88; }
++
++/* Mobile calendar */
++@media (max-width: 760px) {
++  .calendar-card {
++    border-radius: 10px;
++  }
++
++  .calendar-header {
++    padding: 10px 12px;
++  }
++
++  .calendar-body {
++    padding: 10px 10px 12px;
++  }
++
++  .calendar-days {
++    gap: 3px;
++  }
++
++  .calendar-day {
++    min-height: 38px;
++    border-radius: 7px;
++  }
++
++  .day-number {
++    font-size: .78rem;
++  }
++
++  .day-badge {
++    min-width: 14px;
++    height: 14px;
++    font-size: .52rem;
++  }
++
++  .event-list {
++    max-height: none;
++  }
++
++  .event-item {
++    padding: 10px;
++  }
++
++  .event-header,
++  .event-meta {
++    align-items: flex-start;
++    flex-wrap: wrap;
++  }
++
++  .event-empresa {
++    white-space: normal;
++  }
++}
+diff --git a/css/dashboard.css b/css/dashboard.css
+index 4eb3bb9..e1f835b 100644
+--- a/css/dashboard.css
++++ b/css/dashboard.css
+@@ -616,6 +616,14 @@
+   font-weight: 600;
+ }
+ 
++.expediente-file-actions {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  flex-wrap: wrap;
++  justify-content: flex-end;
++}
++
+ .expediente-file a,
+ .expediente-file-link {
+   color: var(--dc-rojo);
+@@ -631,6 +639,20 @@
+   cursor: pointer;
+ }
+ 
++.expediente-file-delete {
++  border: 0;
++  background: transparent;
++  color: #64748b;
++  font-size: .78rem;
++  font-weight: 700;
++  padding: 0;
++  cursor: pointer;
++}
++
++.expediente-file-delete:hover {
++  color: #b91c1c;
++}
++
+ .expediente-upload {
+   border: 1px dashed #cbd5e1;
+   border-radius: 8px;
+@@ -706,3 +728,90 @@
+   .event-actions,
+   .expediente-link-upload { grid-template-columns: 1fr; }
+ }
++
++/* Mobile dashboard and expediente */
++@media (max-width: 760px) {
++  .dash-page-header {
++    align-items: stretch;
++    gap: 10px;
++    flex-direction: column;
++  }
++
++  .btn-nueva-comanda {
++    width: 100%;
++    justify-content: center;
++    min-height: 40px;
++  }
++
++  .dashboard-layout,
++  .dashboard-layout--calendar {
++    grid-template-columns: 1fr;
++    gap: 12px;
++  }
++
++  .dash-events-panel {
++    position: static;
++    border-radius: 10px;
++  }
++
++  .dash-events-panel .event-list {
++    max-height: none;
++  }
++
++  .calendar-request-form {
++    padding: 10px;
++  }
++
++  .calendar-request-actions {
++    flex-direction: column;
++  }
++
++  .calendar-request-actions .event-secondary-btn,
++  .calendar-request-actions button {
++    width: 100%;
++    max-width: none;
++  }
++
++  .expediente-container {
++    max-width: none;
++  }
++
++  .expediente-header {
++    flex-direction: column;
++    gap: 10px;
++  }
++
++  .expediente-grid,
++  .expediente-fields {
++    grid-template-columns: 1fr;
++  }
++
++  .expediente-section {
++    padding: 12px;
++  }
++
++  .expediente-status-actions,
++  .expediente-actions {
++    flex-direction: column;
++  }
++
++  .expediente-status-btn,
++  .expediente-actions .btn-submit {
++    width: 100%;
++  }
++
++  .expediente-file {
++    align-items: flex-start;
++    flex-direction: column;
++    gap: 8px;
++  }
++
++  .expediente-file-actions {
++    width: 100%;
++    justify-content: flex-start;
++  }
++
++  .expediente-upload {
++    padding: 12px;
++  }
++}
+diff --git a/css/forms.css b/css/forms.css
+index 6729548..ca22e2f 100644
+--- a/css/forms.css
++++ b/css/forms.css
+@@ -3867,3 +3867,530 @@ h3 {
+   padding: 2px 4px;
+   width: 40px;
+ }
++
++/* Vista de logistica posterior a guardar: material ordenado */
++#logisticaForm .dc-material-grid {
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  align-items: start;
++  gap: 12px;
++  padding: 12px;
++}
++
++#logisticaForm .dc-material-col {
++  border-radius: 8px;
++  min-width: 0;
++}
++
++#logisticaForm .dc-material-col-header {
++  min-height: 54px;
++}
++
++#logisticaForm .dc-material-item {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) 62px 28px;
++  align-items: center;
++  gap: 8px;
++  min-height: 58px;
++  padding: 8px 10px;
++}
++
++#logisticaForm .dc-material-item-info {
++  min-width: 0;
++  display: grid;
++  gap: 3px;
++}
++
++#logisticaForm .dc-material-nombre {
++  display: block;
++  white-space: normal;
++  overflow: visible;
++  text-overflow: clip;
++  font-size: .74rem;
++  line-height: 1.22;
++  word-break: normal;
++  overflow-wrap: anywhere;
++}
++
++#logisticaForm .dc-material-precio,
++#logisticaForm .dc-material-incluido {
++  justify-self: start;
++}
++
++#logisticaForm .dc-material-item-right {
++  display: contents;
++}
++
++#logisticaForm .dc-material-cantidad {
++  width: 62px;
++  min-height: 34px;
++  justify-self: center;
++  grid-column: 2;
++  border-radius: 6px;
++  font-size: .8rem;
++  font-weight: 400;
++}
++
++#logisticaForm .dc-material-btn {
++  width: 28px;
++  height: 28px;
++  justify-self: end;
++  grid-column: 3;
++}
++
++#logisticaForm .dc-material-item:not(.dc-material-item--active) .dc-material-item-info {
++  padding-right: 4px;
++}
++
++#logisticaForm .dc-material-item-expandable .dc-material-item {
++  grid-template-columns: minmax(0, 1fr) 28px;
++}
++
++#logisticaForm .dc-material-item-expandable .dc-material-btn,
++#logisticaForm .dc-material-item-expandable .dc-material-expand-btn {
++  grid-column: 2;
++}
++
++#logisticaForm .dc-material-subitem {
++  display: grid;
++  grid-template-columns: 18px minmax(0, 1fr) 62px 42px;
++  align-items: center;
++  gap: 8px;
++  padding: 7px 10px 7px 18px;
++}
++
++#logisticaForm .dc-material-subitem .dc-material-cantidad {
++  width: 58px;
++}
++
++#logisticaForm .dc-material-unidad {
++  justify-self: end;
++  white-space: nowrap;
++}
++
++#materialLogisticaPage .dc-material-grid {
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  align-items: start;
++  gap: 12px;
++}
++
++#materialLogisticaPage .dc-material-col {
++  min-width: 0;
++}
++
++#materialLogisticaPage .dc-material-item,
++#materialLogisticaPage .dc-material-subitem {
++  display: grid;
++  grid-template-columns: 18px minmax(0, 1fr) 58px 42px;
++  align-items: center;
++  gap: 8px;
++  min-height: 46px;
++  padding: 7px 11px;
++}
++
++#materialLogisticaPage .dc-material-item > input[type="checkbox"],
++#materialLogisticaPage .dc-material-subitem > input[type="checkbox"] {
++  width: 14px;
++  height: 14px;
++  margin: 0;
++  justify-self: center;
++  accent-color: var(--dc-rojo);
++}
++
++#materialLogisticaPage .dc-material-nombre {
++  white-space: normal;
++  overflow: visible;
++  text-overflow: clip;
++  font-size: .75rem;
++  line-height: 1.25;
++  overflow-wrap: anywhere;
++}
++
++#materialLogisticaPage .dc-material-cantidad {
++  width: 56px;
++  min-height: 34px;
++  justify-self: center;
++  padding: 3px 5px;
++  border-radius: 6px;
++  font-size: .78rem;
++  font-weight: 400;
++}
++
++#materialLogisticaPage .dc-material-unidad {
++  justify-self: end;
++  color: var(--dc-text);
++  font-size: .72rem;
++  white-space: nowrap;
++}
++
++#materialLogisticaPage .dc-material-expand-btn {
++  justify-self: end;
++}
++
++#materialLogisticaPage .dc-material-item:has(.dc-material-expand-btn) {
++  grid-template-columns: 18px minmax(0, 1fr) 34px;
++}
++
++/* Mobile forms */
++@media (max-width: 760px) {
++  .comanda-form-layout {
++    grid-template-columns: 1fr;
++    gap: 12px;
++  }
++
++  .comanda-form-aside {
++    position: static;
++    order: 2;
++  }
++
++  .comanda-form-main {
++    min-width: 0;
++  }
++
++  .form-section,
++  .dc-section {
++    border-radius: 9px;
++    padding-left: 10px;
++    padding-right: 10px;
++  }
++
++  .dc-section-header {
++    gap: 8px;
++    align-items: flex-start;
++  }
++
++  .dc-section-header h3,
++  .form-section h3,
++  h3 {
++    font-size: .72rem;
++    line-height: 1.2;
++  }
++
++  .dc-info-grid,
++  .dc-fields-grid,
++  .dc-two-column-grid,
++  .multiplicadores-container,
++  .checkbox-group {
++    grid-template-columns: 1fr !important;
++    grid-template-areas: none !important;
++  }
++
++  .dc-info-grid > *,
++  .dc-field--wide,
++  .dc-log-wide,
++  .dc-log-full {
++    grid-column: auto !important;
++    grid-area: auto !important;
++  }
++
++  label,
++  .dc-label {
++    font-size: .76rem;
++  }
++
++  input,
++  select,
++  textarea,
++  .dc-input {
++    min-height: 38px;
++    font-size: .86rem;
++  }
++
++  textarea {
++    min-height: 86px;
++  }
++
++  .menu-selection,
++  #menusContainer {
++    display: grid;
++    grid-template-columns: 1fr;
++    gap: 8px;
++  }
++
++  .menu-option {
++    padding: 10px;
++  }
++
++  .menu-option h4 {
++    font-size: .78rem;
++  }
++
++  .menu-option p {
++    font-size: .68rem;
++  }
++
++  .button-group,
++  .form-actions,
++  .form-actions--end,
++  .modal-footer {
++    flex-direction: column;
++    align-items: stretch;
++  }
++
++  .button-group button,
++  .form-actions button,
++  .form-actions--end button,
++  .modal-footer button,
++  .btn-primary,
++  .btn-secondary,
++  .btn-submit {
++    width: 100%;
++    min-height: 40px;
++  }
++
++  .comanda-resumen {
++    border-radius: 9px;
++  }
++
++  .comanda-resumen-body {
++    max-height: none;
++  }
++
++  .resumen-footer .btn-guardar-comanda,
++  .resumen-footer button {
++    width: 100%;
++  }
++
++  .dc-material-header {
++    flex-direction: column;
++    align-items: flex-start;
++    padding: 8px 10px;
++  }
++
++  .dc-material-grid,
++  #logisticaForm .logistics-summary-grid {
++    grid-template-columns: 1fr !important;
++  }
++
++  .dc-material-item,
++  .dc-material-subitem {
++    align-items: flex-start;
++  }
++
++  .dc-material-item-right {
++    gap: 5px;
++  }
++
++  .dc-material-cantidad,
++  #logisticaInlineSection + #materialLogisticaInline .dc-material-cantidad,
++  #logisticaForm .dc-material-cantidad {
++    width: 44px;
++    min-height: 30px;
++  }
++
++  .diy-item-list,
++  .referencias-grid,
++  .referencias-grid--compact {
++    grid-template-columns: 1fr !important;
++  }
++
++  .diy-modal {
++    max-width: none;
++    width: calc(100vw - 24px);
++  }
++
++  #modalDesayunoOpciones.modal .modal-content {
++    width: calc(100vw - 24px);
++    max-width: none !important;
++  }
++}
++
++@media (max-width: 430px) {
++  input,
++  select,
++  textarea,
++  .dc-input {
++    font-size: .82rem;
++  }
++
++  .dc-material-item {
++    gap: 6px;
++    padding: 7px;
++  }
++
++  .dc-material-nombre {
++    font-size: .72rem;
++  }
++}
++
++/* Ajuste final: material en pantalla de logistica posterior a guardar */
++#logisticaForm #materialLogisticaPage .dc-material-grid {
++  display: grid !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 12px !important;
++  align-items: stretch !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-col {
++  display: block !important;
++  min-width: 0 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item {
++  display: grid !important;
++  grid-template-columns: minmax(0, 1fr) 58px 34px !important;
++  align-items: center !important;
++  gap: 8px !important;
++  min-height: 44px !important;
++  padding: 7px 10px !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item-info {
++  min-width: 0 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item-right {
++  display: contents !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-nombre {
++  display: block !important;
++  white-space: normal !important;
++  overflow: visible !important;
++  text-overflow: clip !important;
++  overflow-wrap: anywhere !important;
++  font-size: .72rem !important;
++  line-height: 1.2 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-cantidad {
++  grid-column: 2 !important;
++  width: 52px !important;
++  min-height: 30px !important;
++  justify-self: center !important;
++  padding: 2px 5px !important;
++  font-size: .76rem !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-btn {
++  grid-column: 3 !important;
++  width: 28px !important;
++  height: 28px !important;
++  justify-self: end !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-unidad {
++  grid-column: 3 !important;
++  justify-self: end !important;
++  white-space: nowrap !important;
++  font-size: .7rem !important;
++}
++
++@media (max-width: 760px) {
++  #logisticaForm #materialLogisticaPage .dc-material-grid {
++    grid-template-columns: 1fr !important;
++  }
++}
++
++@media print {
++  #logisticaForm #materialLogisticaPage .dc-material-grid {
++    grid-template-columns: repeat(3, 1fr) !important;
++    gap: 6px !important;
++  }
++}
++
++/* Logistica: quitar doble fondo y aprovechar ancho */
++#logisticaForm #materialLogisticaPage .dc-material-section {
++  background: #ffffff !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-grid {
++  background: #ffffff !important;
++  padding: 10px 14px 14px !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 10px !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-col {
++  background: #ffffff !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item {
++  min-height: 42px !important;
++  padding: 6px 10px !important;
++}
++
++/* Detalle de comanda: material necesario guardado */
++#detalleLogisticaSection {
++  background: var(--dc-crema) !important;
++}
++
++#detalleLogisticaSection .detalle-body {
++  background: var(--dc-crema) !important;
++  padding: 10px 14px 14px !important;
++}
++
++#detalleLogisticaContent {
++  background: var(--dc-crema) !important;
++}
++
++#detalleLogisticaContent .dc-material-grid {
++  background: var(--dc-crema) !important;
++  display: grid !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 10px !important;
++  padding: 0 !important;
++}
++
++#detalleLogisticaContent .dc-material-col {
++  background: #ffffff !important;
++  min-width: 0 !important;
++}
++
++#detalleLogisticaContent .dc-material-col h5 {
++  margin: 0 !important;
++  padding: 7px 10px !important;
++  min-height: 30px !important;
++}
++
++#detalleLogisticaContent .dc-material-item {
++  display: grid !important;
++  grid-template-columns: minmax(0, 1fr) 42px 24px !important;
++  align-items: center !important;
++  gap: 4px !important;
++  min-height: 40px !important;
++  padding: 6px 10px !important;
++}
++
++#detalleLogisticaContent .dc-material-nombre {
++  display: block !important;
++  white-space: normal !important;
++  overflow: visible !important;
++  text-overflow: clip !important;
++  overflow-wrap: anywhere !important;
++  font-size: .72rem !important;
++  line-height: 1.2 !important;
++}
++
++#detalleLogisticaContent .dc-material-cantidad {
++  justify-self: end !important;
++  text-align: right !important;
++  width: auto !important;
++  min-width: 0 !important;
++  padding: 0 !important;
++  border: none !important;
++  background: transparent !important;
++  font-size: .74rem !important;
++  font-weight: 500 !important;
++}
++
++#detalleLogisticaContent .dc-material-unidad {
++  justify-self: end !important;
++  text-align: right !important;
++  white-space: nowrap !important;
++  font-size: .7rem !important;
++}
++
++.detalle-logistica-notas {
++  margin: 4px 8px 0;
++  padding: 6px 8px;
++  border-top: 1px solid #e2e8f0;
++  font-size: .76rem;
++  line-height: 1.35;
++}
++
++@media print {
++  #detalleLogisticaContent .dc-material-grid {
++    grid-template-columns: repeat(3, 1fr) !important;
++    gap: 6px !important;
++  }
++}
+diff --git a/css/styles.css b/css/styles.css
+index 7870271..9c83ece 100644
+--- a/css/styles.css
++++ b/css/styles.css
+@@ -379,3 +379,129 @@ button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+   #detalleComanda { position: absolute; left: 0; top: 0; width: 100%; }
+   .no-print { display: none !important; }
+ }
++
++/* Mobile app shell */
++@media (max-width: 760px) {
++  :root {
++    --mobile-nav-h: 64px;
++  }
++
++  html,
++  body {
++    overflow-x: hidden;
++  }
++
++  body {
++    padding-bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
++  }
++
++  .dc-sidebar {
++    top: auto;
++    left: 0;
++    right: 0;
++    bottom: 0;
++    width: 100%;
++    height: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
++    padding-bottom: env(safe-area-inset-bottom, 0px);
++    box-shadow: 0 -10px 28px rgba(15, 23, 42, .18);
++    overflow: visible;
++  }
++
++  .dc-sidebar-brand,
++  .dc-sidebar-footer,
++  .dc-nav-sep {
++    display: none;
++  }
++
++  .dc-nav {
++    height: var(--mobile-nav-h);
++    padding: 0;
++    flex: none;
++    display: grid;
++    grid-template-columns: repeat(4, 1fr);
++    gap: 0;
++  }
++
++  .dc-nav-item {
++    min-width: 0;
++    height: var(--mobile-nav-h);
++    flex-direction: column;
++    justify-content: center;
++    gap: 4px;
++    padding: 8px 4px;
++    border-left: 0;
++    border-top: 3px solid transparent;
++    font-size: .68rem;
++    line-height: 1.1;
++    text-align: center;
++  }
++
++  .dc-nav-item.active {
++    border-left-color: transparent;
++    border-top-color: var(--dc-rojo);
++  }
++
++  .dc-nav-item .nav-icon {
++    width: auto;
++    font-size: 15px;
++  }
++
++  .dc-main {
++    margin-left: 0;
++    min-width: 0;
++  }
++
++  .dc-page-header {
++    padding: 16px 14px 0;
++  }
++
++  .dc-page-header h1 {
++    font-size: 1.28rem;
++    line-height: 1.15;
++  }
++
++  .dc-page-header p {
++    font-size: .76rem;
++  }
++
++  .dc-page-content {
++    padding: 12px 14px 20px;
++  }
++
++  .back-button {
++    margin-bottom: 10px;
++    padding: 8px 12px;
++  }
++
++  .modal {
++    padding: 10px;
++  }
++
++  .modal-content {
++    width: 100%;
++    max-width: none;
++    margin: 0 auto;
++    max-height: calc(100vh - 20px);
++    overflow: hidden;
++  }
++
++  .modal-header,
++  .modal-footer {
++    padding: 10px 12px;
++  }
++
++  .modal-body {
++    padding: 12px;
++    max-height: calc(100vh - 130px);
++  }
++}
++
++@media (max-width: 430px) {
++  .dc-nav-item {
++    font-size: .62rem;
++  }
++
++  .dc-page-header h1 {
++    font-size: 1.16rem;
++  }
++}
+diff --git a/deploy/css/calendar.css b/deploy/css/calendar.css
+index 06fe3a6..d6472a0 100644
+--- a/deploy/css/calendar.css
++++ b/deploy/css/calendar.css
+@@ -278,3 +278,55 @@
+   transition: opacity .15s;
+ }
+ .event-new-btn:hover { opacity: .88; }
++
++/* Mobile calendar */
++@media (max-width: 760px) {
++  .calendar-card {
++    border-radius: 10px;
++  }
++
++  .calendar-header {
++    padding: 10px 12px;
++  }
++
++  .calendar-body {
++    padding: 10px 10px 12px;
++  }
++
++  .calendar-days {
++    gap: 3px;
++  }
++
++  .calendar-day {
++    min-height: 38px;
++    border-radius: 7px;
++  }
++
++  .day-number {
++    font-size: .78rem;
++  }
++
++  .day-badge {
++    min-width: 14px;
++    height: 14px;
++    font-size: .52rem;
++  }
++
++  .event-list {
++    max-height: none;
++  }
++
++  .event-item {
++    padding: 10px;
++  }
++
++  .event-header,
++  .event-meta {
++    align-items: flex-start;
++    flex-wrap: wrap;
++  }
++
++  .event-empresa {
++    white-space: normal;
++  }
++}
+diff --git a/deploy/css/dashboard.css b/deploy/css/dashboard.css
+index c9c84be..e1f835b 100644
+--- a/deploy/css/dashboard.css
++++ b/deploy/css/dashboard.css
+@@ -614,15 +614,14 @@
+ .expediente-file span {
+   color: var(--dc-text);
+   font-weight: 600;
+-  min-width: 0;
+-  overflow-wrap: anywhere;
+ }
+ 
+ .expediente-file-actions {
+   display: flex;
+   align-items: center;
+   gap: 10px;
+-  flex-shrink: 0;
++  flex-wrap: wrap;
++  justify-content: flex-end;
+ }
+ 
+ .expediente-file a,
+@@ -644,14 +643,14 @@
+   border: 0;
+   background: transparent;
+   color: #64748b;
+-  cursor: pointer;
+-  font-size: .82rem;
++  font-size: .78rem;
+   font-weight: 700;
+   padding: 0;
++  cursor: pointer;
+ }
+ 
+ .expediente-file-delete:hover {
+-  color: #dc2626;
++  color: #b91c1c;
+ }
+ 
+ .expediente-upload {
+@@ -729,3 +728,90 @@
+   .event-actions,
+   .expediente-link-upload { grid-template-columns: 1fr; }
+ }
++
++/* Mobile dashboard and expediente */
++@media (max-width: 760px) {
++  .dash-page-header {
++    align-items: stretch;
++    gap: 10px;
++    flex-direction: column;
++  }
++
++  .btn-nueva-comanda {
++    width: 100%;
++    justify-content: center;
++    min-height: 40px;
++  }
++
++  .dashboard-layout,
++  .dashboard-layout--calendar {
++    grid-template-columns: 1fr;
++    gap: 12px;
++  }
++
++  .dash-events-panel {
++    position: static;
++    border-radius: 10px;
++  }
++
++  .dash-events-panel .event-list {
++    max-height: none;
++  }
++
++  .calendar-request-form {
++    padding: 10px;
++  }
++
++  .calendar-request-actions {
++    flex-direction: column;
++  }
++
++  .calendar-request-actions .event-secondary-btn,
++  .calendar-request-actions button {
++    width: 100%;
++    max-width: none;
++  }
++
++  .expediente-container {
++    max-width: none;
++  }
++
++  .expediente-header {
++    flex-direction: column;
++    gap: 10px;
++  }
++
++  .expediente-grid,
++  .expediente-fields {
++    grid-template-columns: 1fr;
++  }
++
++  .expediente-section {
++    padding: 12px;
++  }
++
++  .expediente-status-actions,
++  .expediente-actions {
++    flex-direction: column;
++  }
++
++  .expediente-status-btn,
++  .expediente-actions .btn-submit {
++    width: 100%;
++  }
++
++  .expediente-file {
++    align-items: flex-start;
++    flex-direction: column;
++    gap: 8px;
++  }
++
++  .expediente-file-actions {
++    width: 100%;
++    justify-content: flex-start;
++  }
++
++  .expediente-upload {
++    padding: 12px;
++  }
++}
+diff --git a/deploy/css/forms.css b/deploy/css/forms.css
+index 6729548..ca22e2f 100644
+--- a/deploy/css/forms.css
++++ b/deploy/css/forms.css
+@@ -3867,3 +3867,530 @@ h3 {
+   padding: 2px 4px;
+   width: 40px;
+ }
++
++/* Vista de logistica posterior a guardar: material ordenado */
++#logisticaForm .dc-material-grid {
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  align-items: start;
++  gap: 12px;
++  padding: 12px;
++}
++
++#logisticaForm .dc-material-col {
++  border-radius: 8px;
++  min-width: 0;
++}
++
++#logisticaForm .dc-material-col-header {
++  min-height: 54px;
++}
++
++#logisticaForm .dc-material-item {
++  display: grid;
++  grid-template-columns: minmax(0, 1fr) 62px 28px;
++  align-items: center;
++  gap: 8px;
++  min-height: 58px;
++  padding: 8px 10px;
++}
++
++#logisticaForm .dc-material-item-info {
++  min-width: 0;
++  display: grid;
++  gap: 3px;
++}
++
++#logisticaForm .dc-material-nombre {
++  display: block;
++  white-space: normal;
++  overflow: visible;
++  text-overflow: clip;
++  font-size: .74rem;
++  line-height: 1.22;
++  word-break: normal;
++  overflow-wrap: anywhere;
++}
++
++#logisticaForm .dc-material-precio,
++#logisticaForm .dc-material-incluido {
++  justify-self: start;
++}
++
++#logisticaForm .dc-material-item-right {
++  display: contents;
++}
++
++#logisticaForm .dc-material-cantidad {
++  width: 62px;
++  min-height: 34px;
++  justify-self: center;
++  grid-column: 2;
++  border-radius: 6px;
++  font-size: .8rem;
++  font-weight: 400;
++}
++
++#logisticaForm .dc-material-btn {
++  width: 28px;
++  height: 28px;
++  justify-self: end;
++  grid-column: 3;
++}
++
++#logisticaForm .dc-material-item:not(.dc-material-item--active) .dc-material-item-info {
++  padding-right: 4px;
++}
++
++#logisticaForm .dc-material-item-expandable .dc-material-item {
++  grid-template-columns: minmax(0, 1fr) 28px;
++}
++
++#logisticaForm .dc-material-item-expandable .dc-material-btn,
++#logisticaForm .dc-material-item-expandable .dc-material-expand-btn {
++  grid-column: 2;
++}
++
++#logisticaForm .dc-material-subitem {
++  display: grid;
++  grid-template-columns: 18px minmax(0, 1fr) 62px 42px;
++  align-items: center;
++  gap: 8px;
++  padding: 7px 10px 7px 18px;
++}
++
++#logisticaForm .dc-material-subitem .dc-material-cantidad {
++  width: 58px;
++}
++
++#logisticaForm .dc-material-unidad {
++  justify-self: end;
++  white-space: nowrap;
++}
++
++#materialLogisticaPage .dc-material-grid {
++  grid-template-columns: repeat(3, minmax(0, 1fr));
++  align-items: start;
++  gap: 12px;
++}
++
++#materialLogisticaPage .dc-material-col {
++  min-width: 0;
++}
++
++#materialLogisticaPage .dc-material-item,
++#materialLogisticaPage .dc-material-subitem {
++  display: grid;
++  grid-template-columns: 18px minmax(0, 1fr) 58px 42px;
++  align-items: center;
++  gap: 8px;
++  min-height: 46px;
++  padding: 7px 11px;
++}
++
++#materialLogisticaPage .dc-material-item > input[type="checkbox"],
++#materialLogisticaPage .dc-material-subitem > input[type="checkbox"] {
++  width: 14px;
++  height: 14px;
++  margin: 0;
++  justify-self: center;
++  accent-color: var(--dc-rojo);
++}
++
++#materialLogisticaPage .dc-material-nombre {
++  white-space: normal;
++  overflow: visible;
++  text-overflow: clip;
++  font-size: .75rem;
++  line-height: 1.25;
++  overflow-wrap: anywhere;
++}
++
++#materialLogisticaPage .dc-material-cantidad {
++  width: 56px;
++  min-height: 34px;
++  justify-self: center;
++  padding: 3px 5px;
++  border-radius: 6px;
++  font-size: .78rem;
++  font-weight: 400;
++}
++
++#materialLogisticaPage .dc-material-unidad {
++  justify-self: end;
++  color: var(--dc-text);
++  font-size: .72rem;
++  white-space: nowrap;
++}
++
++#materialLogisticaPage .dc-material-expand-btn {
++  justify-self: end;
++}
++
++#materialLogisticaPage .dc-material-item:has(.dc-material-expand-btn) {
++  grid-template-columns: 18px minmax(0, 1fr) 34px;
++}
++
++/* Mobile forms */
++@media (max-width: 760px) {
++  .comanda-form-layout {
++    grid-template-columns: 1fr;
++    gap: 12px;
++  }
++
++  .comanda-form-aside {
++    position: static;
++    order: 2;
++  }
++
++  .comanda-form-main {
++    min-width: 0;
++  }
++
++  .form-section,
++  .dc-section {
++    border-radius: 9px;
++    padding-left: 10px;
++    padding-right: 10px;
++  }
++
++  .dc-section-header {
++    gap: 8px;
++    align-items: flex-start;
++  }
++
++  .dc-section-header h3,
++  .form-section h3,
++  h3 {
++    font-size: .72rem;
++    line-height: 1.2;
++  }
++
++  .dc-info-grid,
++  .dc-fields-grid,
++  .dc-two-column-grid,
++  .multiplicadores-container,
++  .checkbox-group {
++    grid-template-columns: 1fr !important;
++    grid-template-areas: none !important;
++  }
++
++  .dc-info-grid > *,
++  .dc-field--wide,
++  .dc-log-wide,
++  .dc-log-full {
++    grid-column: auto !important;
++    grid-area: auto !important;
++  }
++
++  label,
++  .dc-label {
++    font-size: .76rem;
++  }
++
++  input,
++  select,
++  textarea,
++  .dc-input {
++    min-height: 38px;
++    font-size: .86rem;
++  }
++
++  textarea {
++    min-height: 86px;
++  }
++
++  .menu-selection,
++  #menusContainer {
++    display: grid;
++    grid-template-columns: 1fr;
++    gap: 8px;
++  }
++
++  .menu-option {
++    padding: 10px;
++  }
++
++  .menu-option h4 {
++    font-size: .78rem;
++  }
++
++  .menu-option p {
++    font-size: .68rem;
++  }
++
++  .button-group,
++  .form-actions,
++  .form-actions--end,
++  .modal-footer {
++    flex-direction: column;
++    align-items: stretch;
++  }
++
++  .button-group button,
++  .form-actions button,
++  .form-actions--end button,
++  .modal-footer button,
++  .btn-primary,
++  .btn-secondary,
++  .btn-submit {
++    width: 100%;
++    min-height: 40px;
++  }
++
++  .comanda-resumen {
++    border-radius: 9px;
++  }
++
++  .comanda-resumen-body {
++    max-height: none;
++  }
++
++  .resumen-footer .btn-guardar-comanda,
++  .resumen-footer button {
++    width: 100%;
++  }
++
++  .dc-material-header {
++    flex-direction: column;
++    align-items: flex-start;
++    padding: 8px 10px;
++  }
++
++  .dc-material-grid,
++  #logisticaForm .logistics-summary-grid {
++    grid-template-columns: 1fr !important;
++  }
++
++  .dc-material-item,
++  .dc-material-subitem {
++    align-items: flex-start;
++  }
++
++  .dc-material-item-right {
++    gap: 5px;
++  }
++
++  .dc-material-cantidad,
++  #logisticaInlineSection + #materialLogisticaInline .dc-material-cantidad,
++  #logisticaForm .dc-material-cantidad {
++    width: 44px;
++    min-height: 30px;
++  }
++
++  .diy-item-list,
++  .referencias-grid,
++  .referencias-grid--compact {
++    grid-template-columns: 1fr !important;
++  }
++
++  .diy-modal {
++    max-width: none;
++    width: calc(100vw - 24px);
++  }
++
++  #modalDesayunoOpciones.modal .modal-content {
++    width: calc(100vw - 24px);
++    max-width: none !important;
++  }
++}
++
++@media (max-width: 430px) {
++  input,
++  select,
++  textarea,
++  .dc-input {
++    font-size: .82rem;
++  }
++
++  .dc-material-item {
++    gap: 6px;
++    padding: 7px;
++  }
++
++  .dc-material-nombre {
++    font-size: .72rem;
++  }
++}
++
++/* Ajuste final: material en pantalla de logistica posterior a guardar */
++#logisticaForm #materialLogisticaPage .dc-material-grid {
++  display: grid !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 12px !important;
++  align-items: stretch !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-col {
++  display: block !important;
++  min-width: 0 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item {
++  display: grid !important;
++  grid-template-columns: minmax(0, 1fr) 58px 34px !important;
++  align-items: center !important;
++  gap: 8px !important;
++  min-height: 44px !important;
++  padding: 7px 10px !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item-info {
++  min-width: 0 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item-right {
++  display: contents !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-nombre {
++  display: block !important;
++  white-space: normal !important;
++  overflow: visible !important;
++  text-overflow: clip !important;
++  overflow-wrap: anywhere !important;
++  font-size: .72rem !important;
++  line-height: 1.2 !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-cantidad {
++  grid-column: 2 !important;
++  width: 52px !important;
++  min-height: 30px !important;
++  justify-self: center !important;
++  padding: 2px 5px !important;
++  font-size: .76rem !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-btn {
++  grid-column: 3 !important;
++  width: 28px !important;
++  height: 28px !important;
++  justify-self: end !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-unidad {
++  grid-column: 3 !important;
++  justify-self: end !important;
++  white-space: nowrap !important;
++  font-size: .7rem !important;
++}
++
++@media (max-width: 760px) {
++  #logisticaForm #materialLogisticaPage .dc-material-grid {
++    grid-template-columns: 1fr !important;
++  }
++}
++
++@media print {
++  #logisticaForm #materialLogisticaPage .dc-material-grid {
++    grid-template-columns: repeat(3, 1fr) !important;
++    gap: 6px !important;
++  }
++}
++
++/* Logistica: quitar doble fondo y aprovechar ancho */
++#logisticaForm #materialLogisticaPage .dc-material-section {
++  background: #ffffff !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-grid {
++  background: #ffffff !important;
++  padding: 10px 14px 14px !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 10px !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-col {
++  background: #ffffff !important;
++}
++
++#logisticaForm #materialLogisticaPage .dc-material-item {
++  min-height: 42px !important;
++  padding: 6px 10px !important;
++}
++
++/* Detalle de comanda: material necesario guardado */
++#detalleLogisticaSection {
++  background: var(--dc-crema) !important;
++}
++
++#detalleLogisticaSection .detalle-body {
++  background: var(--dc-crema) !important;
++  padding: 10px 14px 14px !important;
++}
++
++#detalleLogisticaContent {
++  background: var(--dc-crema) !important;
++}
++
++#detalleLogisticaContent .dc-material-grid {
++  background: var(--dc-crema) !important;
++  display: grid !important;
++  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
++  gap: 10px !important;
++  padding: 0 !important;
++}
++
++#detalleLogisticaContent .dc-material-col {
++  background: #ffffff !important;
++  min-width: 0 !important;
++}
++
++#detalleLogisticaContent .dc-material-col h5 {
++  margin: 0 !important;
++  padding: 7px 10px !important;
++  min-height: 30px !important;
++}
++
++#detalleLogisticaContent .dc-material-item {
++  display: grid !important;
++  grid-template-columns: minmax(0, 1fr) 42px 24px !important;
++  align-items: center !important;
++  gap: 4px !important;
++  min-height: 40px !important;
++  padding: 6px 10px !important;
++}
++
++#detalleLogisticaContent .dc-material-nombre {
++  display: block !important;
++  white-space: normal !important;
++  overflow: visible !important;
++  text-overflow: clip !important;
++  overflow-wrap: anywhere !important;
++  font-size: .72rem !important;
++  line-height: 1.2 !important;
++}
++
++#detalleLogisticaContent .dc-material-cantidad {
++  justify-self: end !important;
++  text-align: right !important;
++  width: auto !important;
++  min-width: 0 !important;
++  padding: 0 !important;
++  border: none !important;
++  background: transparent !important;
++  font-size: .74rem !important;
++  font-weight: 500 !important;
++}
++
++#detalleLogisticaContent .dc-material-unidad {
++  justify-self: end !important;
++  text-align: right !important;
++  white-space: nowrap !important;
++  font-size: .7rem !important;
++}
++
++.detalle-logistica-notas {
++  margin: 4px 8px 0;
++  padding: 6px 8px;
++  border-top: 1px solid #e2e8f0;
++  font-size: .76rem;
++  line-height: 1.35;
++}
++
++@media print {
++  #detalleLogisticaContent .dc-material-grid {
++    grid-template-columns: repeat(3, 1fr) !important;
++    gap: 6px !important;
++  }
++}
+diff --git a/deploy/css/styles.css b/deploy/css/styles.css
+index 7870271..9c83ece 100644
+--- a/deploy/css/styles.css
++++ b/deploy/css/styles.css
+@@ -379,3 +379,129 @@ button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+   #detalleComanda { position: absolute; left: 0; top: 0; width: 100%; }
+   .no-print { display: none !important; }
+ }
++
++/* Mobile app shell */
++@media (max-width: 760px) {
++  :root {
++    --mobile-nav-h: 64px;
++  }
++
++  html,
++  body {
++    overflow-x: hidden;
++  }
++
++  body {
++    padding-bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
++  }
++
++  .dc-sidebar {
++    top: auto;
++    left: 0;
++    right: 0;
++    bottom: 0;
++    width: 100%;
++    height: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
++    padding-bottom: env(safe-area-inset-bottom, 0px);
++    box-shadow: 0 -10px 28px rgba(15, 23, 42, .18);
++    overflow: visible;
++  }
++
++  .dc-sidebar-brand,
++  .dc-sidebar-footer,
++  .dc-nav-sep {
++    display: none;
++  }
++
++  .dc-nav {
++    height: var(--mobile-nav-h);
++    padding: 0;
++    flex: none;
++    display: grid;
++    grid-template-columns: repeat(4, 1fr);
++    gap: 0;
++  }
++
++  .dc-nav-item {
++    min-width: 0;
++    height: var(--mobile-nav-h);
++    flex-direction: column;
++    justify-content: center;
++    gap: 4px;
++    padding: 8px 4px;
++    border-left: 0;
++    border-top: 3px solid transparent;
++    font-size: .68rem;
++    line-height: 1.1;
++    text-align: center;
++  }
++
++  .dc-nav-item.active {
++    border-left-color: transparent;
++    border-top-color: var(--dc-rojo);
++  }
++
++  .dc-nav-item .nav-icon {
++    width: auto;
++    font-size: 15px;
++  }
++
++  .dc-main {
++    margin-left: 0;
++    min-width: 0;
++  }
++
++  .dc-page-header {
++    padding: 16px 14px 0;
++  }
++
++  .dc-page-header h1 {
++    font-size: 1.28rem;
++    line-height: 1.15;
++  }
++
++  .dc-page-header p {
++    font-size: .76rem;
++  }
++
++  .dc-page-content {
++    padding: 12px 14px 20px;
++  }
++
++  .back-button {
++    margin-bottom: 10px;
++    padding: 8px 12px;
++  }
++
++  .modal {
++    padding: 10px;
++  }
++
++  .modal-content {
++    width: 100%;
++    max-width: none;
++    margin: 0 auto;
++    max-height: calc(100vh - 20px);
++    overflow: hidden;
++  }
++
++  .modal-header,
++  .modal-footer {
++    padding: 10px 12px;
++  }
++
++  .modal-body {
++    padding: 12px;
++    max-height: calc(100vh - 130px);
++  }
++}
++
++@media (max-width: 430px) {
++  .dc-nav-item {
++    font-size: .62rem;
++  }
++
++  .dc-page-header h1 {
++    font-size: 1.16rem;
++  }
++}
+diff --git a/deploy/index.html b/deploy/index.html
+index 2ac1d5a..08d9692 100644
+--- a/deploy/index.html
++++ b/deploy/index.html
+@@ -6,10 +6,10 @@
+     <title>CaterCloud - Sistema de Comandas</title>
+     
+     <!-- CSS -->
+-    <link rel="stylesheet" href="css/styles.css">
+-    <link rel="stylesheet" href="css/dashboard.css">
+-    <link rel="stylesheet" href="css/calendar.css">
+-    <link rel="stylesheet" href="css/forms.css">
++    <link rel="stylesheet" href="css/styles.css?v=20260605n">
++    <link rel="stylesheet" href="css/dashboard.css?v=20260605n">
++    <link rel="stylesheet" href="css/calendar.css?v=20260605n">
++    <link rel="stylesheet" href="css/forms.css?v=20260605p">
+ 
+     <!-- Fuentes corporativas -->
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+@@ -30,22 +30,22 @@
+ 
+   <nav class="dc-nav">
+     <div class="dc-nav-item" onclick="mostrarDashboard()" id="nav-dashboard">
+-      <span class="nav-icon">&#8862;</span> Dashboard
++      <span class="nav-icon">⊞</span> Dashboard
+     </div>
+     <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda" data-requires-write>
+-      <span class="nav-icon">+</span> Nueva Comanda
++      <span class="nav-icon">＋</span> Nueva Comanda
+     </div>
+     <div class="dc-nav-sep"></div>
+     <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
+-      <span class="nav-icon">&#9776;</span> Historial
++      <span class="nav-icon">☰</span> Historial
+     </div>
+     <div class="dc-nav-item" onclick="mostrarLogistica()" id="nav-logistica">
+-      <span class="nav-icon">&#8857;</span> Logística
++      <span class="nav-icon">◎</span> Logística
+     </div>
+   </nav>
+ 
+   <div class="dc-sidebar-footer">
+-    <div class="dc-user-avatar" id="dcUserInitial">-</div>
++    <div class="dc-user-avatar" id="dcUserInitial">—</div>
+     <div class="dc-user-info">
+       <div class="dc-user-name" id="dcUserName"></div>
+       <button class="dc-logout-btn" id="btnLogout">Cerrar sesión</button>
+@@ -73,10 +73,10 @@
+           <!-- Calendario compacto -->
+           <div class="calendar-card">
+             <div class="calendar-header">
+-              <span id="calendarMonthTitle">&#9679;</span>
++              <span id="calendarMonthTitle">—</span>
+               <div class="calendar-nav">
+-                <button onclick="cambiarMes(-1)">⬹</button>
+-                <button onclick="cambiarMes(1)">⬺</button>
++                <button onclick="cambiarMes(-1)">‹</button>
++                <button onclick="cambiarMes(1)">›</button>
+               </div>
+             </div>
+             <div class="calendar-body">
+@@ -103,7 +103,7 @@
+     <!-- Vista: Nueva comanda -->
+     <div id="comandaForm" style="display: none;">
+       <div class="dc-page-header">
+-        <button class="back-button" onclick="volverAlDashboard()">&larr; Volver</button>
++        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+         <h1>Nueva Comanda</h1>
+         <p>Completa los datos del pedido de catering</p>
+       </div>
+@@ -118,7 +118,7 @@
+                 <!-- Comanda: Información básica -->
+                 <div class="form-section dc-section">
+                     <div class="dc-section-header">
+-                        <span class="dc-section-icon">&#128203;</span>
++                        <span class="dc-section-icon">📋</span>
+                         <h3>Información Básica</h3>
+                     </div>
+ 
+@@ -148,7 +148,7 @@
+                 <!-- Comanda: Menú principal -->
+                 <div class="form-section">
+                     <div class="dc-section-header">
+-                        <h3>&#127860; Menú Principal</h3>
++                        <h3>🍴 Menú Principal</h3>
+                     </div>
+ 
+                     <div class="dc-two-column-grid">
+@@ -188,7 +188,7 @@
+                 <!-- Comanda: Multiplicadores de cantidades -->
+                 <div id="multiplicadorSection" class="form-section dc-section" style="display: none;">
+                     <div class="dc-section-header">
+-                        <span class="dc-section-icon">&#129518;</span>
++                        <span class="dc-section-icon">🧮</span>
+                         <h3>Multiplicadores de Cantidades</h3>
+                     </div>
+ 
+@@ -205,7 +205,7 @@
+                                 </div>
+ 
+                                 <div class="info-cantidad" id="infoCantidadSaladas">
+-                                    <strong>Cálculo:</strong> <span id="paxValue">0</span> PAX &times;
++                                    <strong>Cálculo:</strong> <span id="paxValue">0</span> PAX ×
+                                     <span id="multSaladasValue">1</span> =
+                                     <span id="totalSaladasValue">0</span> uds por referencia
+                                 </div>
+@@ -222,7 +222,7 @@
+                                 </div>
+ 
+                                 <div class="info-cantidad" id="infoCantidadPostres">
+-                                    <strong>Cálculo:</strong> <span id="paxValue2">0</span> PAX &times;
++                                    <strong>Cálculo:</strong> <span id="paxValue2">0</span> PAX ×
+                                     <span id="multPostresValue">1</span> =
+                                     <span id="totalPostresValue">0</span> uds por postre
+                                 </div>
+@@ -234,7 +234,7 @@
+                 <!-- Comanda: Selección de referencias -->
+                 <div id="referenciasSection" class="form-section dc-section" style="display: none;">
+                     <div class="dc-section-header">
+-                        <span class="dc-section-icon">&#128203;</span>
++                        <span class="dc-section-icon">📋</span>
+                         <h3>Selección de Referencias</h3>
+                     </div>
+ 
+@@ -243,7 +243,7 @@
+                         <!-- Referencias grises -->
+                         <div id="referenciasSaladasGroup" class="referencias-group">
+                             <div class="referencias-group-header">
+-                                <label class="referencias-group-title">&#11036; Referencias Grises</label>
++                                <label class="referencias-group-title">⬜ Referencias Grises</label>
+                                 <span id="contadorGris" class="referencias-counter">0 / 0</span>
+                             </div>
+ 
+@@ -256,7 +256,7 @@
+                         <!-- Referencias rojas -->
+                         <div id="referenciasRojasGroup" class="referencias-group" style="display:none;">
+                             <div class="referencias-group-header">
+-                                <label class="referencias-group-title referencias-group-title--red">&#128308; Referencias Rojas</label>
++                                <label class="referencias-group-title referencias-group-title--red">🔴 Referencias Rojas</label>
+                                 <span id="contadorRojo" class="referencias-counter referencias-counter--red">0 / 0</span>
+                             </div>
+ 
+@@ -266,7 +266,7 @@
+                         <!-- Postres -->
+                         <div id="referenciasPostresGroup" class="referencias-group referencias-group--postres" style="display: none;">
+                             <div class="referencias-group-header">
+-                                <label class="referencias-group-title">&#127856; Postres</label>
++                                <label class="referencias-group-title">🍰 Postres</label>
+                                 <span id="contadorPostres" class="referencias-counter">0 / 0</span>
+                             </div>
+ 
+@@ -280,7 +280,7 @@
+                 
+                 <!-- Comanda: Notas adicionales -->
+                 <div class="form-section">
+-                    <h3>&#128221; Notas Adicionales</h3>
++                    <h3>📝 Notas Adicionales</h3>
+ 
+                     <div class="form-group">
+                         <label for="alergias_notas">Información importante para la cocina</label>
+@@ -294,7 +294,7 @@
+                 <!-- Comanda: Datos de logística -->
+                 <div id="logisticaInlineSection" class="form-section dc-section dc-section--logistics">
+                     <div class="dc-section-header">
+-                        <span class="dc-section-icon">&#128666;</span>
++                        <span class="dc-section-icon">🚚</span>
+                         <div class="dc-log-heading">
+                             <h3>Datos de Logística</h3>
+                             <span>Contacto, dirección y horarios del servicio</span>
+@@ -345,7 +345,7 @@
+ 
+                 <!-- Comanda: Notas adicionales logística -->
+                 <div class="form-section">
+-                    <h3>&#128221; Notas Adicionales Logística</h3>
++                    <h3>📝 Notas Adicionales Logística</h3>
+ 
+                     <div class="form-group">
+                         <label for="log_inline_notas">Información importante para logística</label>
+@@ -360,10 +360,10 @@
+                 <!-- Acciones del formulario -->
+                 <div class="button-group">
+                     <button type="button" class="btn-secondary" onclick="volverAlDashboard()">
+-                        &larr; Volver
++                        ← Volver
+                     </button>
+                     <button type="submit" class="btn-primary" data-requires-write>
+-                        &#128190; Guardar Comanda
++                        💾 Guardar Comanda
+                     </button>
+                 </div>
+ 
+@@ -379,7 +379,7 @@
+               </div>
+               <div class="comanda-resumen-body" id="resumenBody">
+                 <div class="resumen-empty">
+-                  <div>&#128203;</div>
++                  <div>📋</div>
+                   <div>Añade menús a la comanda</div>
+                 </div>
+               </div>
+@@ -408,8 +408,8 @@
+     <div id="modalMenus" class="modal">
+         <div class="modal-content">
+             <div class="modal-header">
+-                <h3 id="modalTitle">+ Añadir Menú Adicional</h3>
+-                <span class="close-modal" onclick="cerrarModalMenus()">&times;</span>
++                <h3 id="modalTitle">➕ Añadir Menú Adicional</h3>
++                <span class="close-modal" onclick="cerrarModalMenus()">×</span>
+             </div>
+             
+             <div class="modal-body">
+@@ -426,14 +426,14 @@
+                 <div id="modalMenusContainer" class="menu-selection"></div>
+                 
+                 <div id="modalPaxSection" class="form-section dc-mt-20" style="display: none;">
+-                    <h4>&#128101; PAX para este menú</h4>
++                    <h4>👥 PAX para este menú</h4>
+                     <input type="number" id="modalPaxAdicional" class="multiplicador-input" 
+                            placeholder="Número de PAX" min="1" value=""
+                            onchange="actualizarCantidadesReferenciasAdicionales()">
+                 </div>
+                 
+                 <div id="modalMultiplicadorSection" class="form-section" style="display: none;">
+-                    <h4>&#129518; Multiplicadores</h4>
++                    <h4>🧮 Multiplicadores</h4>
+ 
+                     <div class="multiplicadores-container">
+                         <div class="multiplicador-section">
+@@ -461,7 +461,7 @@
+                 </div>
+                 
+                 <div id="modalReferenciasSection" class="form-section" style="display: none;">
+-                    <h4>&#128203; Selección de Referencias</h4>
++                    <h4>📋 Selección de Referencias</h4>
+ 
+                     <div>
+                         <label>Selecciona <span id="modalMinSaladas">X</span>-<span id="modalMaxSaladas">Y</span> referencias saladas:</label>
+@@ -487,7 +487,7 @@
+         <div class="modal-content modal-content--narrow">
+             <div class="modal-header">
+                 <h3 id="modalDesayunoTitle">Seleccionar opciones</h3>
+-                <span class="close-modal" onclick="cerrarModalDesayunoOpciones()">&times;</span>
++                <span class="close-modal" onclick="cerrarModalDesayunoOpciones()">×</span>
+             </div>
+             <div class="modal-body" id="modalDesayunoBody"></div>
+             <div class="modal-footer" id="modalDesayunoFooter" style="display:none;">
+@@ -501,7 +501,7 @@
+         <div class="modal-content modal-content--compact">
+             <div class="modal-header">
+                 <h3 id="modalMaterialSubitemsTitle">Seleccionar opción</h3>
+-                <span class="close-modal" onclick="cerrarModalMaterialSubitems()">&times;</span>
++                <span class="close-modal" onclick="cerrarModalMaterialSubitems()">×</span>
+             </div>
+             <div class="modal-body">
+                 <div id="modalMaterialSubitemsOpciones"></div>
+@@ -513,8 +513,8 @@
+     <div id="modalConfirmacionLogistica" class="modal">
+         <div class="modal-content modal-content--narrow">
+             <div class="modal-header">
+-                <h3>&#128666; ¿Crear también comanda de logística?</h3>
+-                <span class="close-modal" onclick="cerrarModalConfirmacion()">&times;</span>
++                <h3>🚚 ¿Crear también comanda de logística?</h3>
++                <span class="close-modal" onclick="cerrarModalConfirmacion()">×</span>
+             </div>
+             
+             <div class="modal-body">
+@@ -537,7 +537,7 @@
+     <!-- Vista: Historial -->
+     <div id="historialPage" style="display: none;">
+       <div class="dc-page-header">
+-        <button class="back-button" onclick="volverAlDashboard()">&larr; Volver</button>
++        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+         <h1>Historial de Comandas</h1>
+       </div>
+ 
+@@ -566,7 +566,7 @@
+     <!-- Vista: Expediente de pedido -->
+     <div id="expedientePedido" style="display: none;">
+       <div class="dc-page-header">
+-        <button class="back-button" onclick="volverAlDashboard()">&larr; Volver al Dashboard</button>
++        <button class="back-button" onclick="volverAlDashboard()">← Volver al Dashboard</button>
+         <h1>Expediente de Pedido</h1>
+       </div>
+ 
+@@ -578,7 +578,7 @@
+     <!-- Vista: Detalle de comanda -->
+     <div id="detalleComanda" style="display: none;">
+       <div class="dc-page-header">
+-        <button class="back-button" onclick="volverAlHistorial()">&larr; Volver al Historial</button>
++        <button class="back-button" onclick="volverAlHistorial()">← Volver al Historial</button>
+       </div>
+ 
+       <div class="dc-page-content">
+@@ -621,7 +621,7 @@
+             <!-- Detalle: Información del evento -->
+             <div class="dc-section">
+                 <div class="dc-section-header">
+-                    <span>&#128203;</span>
++                    <span>📋</span>
+                     <h3>Información del Evento</h3>
+                 </div>
+ 
+@@ -656,7 +656,7 @@
+             <!-- Detalle: Menú principal -->
+             <div class="dc-section">
+                 <div class="dc-section-header">
+-                    <span>&#127869;</span>
++                    <span>🍽️</span>
+                     <h3 id="detalleMenuTitulo">Menú</h3>
+                 </div>
+                 <div id="detalleMenajeBadge" class="detalle-menaje-badge" style="display:none;"></div>
+@@ -666,7 +666,7 @@
+             <!-- Detalle: Menús adicionales -->
+             <div class="dc-section" id="detalleMenusAdicionalesSection" style="display:none;">
+                 <div class="dc-section-header">
+-                    <span>+</span>
++                    <span>➕</span>
+                     <h3>Menús Adicionales</h3>
+                 </div>
+ 
+@@ -676,7 +676,7 @@
+             <!-- Detalle: Referencias -->
+             <div class="dc-section" id="detalleReferenciasSection" style="display:none;">
+                 <div class="dc-section-header">
+-                    <span>&#128203;</span>
++                    <span>📋</span>
+                     <h3>Referencias Seleccionadas</h3>
+                 </div>
+ 
+@@ -693,7 +693,7 @@
+             <!-- Detalle: Notas adicionales -->
+             <div class="dc-section" id="detalleNotasSection" style="display:none;">
+                 <div class="dc-section-header">
+-                    <span>&#128221;</span>
++                    <span>📝</span>
+                     <h3>Notas Adicionales</h3>
+                 </div>
+ 
+@@ -705,7 +705,7 @@
+             <!-- Detalle: Datos de entrega -->
+             <div class="dc-section" id="detalleDatosLogisticaSection" style="display:none;">
+                 <div class="dc-section-header">
+-                    <span>&#128666;</span>
++                    <span>🚚</span>
+                     <h3>Datos de Entrega</h3>
+                 </div>
+ 
+@@ -715,26 +715,38 @@
+             <!-- Detalle: Material necesario -->
+             <div class="dc-section" id="detalleLogisticaSection" style="display:none;">
+                 <div class="dc-section-header">
+-                    <span>&#128230;</span>
++                    <span>📦</span>
+                     <h3>Material Necesario</h3>
+                 </div>
+ 
+                 <div class="detalle-body" id="detalleLogisticaContent"></div>
+             </div>
+ 
++            <!-- Detalle: Notas adicionales logística -->
++            <div class="dc-section" id="detalleNotasLogisticaSection" style="display:none;">
++                <div class="dc-section-header">
++                    <span>📝</span>
++                    <h3>Notas Adicionales Logística</h3>
++                </div>
++
++                <div class="detalle-body">
++                    <div id="detalleNotasLogistica"></div>
++                </div>
++            </div>
++
+       </div>
+     </div>
+ 
+     <!-- Vista: Formulario de logística -->
+     <div id="logisticaForm" style="display: none;">
+         <button class="back-button" onclick="volverDesdeCancelLogistica()">
+-            &larr; Cancelar y volver al Inicio
++            ← Cancelar y volver al Inicio
+         </button>
+ 
+         <div class="container">
+             <div class="header">
+                 <h1>
+-                    <span>&#128666;</span>
++                    <span>🚚</span>
+                     Comanda de Logística
+                 </h1>
+                 <p>Completa los datos de entrega para la comanda de cocina</p>
+@@ -752,32 +764,32 @@
+                     <div class="detalle-info logistics-summary-grid">
+                         <div class="info-item logistics-summary-item logistics-summary-item--code">
+                             <div class="info-label">Código Cocina</div>
+-                            <div id="log_codigo_cocina" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_codigo_cocina" class="info-value log-readonly">—</div>
+                         </div>
+ 
+                         <div class="info-item logistics-summary-item logistics-summary-item--company">
+                             <div class="info-label">Empresa</div>
+-                            <div id="log_empresa" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_empresa" class="info-value log-readonly">—</div>
+                         </div>
+ 
+                         <div class="info-item logistics-summary-item">
+                             <div class="info-label">Responsable</div>
+-                            <div id="log_responsable" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_responsable" class="info-value log-readonly">—</div>
+                         </div>
+ 
+                         <div class="info-item logistics-summary-item logistics-summary-item--small">
+                             <div class="info-label">PAX</div>
+-                            <div id="log_pax" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_pax" class="info-value log-readonly">—</div>
+                         </div>
+ 
+                         <div class="info-item logistics-summary-item">
+                             <div class="info-label">Fecha del Evento</div>
+-                            <div id="log_fecha_evento" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_fecha_evento" class="info-value log-readonly">—</div>
+                         </div>
+ 
+                         <div class="info-item logistics-summary-item logistics-summary-item--small">
+                             <div class="info-label">Hora de Salida</div>
+-                            <div id="log_hora_salida" class="info-value log-readonly">&#9679;</div>
++                            <div id="log_hora_salida" class="info-value log-readonly">—</div>
+                         </div>
+                     </div>
+                 </div>
+@@ -785,7 +797,7 @@
+                 <!-- Logística: Datos de entrega -->
+                 <div class="form-section dc-section dc-section--logistics">
+                     <div class="dc-section-header">
+-                        <span class="dc-section-icon">&#128666;</span>
++                        <span class="dc-section-icon">🚚</span>
+                         <div class="dc-log-heading">
+                             <h3>Datos de Entrega</h3>
+                             <span>Contacto, dirección y horarios del servicio</span>
+@@ -844,7 +856,7 @@
+                             class="btn-submit"
+                             data-requires-write
+                             onclick="guardarComandaLogistica()">
+-                        &#128666; Guardar Comanda de Logística
++                        🚚 Guardar Comanda de Logística
+                     </button>
+                 </div>
+ 
+@@ -881,8 +893,8 @@
+     <!-- Scripts: Aplicación -->
+     <script src="js/storage.js"></script>
+     <script src="js/clients.js"></script>
+-    <script src="js/calendar.js?v=20260605c"></script>
+-    <script src="js/dashboard.js?v=20260605c"></script>
++    <script src="js/calendar.js?v=20260605"></script>
++    <script src="js/dashboard.js?v=20260605"></script>
+     <script src="js/dom-utils.js"></script>
+     <script src="js/desayunos.js"></script>
+     <script src="js/referencias.js"></script>
+@@ -891,8 +903,8 @@
+     <script src="js/bandejas-preparadas.js"></script>
+     <script src="js/foodbox-lunch.js"></script>
+     <script src="js/comanda-form.js"></script>
+-    <script src="js/historial.js?v=20260605c"></script>
+-    <script src="js/main.js?v=20260605c"></script>
++    <script src="js/historial.js?v=20260605b"></script>
++    <script src="js/main.js?v=20260605b"></script>
+     <script src="js/preferencias.js"></script>
+     <script src="js/logistics.js"></script>
+     <script src="js/generar-comandas.js"></script>
+@@ -947,4 +959,3 @@
+ </main>
+ </body>
+ </html>
+-
+diff --git a/deploy/js/historial.js b/deploy/js/historial.js
+index 4050389..7353d82 100644
+--- a/deploy/js/historial.js
++++ b/deploy/js/historial.js
+@@ -143,15 +143,10 @@ function _renderExpedientePedido(comanda) {
+         : 'Sin fecha';
+     const estado = comanda.estado || 'creada';
+     const estadoLabel = getEstadoPedidoLabel(estado);
+-    const documentos = comanda.documentos || {};
+-    const tieneCocina = documentos.cocina_path;
+-    const tieneLogistica = documentos.logistica_path;
+     const esSolicitud = comanda.tipo_registro === 'solicitud' || ['negociacion', 'por_confirmar', 'confirmado'].includes(estado);
+     const puedeCrearComanda = estado !== 'anulada';
+     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+-    const archivosHtml = esSolicitud
+-        ? _renderArchivosSolicitud(comanda)
+-        : _renderArchivosComanda(documentos, tieneCocina, tieneLogistica);
++    const archivosHtml = _renderArchivosSolicitud(comanda);
+ 
+     cont.innerHTML = `
+         <div class="expediente-header">
+@@ -198,23 +193,6 @@ function _renderExpedientePedido(comanda) {
+         </div>`;
+ }
+ 
+-function _renderArchivosComanda(documentos, tieneCocina, tieneLogistica) {
+-    return `<div class="expediente-files">
+-        <div class="expediente-file">
+-            <span>Comanda cocina</span>
+-            ${tieneCocina
+-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.cocina_path}')">Abrir</button>`
+-                : `<em>Pendiente</em>`}
+-        </div>
+-        <div class="expediente-file">
+-            <span>Comanda logistica</span>
+-            ${tieneLogistica
+-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.logistica_path}')">Abrir</button>`
+-                : `<em>Pendiente</em>`}
+-        </div>
+-    </div>`;
+-}
+-
+ function _renderArchivosSolicitud(comanda) {
+     const adjuntos = comanda.adjuntos || [];
+     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+@@ -228,9 +206,7 @@ function _renderArchivosSolicitud(comanda) {
+                         : (a.path
+                             ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${a.path}')">Abrir</button>`
+                             : `<em>Guardado</em>`)}
+-                    ${puedeEditar
+-                        ? `<button type="button" class="expediente-file-delete" onclick="eliminarAdjuntoSolicitud('${comanda.codigo}', ${index})">Eliminar</button>`
+-                        : ''}
++                    ${puedeEditar ? `<button type="button" class="expediente-file-delete" onclick="eliminarAdjuntoSolicitud('${comanda.codigo}', ${index})">Eliminar</button>` : ''}
+                 </div>
+             </div>
+         `).join('')
+@@ -427,35 +403,34 @@ async function eliminarAdjuntoSolicitud(codigo, index) {
+ 
+     const comanda = obtenerComandaDelHistorial(codigo);
+     if (!comanda) {
+-        alert('Solicitud no encontrada.');
++        alert('Pedido no encontrado.');
+         return;
+     }
+ 
+     const adjuntos = [...(comanda.adjuntos || [])];
+     const adjunto = adjuntos[index];
+-    if (!adjunto) {
+-        alert('Archivo no encontrado.');
+-        return;
+-    }
++    if (!adjunto) return;
+ 
+-    const nombre = adjunto.nombre || `Archivo ${index + 1}`;
+-    if (!confirm(`Quieres eliminar "${nombre}"?`)) return;
++    if (!confirm(`Eliminar el archivo "${adjunto.nombre || 'Archivo'}"?`)) return;
+ 
+     if (adjunto.path && window.supabaseClient) {
+         try {
+             const { error } = await window.supabaseClient.storage
+                 .from('comandas')
+                 .remove([adjunto.path]);
+-            if (error) console.warn('No se pudo eliminar el archivo de Storage:', error);
++
++            if (error) throw error;
+         } catch (error) {
+             console.warn('No se pudo eliminar el archivo de Storage:', error);
++            alert('No se pudo eliminar el archivo del almacenamiento. Revisa permisos de Storage.');
++            return;
+         }
+     }
+ 
+     adjuntos.splice(index, 1);
+     const ok = await actualizarComandaEnHistorial(codigo, { adjuntos });
+     if (!ok) {
+-        alert('No se pudo eliminar el archivo.');
++        alert('No se pudo actualizar el expediente.');
+         return;
+     }
+ 
+@@ -503,13 +478,13 @@ function _renderMenuDetalle(comanda, pax) {
+             }
+ 
+             if (ref.tipo === 'sandwich' && ref.sabor) {
+-                extra = ' - ' + ref.sabor;
++                extra = ' — ' + ref.sabor;
+             }
+ 
+             if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
+                 extra = ': ' + ref.sandwiches
+                     .filter(s => s.sabor)
+-                    .map(s => `${s.sabor} x${s.cantidad || ''}`)
++                    .map(s => `${s.sabor} ×${s.cantidad || ''}`)
+                     .join(', ');
+             }
+ 
+@@ -527,29 +502,29 @@ function _renderMenuDetalle(comanda, pax) {
+         if (ensaladas.length || sandwiches.length || postres.length) {
+             ensaladas.forEach(e => {
+                 if ((e.cantidad || 1) > 0) {
+-                    html += fila('Ensalada: ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
++                    html += fila('🥗 ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
+                 }
+             });
+ 
+             sandwiches.forEach(s => {
+                 if ((s.cantidad || 1) > 0) {
+-                    html += fila('Sandwich: ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
++                    html += fila('🥪 ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
+                 }
+             });
+ 
+             postres.forEach(p => {
+                 if ((p.cantidad || 1) > 0) {
+-                    html += fila('Postre: ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
++                    html += fila('🍰 ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
+                 }
+             });
+         } else {
+-            if (fl.ensalada_principal) html += fila('Ensalada: ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
+-            if (fl.sandwich_principal) html += fila('Sandwich: ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
+-            if (fl.postre_principal) html += fila('Postre: ' + (fl.postre_principal.nombre || fl.postre_principal), '', '', false);
++            if (fl.ensalada_principal) html += fila('🥗 ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
++            if (fl.sandwich_principal) html += fila('🥪 ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
++            if (fl.postre_principal) html += fila('🍰 ' + (fl.postre_principal.nombre || fl.postre_principal), '', '', false);
+ 
+             if (fl.adicionales?.length) {
+                 fl.adicionales.forEach(a => {
+-                    html += fila('Adicional: ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
++                    html += fila('➕ ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
+                 });
+             }
+         }
+@@ -561,29 +536,29 @@ function _renderMenuDetalle(comanda, pax) {
+         const mul = comanda.multiplicadores;
+ 
+         if (saladas.length) {
+-            const mulLabel = mul?.saladas ? ` x${mul.saladas}` : '';
++            const mulLabel = mul?.saladas ? ` ×${mul.saladas}` : '';
+             html += fila('Saladas' + mulLabel, '', '', true);
+             saladas.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+         }
+ 
+         if (postres.length) {
+-            const mulLabel = mul?.postres ? ` x${mul.postres}` : '';
++            const mulLabel = mul?.postres ? ` ×${mul.postres}` : '';
+             html += fila('Postres' + mulLabel, '', '', true);
+             postres.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+         }
+     }
+ 
+-    // DIY Desayunos (cat 5) y Foodbox (cat 6)
++    // ── DIY Desayunos (cat 5) y Foodbox (cat 6) ──
+     if (comanda.bandejas) {
+         const b = comanda.bandejas;
+         const grupos = [
+-            { icono: 'Cafe', label: 'Termos y Bebidas',  items: b.termos     || [] },
+-            { icono: 'Servicio', label: 'Servicio',      items: b.servicio   || [] },
+-            { icono: 'Dulces', label: 'Dulces y Bolleria', items: b.dulces   || [] },
+-            { icono: 'Salados', label: 'Salados y Bebidas', items: b.salados || [] },
+-            { icono: 'Saladas', label: 'Saladas',        items: b.saladas    || [] },
+-            { icono: 'Sandwiches', label: 'Sandwiches',  items: b.sandwiches || [] },
+-            { icono: 'Postres', label: 'Postres',        items: b.postres    || [] },
++            { icono: '☕', label: 'Termos y Bebidas',  items: b.termos     || [] },
++            { icono: '🍽️', label: 'Servicio',          items: b.servicio   || [] },
++            { icono: '🍰', label: 'Dulces y Bollería', items: b.dulces     || [] },
++            { icono: '🥪', label: 'Salados y Bebidas', items: b.salados    || [] },
++            { icono: '🥗', label: 'Saladas',           items: b.saladas    || [] },
++            { icono: '🥪', label: 'Sándwiches',        items: b.sandwiches || [] },
++            { icono: '🍰', label: 'Postres',           items: b.postres    || [] },
+         ].filter(g => g.items.length > 0);
+ 
+         grupos.forEach(g => {
+@@ -633,18 +608,25 @@ function _renderTotalTermosDetalle(comanda) {
+             .replace(/^Termo de?\s*/i, '')
+             .replace(/^Termo\s*/i, '');
+ 
+-        return `${nombreCorto} x${r.cantidad}`;
+-    }).join('  -  ');
++        return `${nombreCorto} ×${r.cantidad}`;
++    }).join('  ·  ');
+ 
+     return `<div class="detalle-termos-total">
+         <div class="detalle-menu-row">
+-            <span class="detalle-menu-nombre" style="font-weight:600;">Total termos: ${partes}${tag}</span>
++            <span class="detalle-menu-nombre" style="font-weight:600;">☕ Total termos: ${partes}${tag}</span>
+         </div>
+     </div>`;
+ }
+ 
+ function _renderDetalleComanda(comanda) {
+     const el = (id) => document.getElementById(id);
++    const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
++        '&': '&amp;',
++        '<': '&lt;',
++        '>': '&gt;',
++        '"': '&quot;',
++        "'": '&#39;'
++    })[char]);
+ 
+     if (el('detalleCodigo')) el('detalleCodigo').textContent = comanda.codigo || '';
+ 
+@@ -654,18 +636,18 @@ function _renderDetalleComanda(comanda) {
+             : '';
+     }
+ 
+-    if (el('detalleEmpresa')) el('detalleEmpresa').textContent = comanda.empresa || '-';
+-    if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '-';
++    if (el('detalleEmpresa')) el('detalleEmpresa').textContent = comanda.empresa || '—';
++    if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '—';
+     if (el('detallePax')) el('detallePax').textContent = comanda.pax || '0';
+ 
+     if (el('detalleFechaEvento')) {
+         const fe = comanda.fecha_evento ? new Date(comanda.fecha_evento + 'T00:00:00') : null;
+-        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '-';
++        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '—';
+     }
+ 
+-    if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '-';
++    if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '—';
+ 
+-    const nombreMenu = comanda.menu_principal?.nombre || 'Menu';
++    const nombreMenu = comanda.menu_principal?.nombre || 'Menú';
+     const tipoMenaje = comanda.tipo_menaje;
+ 
+     const labelMenaje = tipoMenaje === 'loza'
+@@ -691,9 +673,9 @@ function _renderDetalleComanda(comanda) {
+     (comanda.menus_adicionales || []).forEach(m => {
+         menusDetalle.push({
+             ...m,
+-            nombre: m.nombre || m.menu_principal?.nombre || 'Menu adicional',
++            nombre: m.nombre || m.menu_principal?.nombre || 'Menú adicional',
+             pax: m.pax_adicional || m.pax || '',
+-            menu_principal: { nombre: m.nombre || m.menu_principal?.nombre || 'Menu adicional' },
++            menu_principal: { nombre: m.nombre || m.menu_principal?.nombre || 'Menú adicional' },
+             referencias_desayuno: m.referencias_desayuno || null,
+             referencias: m.referencias || null,
+             foodbox_lunch: m.foodbox_lunch || null,
+@@ -703,7 +685,7 @@ function _renderDetalleComanda(comanda) {
+     });
+ 
+     if (el('detalleMenuTitulo')) {
+-        const titulo = menusDetalle.length > 1 ? 'Menus de la comanda' : nombreMenu;
++        const titulo = menusDetalle.length > 1 ? 'Menús de la comanda' : nombreMenu;
+         el('detalleMenuTitulo').innerHTML = titulo;
+     }
+     // Badge DESECHABLE/LOZA centrado debajo del header
+@@ -726,7 +708,7 @@ function _renderDetalleComanda(comanda) {
+ 
+                 return `<div class="detalle-menu-card">
+                     <div class="detalle-menu-row" style="margin-bottom:6px;">
+-                        <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${menu.nombre || 'Menu'}</span>
++                        <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${menu.nombre || 'Menú'}</span>
+                         <span class="detalle-menu-cantidad">${paxMenu ? paxMenu + ' pax' : ''}</span>
+                     </div>
+                     ${_renderMenuDetalle(menu, paxMenu)}
+@@ -775,12 +757,11 @@ function _renderDetalleComanda(comanda) {
+ 
+         const campos = [
+             { label: 'Contacto', valor: logInline?.nombre_contacto },
+-            { label: 'Telefono', valor: logInline?.telefono_contacto },
++            { label: 'Teléfono', valor: logInline?.telefono_contacto },
+             { label: 'Hora Entrega', valor: logInline?.hora_entrega },
+             { label: 'Hora Evento', valor: logInline?.hora_evento },
+-            { label: 'Direccion', valor: logInline?.direccion },
+-            { label: 'Cod. Postal', valor: logInline?.codigo_postal },
+-            { label: 'Notas', valor: logInline?.notas_logistica },
++            { label: 'Dirección', valor: logInline?.direccion },
++            { label: 'Cód. Postal', valor: logInline?.codigo_postal },
+         ].filter(c => c.valor);
+ 
+         if (campos.length) {
+@@ -793,9 +774,9 @@ function _renderDetalleComanda(comanda) {
+             contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
+                 <tr>
+                     ${li?.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:22%;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value" style="word-break:break-word;">${li.nombre_contacto}</div></td>` : ''}
+-                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Telefono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
+-                    ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Direccion</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
+-                    ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cod. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
++                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Teléfono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
++                    ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Dirección</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
++                    ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cód. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
+                     ${li?.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${li.hora_entrega}</div></td>` : ''}
+                     ${li?.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${li.hora_evento}</div></td>` : ''}
+                 </tr>
+@@ -843,7 +824,7 @@ function _renderDetalleComanda(comanda) {
+ 
+                     (it.subitems_selected || []).forEach(sub => {
+                         h += `<div class="dc-material-item" style="padding-left:10px; opacity:0.85;">
+-                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">- ${sub.nombre}</span>
++                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">↳ ${sub.nombre}</span>
+                             <span class="dc-material-cantidad" style="font-size:0.72rem;">${sub.cantidad ?? 0}</span>
+                             <span class="dc-material-unidad" style="font-size:0.72rem;">${sub.unidad || 'uds'}</span>
+                         </div>`;
+@@ -855,19 +836,33 @@ function _renderDetalleComanda(comanda) {
+             }
+ 
+             contLog.innerHTML = `<div class="dc-material-grid">
+-                ${renderColMaterial('Bebidas', 'Bebidas', logNormalizado.bebidas)}
+-                ${renderColMaterial('Menaje', 'Menaje', logNormalizado.menaje)}
+-                ${renderColMaterial('Extras', 'Extras', logNormalizado.extras)}
++                ${renderColMaterial('🥤', 'Bebidas', logNormalizado.bebidas)}
++                ${renderColMaterial('🍽️', 'Menaje', logNormalizado.menaje)}
++                ${renderColMaterial('✨', 'Extras', logNormalizado.extras)}
+             </div>`;
+         } else {
+             secLog.style.display = 'none';
+         }
+     }
+ 
++    const secNotasLogistica = el('detalleNotasLogisticaSection');
++    const divNotasLogistica = el('detalleNotasLogistica');
++    const notasLogistica = (comanda.logistica_inline || comanda.logistica || {}).notas_logistica || '';
++
++    if (secNotasLogistica && divNotasLogistica) {
++        if (notasLogistica) {
++            secNotasLogistica.style.display = '';
++            divNotasLogistica.innerHTML = `<div class="detalle-logistica-notas">${textoSeguro(notasLogistica)}</div>`;
++        } else {
++            secNotasLogistica.style.display = 'none';
++            divNotasLogistica.innerHTML = '';
++        }
++    }
++
+     if (el('detalleEstado')) {
+         el('detalleEstado').textContent = comanda.estado
+             ? comanda.estado.charAt(0).toUpperCase() + comanda.estado.slice(1)
+-            : '-';
++            : '—';
+     }
+ 
+     if (el('detalleVersion')) {
+@@ -898,217 +893,176 @@ function _renderDetalleComanda(comanda) {
+     }
+ }
+ 
+-function _cloneComandaValue(value) {
+-    try { return JSON.parse(JSON.stringify(value || null)); }
+-    catch (e) { return value; }
++function _clonarValorComanda(valor) {
++    try {
++        return JSON.parse(JSON.stringify(valor || null));
++    } catch (error) {
++        return valor;
++    }
+ }
+ 
+-function _inferirCategoriaMenu(menu) {
+-    if (!menu) return 0;
+-    if (menu.categoriaId) return Number(menu.categoriaId) || 0;
+-    if (menu._cat) return Number(menu._cat) || 0;
+-    if (menu.referencias_desayuno) return 1;
+-    if (menu.foodbox_lunch) return 4;
+-    if (menu.bandejas) return 5;
+-    if (menu.referencias || menu.multiplicadores) return 2;
+-    const id = Number(menu.id);
+-    if ([1, 2, 3, 4, 17].includes(id)) return 1;
+-    if ([5, 6, 7, 8, 18].includes(id)) return 2;
+-    if (id >= 9 && id <= 14) return 3;
+-    if (id === 15) return 4;
+-    if (id === 16) return 5;
+-    return 0;
++function _inferirCategoriaMenuEdicion(menu) {
++    if (menu?.categoriaId) return Number(menu.categoriaId);
++    if (menu?._cat) return Number(menu._cat);
++    const texto = String(menu?.categoria || '').toLowerCase();
++    if (texto.includes('desayuno')) return 1;
++    if (texto.includes('foodbox lunch')) return 4;
++    if (texto.includes('bandeja') || texto.includes('diy')) return 5;
++    if (texto.includes('foodbox') || texto.includes('comida')) return 2;
++    return Number(document.getElementById('categoria')?.value) || 0;
+ }
+ 
+-function _normalizarMenuParaEdicion(menu, fallbackCategoria) {
+-    const copia = _cloneComandaValue(menu) || {};
+-    const base = copia.menu_principal && !copia.nombre ? { ...copia.menu_principal, ...copia } : copia;
+-    const categoriaId = Number(base.categoriaId || fallbackCategoria || _inferirCategoriaMenu(base)) || 0;
+-    return {
+-        ...base,
+-        id: base.id || base.menu_id || '',
+-        nombre: base.nombre || base.menu_principal?.nombre || 'Menu',
++function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
++    const categoriaId = _inferirCategoriaMenuEdicion(menu);
++    const item = {
++        ..._clonarValorComanda(menu),
++        id: menu?.id || menu?.menu_id || '',
++        nombre: menu?.nombre || menu?.menu_principal?.nombre || 'Menu',
+         categoriaId,
+-        categoria: base.categoria || '',
+-        pax: Number(base.pax || base.pax_adicional || 0) || 0,
+-        tipo_menaje: base.tipo_menaje || null,
+-        material: base.material || null,
+-        referencias_desayuno: base.referencias_desayuno || null,
+-        referencias: base.referencias || null,
+-        foodbox_lunch: base.foodbox_lunch || null,
+-        bandejas: base.bandejas || null,
+-        multiplicadores: base.multiplicadores || null
++        categoria: menu?.categoria || '',
++        pax: Number(menu?.pax || menu?.pax_adicional || (esPrincipal ? comanda?.pax : 0)) || 0,
++        tipo_menaje: menu?.tipo_menaje || comanda?.tipo_menaje || null,
++        material: _clonarValorComanda(menu?.material || null)
+     };
++
++    if (esPrincipal) {
++        if (!item.referencias_desayuno && comanda?.referencias_desayuno) {
++            item.referencias_desayuno = _clonarValorComanda(comanda.referencias_desayuno);
++        }
++        if (!item.referencias && comanda?.referencias) {
++            item.referencias = _clonarValorComanda(comanda.referencias);
++        }
++        if (!item.multiplicadores && comanda?.multiplicadores) {
++            item.multiplicadores = _clonarValorComanda(comanda.multiplicadores);
++        }
++        if (!item.foodbox_lunch && comanda?.foodbox_lunch) {
++            item.foodbox_lunch = _clonarValorComanda(comanda.foodbox_lunch);
++        }
++        if (!item.bandejas && comanda?.bandejas) {
++            item.bandejas = _clonarValorComanda(comanda.bandejas);
++        }
++    }
++
++    return item;
+ }
+ 
+-function _sumarMaterialEdicion(acumulado, material) {
+-    const res = acumulado || { bebidas: [], menaje: [], extras: [] };
++function _sumarMaterialParaEdicion(base, nuevo) {
++    const result = {
++        bebidas: [...(base?.bebidas || [])],
++        menaje: [...(base?.menaje || [])],
++        extras: [...(base?.extras || [])]
++    };
++
+     ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+-        (material?.[tipo] || []).forEach(item => {
+-            const nombre = item.nombre || '';
+-            if (!nombre) return;
+-            const existente = res[tipo].find(i => i.nombre === nombre && (i.unidad || '') === (item.unidad || ''));
++        (nuevo?.[tipo] || []).forEach(item => {
++            const nombre = item?.nombre || item?.id || '';
++            const unidad = item?.unidad || '';
++            const existente = result[tipo].find(i => (i.nombre || i.id || '') === nombre && (i.unidad || '') === unidad);
+             if (existente) {
+                 existente.cantidad = (Number(existente.cantidad) || 0) + (Number(item.cantidad) || 0);
++                existente.checked = existente.checked !== false || item.checked !== false;
+             } else {
+-                res[tipo].push({ ...item });
++                result[tipo].push(_clonarValorComanda(item));
+             }
+         });
+     });
+-    return res;
++
++    return result;
+ }
+ 
+-async function _activarPrimerMenuEdicion(menu) {
+-    if (!menu?.categoriaId) return;
++function _rellenarCampoEdicion(id, valor) {
++    const el = document.getElementById(id);
++    if (el) el.value = valor || '';
++}
+ 
+-    const catSelect = document.getElementById('categoria');
+-    if (!catSelect) return;
++async function _activarPrimerMenuEdicion(menu) {
++    if (!menu) return;
+ 
+-    catSelect.value = String(menu.categoriaId === 6 ? 5 : menu.categoriaId);
++    const categoriaId = Number(menu.categoriaId || menu._cat || 0);
++    const categoriaSelect = document.getElementById('categoria');
++    if (!categoriaSelect) return;
+ 
++    categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
+     if (typeof cargarMenus === 'function') {
+         await cargarMenus();
+     }
+ 
+-    const opciones = Array.from(document.querySelectorAll('#menusContainer .menu-option'));
+-    const opcion = opciones.find(opt => {
++    const nodes = document.querySelectorAll('#menusContainer .menu-option');
++    let nodeEncontrado = null;
++    nodes.forEach(node => {
++        if (nodeEncontrado) return;
+         try {
+-            const data = JSON.parse(opt.dataset.menu || '{}');
+-            return String(data.id) === String(menu.id) || (data.nombre || '').toLowerCase() === (menu.nombre || '').toLowerCase();
+-        } catch (e) {
+-            return false;
+-        }
++            const data = JSON.parse(node.dataset.menu || '{}');
++            if (String(data.id) === String(menu.id)) nodeEncontrado = node;
++        } catch (error) {}
+     });
+ 
+-    if (!opcion || typeof seleccionarMenu !== 'function') return;
+-
+-    const paxInput = document.getElementById('pax');
+-    if (paxInput) paxInput.value = menu.pax || '';
+-
+-    await seleccionarMenu(menu.id, opcion);
+-
+-    const categoriaId = Number(menu.categoriaId || 0);
+-    if (categoriaId === 1 && menu.referencias_desayuno) {
+-        window.referenciasDesayuno = _cloneComandaValue(menu.referencias_desayuno) || {};
+-        setTimeout(() => {
+-            Object.entries(window.referenciasDesayuno || {}).forEach(([id, ref]) => {
+-                const input = document.querySelector(`[data-ref-id="${id}"] input[type="number"], #cantidad_${id}, #ref_${id}`);
+-                if (input && ref?.cantidad !== undefined) input.value = ref.cantidad;
+-            });
+-            if (typeof actualizarCantidadesDesayuno === 'function') actualizarCantidadesDesayuno();
+-        }, 250);
+-    }
+-
+-    if ([2, 3].includes(categoriaId) && menu.referencias) {
+-        window.multiplicadores = { ...(menu.multiplicadores || window.multiplicadores || { saladas: 1, postres: 1 }) };
+-        window.referenciasSeleccionadas = {
+-            gris: [...(menu.referencias.saladas || [])],
+-            rojo: [],
+-            postres: [...(menu.referencias.postres || [])]
+-        };
+-        if (typeof renderReferenciasPagina === 'function') {
+-            ['gris', 'rojo', 'postres'].forEach(tipo => renderReferenciasPagina(tipo));
+-        }
+-        if (typeof actualizarContadoresSeleccion === 'function') actualizarContadoresSeleccion();
+-    }
+-
+-    if (categoriaId === 4 && menu.foodbox_lunch) {
+-        window.foodboxSelecciones = _cloneComandaValue(menu.foodbox_lunch.selecciones || {
+-            ensaladas: menu.foodbox_lunch.ensaladas || [],
+-            sandwiches: menu.foodbox_lunch.sandwiches || [],
+-            postres: menu.foodbox_lunch.postres || []
+-        }) || { ensaladas: [], sandwiches: [], postres: [] };
+-        setTimeout(() => {
+-            ['ensaladas', 'sandwiches', 'postres'].forEach(tipo => {
+-                (window.foodboxSelecciones[tipo] || []).forEach(item => {
+-                    const input = document.getElementById('fb_' + item.id);
+-                    if (input) input.value = item.cantidad || 0;
+-                });
+-            });
+-        }, 350);
+-    }
+-
+-    if ([5, 6].includes(categoriaId) && menu.bandejas && window.BandejasState) {
+-        const b = menu.bandejas;
+-        if (categoriaId === 5) {
+-            if (window.BandejasState.diy_termos) window.BandejasState.diy_termos.selected = [...(b.termos || [])];
+-            if (window.BandejasState.diy_servicio) window.BandejasState.diy_servicio.selected = [...(b.servicio || [])];
+-            if (window.BandejasState.diy_dulces) window.BandejasState.diy_dulces.selected = [...(b.dulces || [])];
+-            if (window.BandejasState.diy_salados) window.BandejasState.diy_salados.selected = [...(b.salados || [])];
+-        }
+-        if (categoriaId === 6) {
+-            if (window.BandejasState.diy_fb_saladas) window.BandejasState.diy_fb_saladas.selected = [...(b.saladas || [])];
+-            if (window.BandejasState.diy_fb_postres) window.BandejasState.diy_fb_postres.selected = [...(b.postres || [])];
+-        }
+-        if (typeof window.renderDIYGrupos === 'function') window.renderDIYGrupos(categoriaId);
++    if (nodeEncontrado && typeof seleccionarMenu === 'function') {
++        await seleccionarMenu(menu.id, nodeEncontrado);
++    } else {
++        window.menuSeleccionado = { ...menu, _cat: categoriaId };
++        _rellenarCampoEdicion('menu_id', menu.id || '');
+     }
+-
+-    window.menuSeleccionado = null;
+-    const menuIdInput = document.getElementById('menu_id');
+-    if (menuIdInput) menuIdInput.value = '';
+ }
+ 
+ async function cargarComandaEnFormularioEdicion(comanda) {
+-    const form = document.getElementById('comandaCocinaForm');
+-    if (form) form.reset();
+-
+-    const setVal = (id, value) => {
+-        const el = document.getElementById(id);
+-        if (el) el.value = value || '';
+-    };
+-
+-    setVal('empresa', comanda.empresa);
+-    setVal('responsable', comanda.responsable);
+-    setVal('pax', '');
+-    setVal('hora_salida', comanda.hora_salida);
+-    setVal('fecha_evento', comanda.fecha_evento);
+-    setVal('alergias_notas', comanda.alergias?.notas);
+-
+-    const log = comanda.logistica_inline || comanda.logistica || {};
+-    setVal('log_inline_hora_entrega', log.hora_entrega);
+-    setVal('log_inline_hora_evento', log.hora_evento);
+-    setVal('log_inline_nombre_contacto', log.nombre_contacto);
+-    setVal('log_inline_telefono_contacto', log.telefono_contacto);
+-    setVal('log_inline_direccion', log.direccion);
+-    setVal('log_inline_codigo_postal', log.codigo_postal);
+-    setVal('log_inline_notas', log.notas_logistica);
+-    setVal('tipo_menaje', comanda.tipo_menaje);
++    _rellenarCampoEdicion('empresa', comanda.empresa || '');
++    _rellenarCampoEdicion('responsable', comanda.responsable || '');
++    _rellenarCampoEdicion('pax', comanda.pax || '');
++    _rellenarCampoEdicion('hora_salida', comanda.hora_salida || '');
++    _rellenarCampoEdicion('fecha_evento', (comanda.fecha_evento || '').split('T')[0]);
++    _rellenarCampoEdicion('tipo_menaje', comanda.tipo_menaje || '');
++    _rellenarCampoEdicion('alergias_notas', comanda.alergias?.notas || '');
++
++    const logistica = comanda.logistica_inline || comanda.logistica || {};
++    _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
++    _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
++    _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
++    _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
++    _rellenarCampoEdicion('log_inline_direccion', logistica.direccion || '');
++    _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
++    _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
+ 
+     const menus = [];
+-    if (comanda.menu_principal) menus.push(_normalizarMenuParaEdicion(comanda.menu_principal, comanda.menu_principal?.categoriaId));
+-    (comanda.menus_adicionales || []).forEach(menu => menus.push(_normalizarMenuParaEdicion(menu, menu?.categoriaId)));
++    if (comanda.menu_principal) {
++        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
++    }
++    (comanda.menus_adicionales || []).forEach(menu => {
++        menus.push(_normalizarMenuEdicion(menu, comanda, false));
++    });
++
++    if (!menus.length && comanda.menu_principal?.nombre) {
++        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
++    }
+ 
+     window.MenusAdicionalesState = window.MenusAdicionalesState || { menusAdicionales: [] };
+     window.MenusAdicionalesState.menusAdicionales = menus;
+-    window.menusAdicionales = window.MenusAdicionalesState.menusAdicionales;
+-    window.menuSeleccionado = null;
+-    window.pax = 0;
++    window.menusAdicionales = menus;
++    window._materialAcumulado = _clonarValorComanda(comanda.material_logistica) || { bebidas: [], menaje: [], extras: [] };
+ 
+-    window._materialAcumulado = comanda.material_logistica || { bebidas: [], menaje: [], extras: [] };
+-    if (!window._materialAcumulado?.bebidas?.length && !window._materialAcumulado?.menaje?.length && !window._materialAcumulado?.extras?.length) {
+-        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
++    if (!window._materialAcumulado.bebidas?.length && !window._materialAcumulado.menaje?.length && !window._materialAcumulado.extras?.length) {
++        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialParaEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
+     }
+ 
+-    const paxTotal = menus.reduce((s, m) => s + (Number(m.pax) || 0), 0);
++    const paxTotal = menus.reduce((total, menu) => total + (Number(menu.pax) || 0), 0);
+     const paxTotalEl = document.getElementById('paxTotalValor');
+     if (paxTotalEl) paxTotalEl.textContent = paxTotal;
+     const paxWrap = document.getElementById('paxTotalWrap');
+     if (paxWrap) paxWrap.style.display = menus.length ? 'block' : 'none';
+ 
+-    setVal('categoria', '');
+-    setVal('menu_id', '');
+-
+     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
+ 
+     try {
+         await _activarPrimerMenuEdicion(menus[0]);
+     } catch (error) {
+-        console.warn('No se pudo activar el menu en edicion:', error);
++        console.warn('No se pudo activar el menu al editar:', error);
+     }
++
+     window.MenusAdicionalesState.menusAdicionales = menus;
+-    window.menusAdicionales = window.MenusAdicionalesState.menusAdicionales;
++    window.menusAdicionales = menus;
+     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
+ }
++
+ async function editarComanda() {
+     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
+         return;
+@@ -1131,12 +1085,16 @@ async function editarComanda() {
+     if (historialPage) historialPage.style.display = 'none';
+ 
+     const submitBtn = document.querySelector('#comandaCocinaForm button[type="submit"]');
+-    if (submitBtn) submitBtn.innerHTML = '&#128190; Guardar Cambios';
++
++    if (submitBtn) {
++        submitBtn.textContent = '💾 Guardar Cambios';
++    }
+ 
+     await cargarComandaEnFormularioEdicion(window.comandaEditando);
+ 
+-    console.log('Comanda cargada para edicion:', window.comandaEditando.codigo);
++    console.log('Comanda cargada para edición:', window.comandaEditando.codigo);
+ }
++
+ function imprimirComanda() {
+     window.print();
+ }
+@@ -1149,7 +1107,7 @@ function eliminarComanda() {
+ 
+     const codigo = document.getElementById('detalleCodigo').textContent;
+ 
+-    if (confirm(`Estas seguro de que deseas eliminar la comanda ${codigo}? Esta accion no se puede deshacer.`)) {
++    if (confirm(`¿Estás seguro de que deseas eliminar la comanda ${codigo}? Esta acción no se puede deshacer.`)) {
+         eliminarComandaDelHistorial(codigo);
+         alert(`Comanda ${codigo} eliminada correctamente`);
+ 
+@@ -1200,5 +1158,3 @@ async function verDetalleComandaPorCodigo(codigo) {
+ 
+     _renderDetalleComanda(comanda);
+ }
+-
+-
+diff --git a/deploy/js/main.js b/deploy/js/main.js
+index a23bed0..062feda 100644
+--- a/deploy/js/main.js
++++ b/deploy/js/main.js
+@@ -1,9 +1,9 @@
+-// ========== CONFIGURACIÃ“N INICIAL ==========
++// ========== CONFIGURACIÓN INICIAL ==========
+ 
+-// Variable global para comanda en ediciÃ³n
++// Variable global para comanda en edición
+ window.comandaEditando = null;
+ 
+-// InicializaciÃ³n cuando se carga el documento
++// Inicialización cuando se carga el documento
+ document.addEventListener('DOMContentLoaded', function() {
+     
+     // Cargar calendario
+@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
+         cargarEventosEjemplo();
+     }
+     
+-    // Configurar fecha mÃ­nima para el formulario
++    // Configurar fecha mínima para el formulario
+     const hoy = new Date().toISOString().split('T')[0];
+     const fechaEventoInput = document.getElementById('fecha_evento');
+     if (fechaEventoInput) {
+@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
+         inicializarContador();
+     }
+     
+-    // Configurar el envÃ­o del formulario
++    // Configurar el envío del formulario
+     const formulario = document.getElementById('comandaCocinaForm');
+     if (formulario) {
+         formulario.addEventListener('submit', manejarEnvioFormulario);
+@@ -62,13 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
+         inicializarPreferencias();
+     }
+     
+-    console.log('CaterCloud inicializado correctamente');
++    console.log('✅ CaterCloud inicializado correctamente');
+ });
+ 
+ // ========== VALIDACIONES EN TIEMPO REAL ==========
+ 
+ function configurarValidacionesEnTiempoReal() {
+-    // Validar empresa (mÃ­nimo 2 caracteres)
++    // Validar empresa (mínimo 2 caracteres)
+     const empresaInput = document.getElementById('empresa');
+     if (empresaInput) {
+         empresaInput.addEventListener('blur', validarEmpresa);
+@@ -77,7 +77,7 @@ function configurarValidacionesEnTiempoReal() {
+         });
+     }
+     
+-    // Validar responsable (mÃ­nimo 2 caracteres)
++    // Validar responsable (mínimo 2 caracteres)
+     const responsableInput = document.getElementById('responsable');
+     if (responsableInput) {
+         responsableInput.addEventListener('blur', validarResponsable);
+@@ -113,7 +113,7 @@ function configurarValidacionesEnTiempoReal() {
+         horaSalidaInput.addEventListener('change', validarHoraSalida);
+     }
+ 
+-    // Mostrar/ocultar secciÃ³n logÃ­stica inline segÃºn categorÃ­a
++    // Mostrar/ocultar sección logística inline según categoría
+     const categoriaSelect = document.getElementById('categoria');
+     if (categoriaSelect) {
+         categoriaSelect.addEventListener('change', function() {
+@@ -123,12 +123,12 @@ function configurarValidacionesEnTiempoReal() {
+ }
+ 
+ /**
+- * Gestiona el material al cambiar categorÃ­a.
++ * Gestiona el material al cambiar categoría.
+  * logisticaInlineSection siempre visible.
+  * Solo se limpia el material para Servicios (3) que usa flujo separado.
+  */
+ function toggleLogisticaInline(categoriaId) {
+-    // Limpiar zumos de desayuno al cambiar a otra categorÃ­a
++    // Limpiar zumos de desayuno al cambiar a otra categoría
+     if (categoriaId !== 1 && window.materialLogistica?.bebidas) {
+         window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+     }
+@@ -136,17 +136,17 @@ function toggleLogisticaInline(categoriaId) {
+     const matContainer = document.getElementById('materialLogisticaInline');
+ 
+     if (categoriaId === 3) {
+-        // Servicios: ocultar solo el material, la secciÃ³n de datos siempre visible
++        // Servicios: ocultar solo el material, la sección de datos siempre visible
+         if (matContainer) matContainer.style.display = 'none';
+         if (typeof window.limpiarMaterialLogistica === 'function') {
+             window.limpiarMaterialLogistica();
+         }
+     }
+-    // Para el resto: el material lo mostrarÃ¡ comanda-form.js al seleccionar menÃº
++    // Para el resto: el material lo mostrará comanda-form.js al seleccionar menú
+ }
+ 
+ /**
+- * Limpia los campos de la secciÃ³n logÃ­stica inline
++ * Limpia los campos de la sección logística inline
+  */
+ function limpiarCamposLogisticaInline() {
+     const ids = [
+@@ -163,7 +163,7 @@ function limpiarCamposLogisticaInline() {
+ }
+ 
+ /**
+- * Valida los campos de logÃ­stica inline (solo si la secciÃ³n estÃ¡ visible)
++ * Valida los campos de logística inline (solo si la sección está visible)
+  */
+ function validarLogisticaInline() {
+     const seccion = document.getElementById('logisticaInlineSection');
+@@ -174,9 +174,9 @@ function validarLogisticaInline() {
+         { id: 'log_inline_hora_entrega',      label: 'Hora de entrega' },
+         { id: 'log_inline_hora_evento',        label: 'Hora del evento' },
+         { id: 'log_inline_nombre_contacto',    label: 'Nombre de contacto' },
+-        { id: 'log_inline_telefono_contacto',  label: 'Telefono de contacto' },
+-        { id: 'log_inline_direccion',          label: 'Direccion' },
+-        { id: 'log_inline_codigo_postal',      label: 'Codigo postal' }
++        { id: 'log_inline_telefono_contacto',  label: 'Teléfono de contacto' },
++        { id: 'log_inline_direccion',          label: 'Dirección' },
++        { id: 'log_inline_codigo_postal',      label: 'Código postal' }
+     ];
+ 
+     requeridos.forEach(({ id, label }) => {
+@@ -193,12 +193,12 @@ function validarLogisticaInline() {
+         }
+     });
+ 
+-    // Validar formato telÃ©fono
++    // Validar formato teléfono
+     const tel = document.getElementById('log_inline_telefono_contacto');
+     if (tel && tel.value.trim() && !/^[0-9\s\+\-]{6,20}$/.test(tel.value.trim())) {
+         tel.style.borderColor = '#dc2626';
+         const errEl = document.getElementById('log_inline_telefono_contacto_err');
+-        if (errEl) errEl.textContent = 'Formato de telefono no valido';
++        if (errEl) errEl.textContent = 'Formato de teléfono no válido';
+         valido = false;
+     }
+ 
+@@ -206,7 +206,7 @@ function validarLogisticaInline() {
+ }
+ 
+ /**
+- * Recoge los datos de logÃ­stica inline del formulario
++ * Recoge los datos de logística inline del formulario
+  */
+ function obtenerDatosLogisticaInline() {
+     const seccion = document.getElementById('logisticaInlineSection');
+@@ -223,7 +223,7 @@ function obtenerDatosLogisticaInline() {
+ }
+ 
+ 
+-// ========== FUNCIONES DE VALIDACIÃ“N INDIVIDUALES ==========
++// ========== FUNCIONES DE VALIDACIÓN INDIVIDUALES ==========
+ 
+ function validarEmpresa() {
+     const input = document.getElementById('empresa');
+@@ -236,8 +236,8 @@ function validarEmpresa() {
+         return false;
+     }
+     
+-    if (!/^[\p{L}0-9\s\-&.,]+$/u.test(value)) {
+-        mostrarErrorCampo(input, 'Solo se permiten letras, numeros y espacios');
++    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-&.,]+$/.test(value)) {
++        mostrarErrorCampo(input, 'Solo se permiten letras, números y espacios');
+         return false;
+     }
+     
+@@ -267,12 +267,12 @@ function validarPax() {
+     const value = parseInt(input.value);
+     
+     if (isNaN(value) || value < 1) {
+-        mostrarErrorCampo(input, 'El numero de PAX debe ser mayor a 0');
++        mostrarErrorCampo(input, 'El número de PAX debe ser mayor a 0');
+         return false;
+     }
+     
+     if (value > 1000) {
+-        mostrarErrorCampo(input, 'El numero de PAX no puede exceder 1000');
++        mostrarErrorCampo(input, 'El número de PAX no puede exceder 1000');
+         return false;
+     }
+     
+@@ -298,12 +298,12 @@ function validarFechaEvento() {
+         return false;
+     }
+     
+-    // No permitir fechas mÃ¡s allÃ¡ de 1 aÃ±o
++    // No permitir fechas más allá de 1 año
+     const maxFecha = new Date();
+     maxFecha.setFullYear(maxFecha.getFullYear() + 1);
+     
+     if (value > maxFecha) {
+-        mostrarErrorCampo(input, 'La fecha no puede ser mayor a un ano desde hoy');
++        mostrarErrorCampo(input, 'La fecha no puede ser mayor a un año desde hoy');
+         return false;
+     }
+     
+@@ -330,25 +330,25 @@ function validarHoraSalida() {
+     return true;
+ }
+ 
+-// ========== VALIDACIÃ“N COMPLETA DEL FORMULARIO ==========
++// ========== VALIDACIÓN COMPLETA DEL FORMULARIO ==========
+ 
+ function validarFormularioCompleto() {
+     const validacionesIndividuales = [
+         validarEmpresa(),
+         validarResponsable(),
+-        // PAX se gestiona por menÃº individual â€” no se valida globalmente
++        // PAX se gestiona por menú individual — no se valida globalmente
+         validarFechaEvento(),
+         validarHoraSalida()
+     ];
+     
+     const todasValidas = validacionesIndividuales.every(v => v === true);
+     
+-    // Verificar que hay al menos un menÃº acumulado
++    // Verificar que hay al menos un menú acumulado
+     const menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+         ? window.obtenerMenusAcumulados() : [];
+ 
+     if (menusAcumulados.length === 0) {
+-        mostrarMensaje('Por favor, anade al menos un menu a la comanda', 'error');
++        mostrarMensaje('❌ Por favor, añade al menos un menú a la comanda', 'error');
+         const menusContainer = document.getElementById('menusContainer');
+         if (menusContainer) {
+             menusContainer.style.border = '2px solid #dc2626';
+@@ -363,13 +363,13 @@ function validarFormularioCompleto() {
+     }
+     
+     if (!todasValidas) {
+-        mostrarMensaje('Por favor, corrige los errores en el formulario', 'error');
++        mostrarMensaje('❌ Por favor, corrige los errores en el formulario', 'error');
+         return false;
+     }
+ 
+-    // Validar logÃ­stica inline si estÃ¡ visible
++    // Validar logística inline si está visible
+     if (!validarLogisticaInline()) {
+-        mostrarMensaje('Por favor, completa los datos de logistica', 'error');
++        mostrarMensaje('❌ Por favor, completa los datos de logística', 'error');
+         return false;
+     }
+     
+@@ -413,10 +413,10 @@ function limpiarErrorCampo(input) {
+     }
+ }
+ 
+-// ========== MANEJO DEL ENVÃO DEL FORMULARIO ==========
++// ========== MANEJO DEL ENVÍO DEL FORMULARIO ==========
+ 
+ /**
+- * Maneja el envÃ­o del formulario de comanda
++ * Maneja el envío del formulario de comanda
+  * MODIFICADO: Incluye referencias de desayuno
+  */
+ async function manejarEnvioFormulario(e) {
+@@ -426,13 +426,13 @@ async function manejarEnvioFormulario(e) {
+         return;
+     }
+     
+-    // Obtener el botÃ³n de submit con verificaciÃ³n
+-    // BotÃ³n puede estar dentro del form o en el panel lateral del resumen
++    // Obtener el botón de submit con verificación
++    // Botón puede estar dentro del form o en el panel lateral del resumen
+     const submitBtn = e.target.querySelector('button[type="submit"]')
+                    || document.querySelector('.btn-guardar-comanda')
+                    || document.getElementById('btnGuardarComanda');
+     if (!submitBtn) {
+-        mostrarMensaje('Error: No se encontro el boton de envio', 'error');
++        mostrarMensaje('❌ Error: No se encontró el botón de envío', 'error');
+         return;
+     }
+     
+@@ -445,37 +445,39 @@ async function manejarEnvioFormulario(e) {
+     }
+     
+     const categoriaId = parseInt(document.getElementById('categoria').value);
+-    const hayMenuActivo = !!window.menuSeleccionado;
++    const menusParaValidar = typeof window.obtenerMenusAcumulados === 'function'
++        ? window.obtenerMenusAcumulados() : [];
++    const editandoConMenusGuardados = !!window.comandaEditando && menusParaValidar.length > 0;
+     
+-    // Validaciones especÃ­ficas por categorÃ­a
+-    if (hayMenuActivo && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
++    // Validaciones específicas por categoría
++    if (!editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
+         const seleccionadasSaladas = window.referenciasSeleccionadas ? 
+             window.referenciasSeleccionadas.saladas.length : 0;
+         
+         if (seleccionadasSaladas < window.menuSeleccionado.items_salados_min) {
+-            mostrarMensaje(`Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
++            mostrarMensaje(`❌ Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
+             submitBtn.innerHTML = originalText;
+             return;
+         }
+     }
+     
+-// ValidaciÃ³n para Foodbox Lunch (MEJORADA)
+-if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+-    // Usar la nueva funciÃ³n de validaciÃ³n mejorada
++// Validación para Foodbox Lunch (MEJORADA)
++if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
++    // Usar la nueva función de validación mejorada
+     if (typeof validarFoodboxLunchMejorado === 'function') {
+         if (!validarFoodboxLunchMejorado()) {
+-            mostrarMensaje('Por favor, corrige la distribucion del Foodbox Lunch', 'error');
++            mostrarMensaje('❌ Por favor, corrige la distribución del Foodbox Lunch', 'error');
+             submitBtn.innerHTML = originalText;
+             submitBtn.disabled = false;
+             return;
+         }
+     }
+ }    
+-    // Deshabilitar botÃ³n y mostrar loader
++    // Deshabilitar botón y mostrar loader
+     submitBtn.innerHTML = '<div class="loader"></div>';
+     submitBtn.disabled = true;
+     
+-    // â”€â”€ Recoger menÃºs acumulados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
++    // ── Recoger menús acumulados ──────────────────────────────────────────────
+     const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+         ? window.obtenerMenusAcumulados() : [];
+ 
+@@ -489,7 +491,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+     const _paxTotal       = _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0)
+                             || parseInt(document.getElementById('pax').value) || 0;
+ 
+-    // â”€â”€ Preparar datos de la comanda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
++    // ── Preparar datos de la comanda ─────────────────────────────────────────
+     const usuarioActualNombre = typeof obtenerNombreUsuarioActual === 'function'
+         ? obtenerNombreUsuarioActual()
+         : (window.currentUser?.email || '');
+@@ -507,7 +509,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+         menu_principal:    _menuPrincipal,
+         menus_adicionales: _menusAdicionales,
+ 
+-        // Referencias segÃºn categorÃ­a del menÃº principal
++        // Referencias según categoría del menú principal
+         ...(_catPrincipal == 1 && (_menuPrincipal.referencias_desayuno || window.referenciasDesayuno) ? {
+             referencias_desayuno: _menuPrincipal.referencias_desayuno || window.referenciasDesayuno
+         } : {}),
+@@ -558,7 +560,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+         tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
+         logistica:   obtenerDatosLogisticaInline(),
+ 
+-        // Material acumulado de todos los menÃºs
++        // Material acumulado de todos los menús
+         material_logistica: window._materialAcumulado && (
+             window._materialAcumulado.bebidas?.length ||
+             window._materialAcumulado.menaje?.length  ||
+@@ -570,22 +572,30 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+         estado: 'creada',
+         version: '1.0'
+     };
++    comandaData.logistica_inline = comandaData.logistica;
+     
+     try {
+         let codigo;
+         
+         if (window.comandaEditando) {
++            comandaData.fecha_creacion = window.comandaEditando.fecha_creacion || comandaData.fecha_creacion;
++            comandaData.creado_por_id = window.comandaEditando.creado_por_id || comandaData.creado_por_id;
++            comandaData.creado_por_nombre = window.comandaEditando.creado_por_nombre || comandaData.creado_por_nombre;
++            comandaData.creado_por_email = window.comandaEditando.creado_por_email || comandaData.creado_por_email;
++            comandaData.adjuntos = window.comandaEditando.adjuntos || comandaData.adjuntos || [];
++            comandaData.documentos = window.comandaEditando.documentos || comandaData.documentos || {};
++
+             // Actualizar comanda existente
+             const resultado = await actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
+             
+             if (resultado) {
+-                mostrarMensaje(`Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
++                mostrarMensaje(`✅ Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
+                 
+                 if (typeof agregarAlCalendario === 'function') {
+                     agregarAlCalendario(comandaData);
+                 }
+                 
+-                // Volver al dashboard despuÃ©s de actualizar
++                // Volver al dashboard después de actualizar
+                 setTimeout(() => {
+                     if (typeof volverAlDashboard === 'function') {
+                         volverAlDashboard();
+@@ -594,13 +604,13 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
+                 }, 2000);
+                 
+             } else {
+-                mostrarMensaje('Error al actualizar la comanda', 'error');
++                mostrarMensaje('❌ Error al actualizar la comanda', 'error');
+             }
+             
+         } else {
+ // Leer material del DOM ANTES de guardar para incluirlo en el payload
+-// â”€â”€ Capturar TODO el material del DOM en el momento del guardado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+-// FunciÃ³n universal: lee cualquier label.dc-material-item del selector dado
++// ── Capturar TODO el material del DOM en el momento del guardado ────────────
++// Función universal: lee cualquier label.dc-material-item del selector dado
+ function _leerLabels(selector) {
+     const items = [];
+     document.querySelectorAll(selector).forEach(label => {
+@@ -648,7 +658,7 @@ function _leerExtrasExpandibles(atributo) {
+     return items;
+ }
+ 
+-// â”€â”€ Capturar todo el material en el momento del guardado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
++// ── Capturar todo el material en el momento del guardado ────────────────────
+ // Lee TODOS los labels del contenedor de un tipo dado (bebidas/menaje/extras)
+ // excluyendo los que tienen atributos de inyectados (se leen por separado)
+ function _leerContainerTipo(tipo, excluirAtributos) {
+@@ -681,14 +691,14 @@ function _leerContainerTipo(tipo, excluirAtributos) {
+     return items;
+ }
+ 
+-// â”€â”€ Leer material SOLO del DOM (fuente de verdad es lo que el usuario ve/marca) â”€â”€
++// ── Leer material SOLO del DOM (fuente de verdad es lo que el usuario ve/marca) ──
+ // Bebidas y extras: solo los marcados con checkbox
+ // Menaje: los marcados (el usuario puede desmarcar los pre-chequeados)
+ const _domBebidas = _leerContainerTipo('bebidas', []);
+ const _domMenaje  = _leerContainerTipo('menaje',  []);
+ const _domExtras  = _leerContainerTipo('extras',  []);
+ 
+-// Usar el material acumulado de todos los menÃºs aÃ±adidos
++// Usar el material acumulado de todos los menús añadidos
+ // (capturado por anadirMenuAComanda en window._materialAcumulado)
+ const _materialCompleto = (
+     window._materialAcumulado &&
+@@ -710,13 +720,13 @@ if (!comandaData.tipo_menaje) {
+ // Crear nueva comanda
+ codigo = await guardarComandaEnHistorial(comandaData);
+ 
+-// DEBUG: Verificar el cÃ³digo generado
+-console.log('Codigo generado:', codigo);
+-console.log('Anio en codigo:', codigo.substring(2, 4));
++// DEBUG: Verificar el código generado
++console.log('Código generado:', codigo);
++console.log('Año en código:', codigo.substring(2, 4));
+ 
+-mostrarMensaje(`Comanda ${codigo} creada exitosamente`, 'success');
++mostrarMensaje(`✅ Comanda ${codigo} creada exitosamente`, 'success');
+ 
+-// GUARDAR EMPRESA FRECUENTE (si existe la funciÃ³n)
++// GUARDAR EMPRESA FRECUENTE (si existe la función)
+ if (typeof guardarEmpresaFrecuente === 'function') {
+     guardarEmpresaFrecuente(
+         document.getElementById('empresa').value,
+@@ -728,17 +738,17 @@ if (typeof agregarAlCalendario === 'function') {
+     agregarAlCalendario(comandaData);
+ }
+ 
+-// Guardar cÃ³digo e ID globalmente para pasarlos al formulario de logÃ­stica
++// Guardar código e ID globalmente para pasarlos al formulario de logística
+ window.ultimoCodigoCocina = codigo;
+ window.ultimoOrdenId      = null;
+ 
+ if (categoriaId === 3) {
+-    // Cocteles/Celebraciones â†’ pÃ¡gina separada de logÃ­stica
++    // Cocteles/Celebraciones → página separada de logística
+     setTimeout(() => {
+         mostrarModalConfirmacionLogistica();
+     }, 1000);
+ } else {
+-    // Resto de categorÃ­as â†’ guardar logÃ­stica inline en Supabase si hay datos
++    // Resto de categorías → guardar logística inline en Supabase si hay datos
+     const datosLogInline = obtenerDatosLogisticaInline();
+     if (datosLogInline && typeof guardarLogisticaInlineEnSupabase === 'function') {
+         guardarLogisticaInlineEnSupabase(codigo, comandaData, datosLogInline);
+@@ -748,7 +758,7 @@ if (categoriaId === 3) {
+     const payloadParaDetalle = {
+         ...comandaData,
+         codigo,
+-        logistica_inline: comandaData.logistica  // datos del formulario (direcciÃ³n, contacto, etc.)
++        logistica_inline: comandaData.logistica  // datos del formulario (dirección, contacto, etc.)
+         // material_logistica ya viene en comandaData
+     };
+ 
+@@ -763,18 +773,18 @@ if (categoriaId === 3) {
+         _renderDetalleComanda(payloadParaDetalle);
+     }
+ 
+-    // 3. Limpiar formulario DESPUÃ‰S (ya no afecta al detalle)
++    // 3. Limpiar formulario DESPUÉS (ya no afecta al detalle)
+     limpiarFormularioComanda();
+ }
+         }
+ 
+         
+     } catch (error) {
+-            mostrarMensaje('Error al guardar la comanda: ' + error.message, 'error');
++        mostrarMensaje('❌ Error al guardar la comanda: ' + error.message, 'error');
+         console.error('Error en manejarEnvioFormulario:', error);
+         
+     } finally {
+-        // Restaurar botÃ³n solo si no es ediciÃ³n
++        // Restaurar botón solo si no es edición
+         if (!window.comandaEditando) {
+             submitBtn.innerHTML = originalText;
+             submitBtn.disabled = false;
+@@ -782,22 +792,22 @@ if (categoriaId === 3) {
+     }
+ }
+ 
+-// ========== FUNCIONES PARA MODAL DE LOGÃSTICA ==========
++// ========== FUNCIONES PARA MODAL DE LOGÍSTICA ==========
+ 
+ /**
+- * Muestra el modal de confirmaciÃ³n para crear comanda de logÃ­stica
++ * Muestra el modal de confirmación para crear comanda de logística
+  */
+ function mostrarModalConfirmacionLogistica() {
+     const modal = document.getElementById('modalConfirmacionLogistica');
+     if (modal) {
+         modal.style.display = 'flex';
+-        // La categorÃ­a 3 ya fue validada antes de llamar esta funciÃ³n.
++        // La categoría 3 ya fue validada antes de llamar esta función.
+         // No se usa preferencia guardada: siempre se pregunta al usuario.
+     }
+ }
+ 
+ /**
+- * Cierra el modal de confirmaciÃ³n
++ * Cierra el modal de confirmación
+  */
+ function cerrarModalConfirmacion() {
+     const modal = document.getElementById('modalConfirmacionLogistica');
+@@ -816,8 +826,8 @@ function cerrarModalConfirmacion() {
+ }
+ 
+ /**
+- * Abre el formulario de logÃ­stica con los datos heredados de la comanda de cocina.
+- * Se llama cuando el usuario confirma "SÃ­" en el modal de logÃ­stica.
++ * Abre el formulario de logística con los datos heredados de la comanda de cocina.
++ * Se llama cuando el usuario confirma "Sí" en el modal de logística.
+  */
+ function crearComandaLogistica() {
+     const recordar = document.getElementById('recordarPreferencia')?.checked;
+@@ -825,11 +835,11 @@ function crearComandaLogistica() {
+         localStorage.setItem('crearLogisticaAutomaticamente', 'true');
+     }
+ 
+-    // Cerrar el modal de confirmaciÃ³n
++    // Cerrar el modal de confirmación
+     const modal = document.getElementById('modalConfirmacionLogistica');
+     if (modal) modal.style.display = 'none';
+ 
+-    // Capturar datos base de la comanda de cocina reciÃ©n creada
++    // Capturar datos base de la comanda de cocina recién creada
+     const datosBase = {
+         empresa:      document.getElementById('empresa')?.value || '',
+         responsable:  document.getElementById('responsable')?.value || '',
+@@ -839,52 +849,52 @@ function crearComandaLogistica() {
+         notas:        document.getElementById('alergias_notas')?.value || ''
+     };
+ 
+-    // El cÃ³digo de cocina estÃ¡ guardado en window.ultimoCodigoCocina
++    // El código de cocina está guardado en window.ultimoCodigoCocina
+     const codigoCocina = window.ultimoCodigoCocina || '';
+     const ordenId      = window.ultimoOrdenId      || null;
+ 
+-    // Abrir formulario de logÃ­stica (definido en logistics.js)
++    // Abrir formulario de logística (definido en logistics.js)
+     if (typeof abrirFormularioLogistica === 'function') {
+         abrirFormularioLogistica(codigoCocina, ordenId, datosBase);
+     } else {
+-        console.error('logistics.js no est? cargado');
++        console.error('❌ logistics.js no está cargado');
+     }
+ }
+ 
+ /**
+- * Guarda una comanda de logÃ­stica en el historial
+- * MODIFICADO: AÃ±o de 2 dÃ­gitos
+- * @param {Object} datosLogistica - Datos de la comanda de logÃ­stica
+- * @returns {string} CÃ³digo de la comanda
++ * Guarda una comanda de logística en el historial
++ * MODIFICADO: Año de 2 dígitos
++ * @param {Object} datosLogistica - Datos de la comanda de logística
++ * @returns {string} Código de la comanda
+  */
+ function guardarComandaLogisticaEnHistorial(datosLogistica) {
+     try {
+         // Obtener historial actual
+         let historial = JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
+         
+-        // Generar cÃ³digo Ãºnico con aÃ±o de 2 dÃ­gitos
++        // Generar código único con año de 2 dígitos
+         const fecha = new Date();
+-        const anio = fecha.getFullYear().toString().slice(-2); // 2 ultimos digitos
+-        const codigo = `LOG-${anio}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
++        const año = fecha.getFullYear().toString().slice(-2); // 2 últimos dígitos
++        const codigo = `LOG-${año}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
+         
+-        // Crear objeto de comanda de logÃ­stica
++        // Crear objeto de comanda de logística
+         const comandaLogistica = {
+             codigo: codigo,
+             ...datosLogistica,
+-            fecha_modificacion: new Date().toISOString()
+-        };
+-        
++        fecha_modificacion: new Date().toISOString()
++    };
++
+         // Agregar al historial
+         historial.unshift(comandaLogistica);
+         
+         // Guardar en localStorage
+         localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+         
+-        console.log(`Comanda de logÃ­stica ${codigo} guardada en historial`);
++        console.log(`Comanda de logística ${codigo} guardada en historial`);
+         return codigo;
+         
+     } catch (error) {
+-        console.error('Error al guardar comanda de logÃ­stica:', error);
++        console.error('Error al guardar comanda de logística:', error);
+         throw error;
+     }
+ }
+@@ -905,12 +915,12 @@ function limpiarFormularioComanda() {
+     window.referenciasSeleccionadas = { saladas: [], postres: [] };
+     window.referenciasDesayuno = {};
+ 
+-    // Resetear menÃºs acumulados y material acumulado
++    // Resetear menús acumulados y material acumulado
+     if (typeof window.resetearMenusAcumulados === 'function') {
+         window.resetearMenusAcumulados();
+     }
+     
+-    // CORRECCIÃ“N: Limpiar selecciones de Foodbox Lunch correctamente
++    // CORRECCIÓN: Limpiar selecciones de Foodbox Lunch correctamente
+     if (window.seleccionesFoodbox) {
+         window.seleccionesFoodbox.ensalada_principal = null;
+         window.seleccionesFoodbox.sandwich_principal = null;
+@@ -918,7 +928,7 @@ function limpiarFormularioComanda() {
+         window.seleccionesFoodbox.adicionales = [];
+     }
+     
+-    // Limpiar errores de validaciÃ³n
++    // Limpiar errores de validación
+     document.querySelectorAll('.error-message').forEach(el => {
+         el.style.display = 'none';
+     });
+@@ -928,12 +938,12 @@ function limpiarFormularioComanda() {
+         input.style.backgroundColor = '';
+     });
+     
+-    // Ocultar secciones dinÃ¡micas - AÃ‘ADIR 'foodboxLunchSection'
++    // Ocultar secciones dinámicas - AÑADIR 'foodboxLunchSection'
+     const seccionesOcultar = [
+         'multiplicadorSection',
+         'referenciasSection',
+         'desayunoReferencesSection',
+-        'foodboxLunchSection',  // Â¡AÃ‘ADIR ESTA!
++        'foodboxLunchSection',  // ¡AÑADIR ESTA!
+         'menusAdicionalesList',
+         'menusAnadidosList'
+     ];
+@@ -945,13 +955,13 @@ function limpiarFormularioComanda() {
+         }
+     });
+     
+-    // Limpiar contenedores - AÃ‘ADIR LOS DE FOODBOX
++    // Limpiar contenedores - AÑADIR LOS DE FOODBOX
+     const contenedoresLimpiar = [
+         'menusContainer',
+         'referenciasSaladasGrid',
+         'referenciasPostresGrid',
+         'referenciasDesayunoGrid',
+-        'foodboxPrincipalGrid',      // Â¡AÃ‘ADIR ESTOS!
++        'foodboxPrincipalGrid',      // ¡AÑADIR ESTOS!
+         'foodboxPostresGrid',
+         'foodboxAdicionalesContainer'
+     ];
+@@ -973,10 +983,10 @@ function limpiarFormularioComanda() {
+         responsableInput.value = obtenerNombreUsuarioActual();
+     }
+ 
+-    // Limpiar campos de logÃ­stica (secciÃ³n siempre visible)
++    // Limpiar campos de logística (sección siempre visible)
+     if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
+ 
+-    // Limpiar material de logÃ­stica: estado interno y DOM
++    // Limpiar material de logística: estado interno y DOM
+     if (typeof window.limpiarMaterialLogistica === 'function') {
+         window.limpiarMaterialLogistica();
+     }
+@@ -1002,7 +1012,7 @@ function mostrarMensaje(texto, tipo) {
+     div.className = `message message-${tipo}`;
+     div.style.display = 'block';
+     
+-    // Ocultar despuÃ©s de 5 segundos
++    // Ocultar después de 5 segundos
+     setTimeout(() => {
+         div.className = 'message';
+         div.style.display = 'none';
+@@ -1026,7 +1036,7 @@ document.getElementById("btnLogin")?.addEventListener("click", async () => {
+ 
+   try {
+     await Auth.signIn(email, pass);
+-    if (msg) msg.textContent = "Sesi?n iniciada";
++    if (msg) msg.textContent = "Sesión iniciada ✅";
+   } catch (error) {
+     if (msg) msg.textContent = "Error: " + (error?.message || error);
+     console.error(error);
+@@ -1037,7 +1047,7 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
+   const msg = document.getElementById("loginMsg");
+   try {
+     await Auth.signOut();
+-    if (msg) msg.textContent = "Sesi?n cerrada";
++    if (msg) msg.textContent = "Sesión cerrada ✅";
+   } catch (error) {
+     if (msg) msg.textContent = "Error: " + (error?.message || error);
+   }
+@@ -1068,7 +1078,7 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
+ 
+ 
+ // ============================================================
+-// FUNCIÃ“N GLOBAL: Actualizar tipo de menaje (termos)
++// FUNCIÓN GLOBAL: Actualizar tipo de menaje (termos)
+ // ============================================================
+ window.actualizarTipoMenajeGlobal = function() {
+     const tipoMenaje = document.getElementById('tipo_menaje')?.value;
+@@ -1089,7 +1099,7 @@ window.actualizarTipoMenajeGlobal = function() {
+         }
+     });
+ 
+-    // 2. Propagar el tipo_menaje a todos los menÃºs ya acumulados
++    // 2. Propagar el tipo_menaje a todos los menús ya acumulados
+     if (window.MenusAdicionalesState?.menusAdicionales) {
+         window.MenusAdicionalesState.menusAdicionales.forEach(m => {
+             m.tipo_menaje = tipoMenaje;
+diff --git a/index.html b/index.html
+index 07ddaa4..08d9692 100644
+--- a/index.html
++++ b/index.html
+@@ -6,10 +6,10 @@
+     <title>CaterCloud - Sistema de Comandas</title>
+     
+     <!-- CSS -->
+-    <link rel="stylesheet" href="css/styles.css">
+-    <link rel="stylesheet" href="css/dashboard.css">
+-    <link rel="stylesheet" href="css/calendar.css">
+-    <link rel="stylesheet" href="css/forms.css">
++    <link rel="stylesheet" href="css/styles.css?v=20260605n">
++    <link rel="stylesheet" href="css/dashboard.css?v=20260605n">
++    <link rel="stylesheet" href="css/calendar.css?v=20260605n">
++    <link rel="stylesheet" href="css/forms.css?v=20260605p">
+ 
+     <!-- Fuentes corporativas -->
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+@@ -343,6 +343,17 @@
+                 <!-- Comanda: Material de logística -->
+                 <div id="materialLogisticaInline" style="display: none;"></div>
+ 
++                <!-- Comanda: Notas adicionales logística -->
++                <div class="form-section">
++                    <h3>📝 Notas Adicionales Logística</h3>
++
++                    <div class="form-group">
++                        <label for="log_inline_notas">Información importante para logística</label>
++                        <textarea id="log_inline_notas" rows="3" placeholder="Instrucciones de entrega, acceso, montaje, parking, ascensor, persona de recepción, etc..."></textarea>
++                        <span class="dc-field-error" id="log_inline_notas_err"></span>
++                    </div>
++                </div>
++
+                 <!-- Mensajes del formulario -->
+                 <div id="message" class="message"></div>
+                 
+@@ -711,6 +722,18 @@
+                 <div class="detalle-body" id="detalleLogisticaContent"></div>
+             </div>
+ 
++            <!-- Detalle: Notas adicionales logística -->
++            <div class="dc-section" id="detalleNotasLogisticaSection" style="display:none;">
++                <div class="dc-section-header">
++                    <span>📝</span>
++                    <h3>Notas Adicionales Logística</h3>
++                </div>
++
++                <div class="detalle-body">
++                    <div id="detalleNotasLogistica"></div>
++                </div>
++            </div>
++
+       </div>
+     </div>
+ 
+@@ -880,8 +903,8 @@
+     <script src="js/bandejas-preparadas.js"></script>
+     <script src="js/foodbox-lunch.js"></script>
+     <script src="js/comanda-form.js"></script>
+-    <script src="js/historial.js?v=20260605"></script>
+-    <script src="js/main.js?v=20260605"></script>
++    <script src="js/historial.js?v=20260605b"></script>
++    <script src="js/main.js?v=20260605b"></script>
+     <script src="js/preferencias.js"></script>
+     <script src="js/logistics.js"></script>
+     <script src="js/generar-comandas.js"></script>
+diff --git a/js/historial.js b/js/historial.js
+index 0ccf692..7353d82 100644
+--- a/js/historial.js
++++ b/js/historial.js
+@@ -143,15 +143,10 @@ function _renderExpedientePedido(comanda) {
+         : 'Sin fecha';
+     const estado = comanda.estado || 'creada';
+     const estadoLabel = getEstadoPedidoLabel(estado);
+-    const documentos = comanda.documentos || {};
+-    const tieneCocina = documentos.cocina_path;
+-    const tieneLogistica = documentos.logistica_path;
+     const esSolicitud = comanda.tipo_registro === 'solicitud' || ['negociacion', 'por_confirmar', 'confirmado'].includes(estado);
+     const puedeCrearComanda = estado !== 'anulada';
+     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+-    const archivosHtml = esSolicitud
+-        ? _renderArchivosSolicitud(comanda)
+-        : _renderArchivosComanda(documentos, tieneCocina, tieneLogistica);
++    const archivosHtml = _renderArchivosSolicitud(comanda);
+ 
+     cont.innerHTML = `
+         <div class="expediente-header">
+@@ -198,23 +193,6 @@ function _renderExpedientePedido(comanda) {
+         </div>`;
+ }
+ 
+-function _renderArchivosComanda(documentos, tieneCocina, tieneLogistica) {
+-    return `<div class="expediente-files">
+-        <div class="expediente-file">
+-            <span>Comanda cocina</span>
+-            ${tieneCocina
+-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.cocina_path}')">Abrir</button>`
+-                : `<em>Pendiente</em>`}
+-        </div>
+-        <div class="expediente-file">
+-            <span>Comanda logistica</span>
+-            ${tieneLogistica
+-                ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${documentos.logistica_path}')">Abrir</button>`
+-                : `<em>Pendiente</em>`}
+-        </div>
+-    </div>`;
+-}
+-
+ function _renderArchivosSolicitud(comanda) {
+     const adjuntos = comanda.adjuntos || [];
+     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+@@ -222,11 +200,14 @@ function _renderArchivosSolicitud(comanda) {
+         ? adjuntos.map((a, index) => `
+             <div class="expediente-file">
+                 <span>${a.nombre || `Archivo ${index + 1}`}</span>
+-                ${a.tipo === 'link' && a.url
+-                    ? `<a href="${a.url}" target="_blank">Abrir</a>`
+-                    : (a.path
+-                        ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${a.path}')">Abrir</button>`
+-                        : `<em>Guardado</em>`)}
++                <div class="expediente-file-actions">
++                    ${a.tipo === 'link' && a.url
++                        ? `<a href="${a.url}" target="_blank">Abrir</a>`
++                        : (a.path
++                            ? `<button type="button" class="expediente-file-link" onclick="abrirDocumentoPrivado('${a.path}')">Abrir</button>`
++                            : `<em>Guardado</em>`)}
++                    ${puedeEditar ? `<button type="button" class="expediente-file-delete" onclick="eliminarAdjuntoSolicitud('${comanda.codigo}', ${index})">Eliminar</button>` : ''}
++                </div>
+             </div>
+         `).join('')
+         : '<p class="expediente-muted">Aun no hay archivos cargados para esta solicitud.</p>';
+@@ -415,6 +396,47 @@ async function guardarAdjuntoSolicitud(codigo, adjunto) {
+     return actualizarComandaEnHistorial(codigo, { adjuntos });
+ }
+ 
++async function eliminarAdjuntoSolicitud(codigo, index) {
++    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede eliminar archivos.')) {
++        return;
++    }
++
++    const comanda = obtenerComandaDelHistorial(codigo);
++    if (!comanda) {
++        alert('Pedido no encontrado.');
++        return;
++    }
++
++    const adjuntos = [...(comanda.adjuntos || [])];
++    const adjunto = adjuntos[index];
++    if (!adjunto) return;
++
++    if (!confirm(`Eliminar el archivo "${adjunto.nombre || 'Archivo'}"?`)) return;
++
++    if (adjunto.path && window.supabaseClient) {
++        try {
++            const { error } = await window.supabaseClient.storage
++                .from('comandas')
++                .remove([adjunto.path]);
++
++            if (error) throw error;
++        } catch (error) {
++            console.warn('No se pudo eliminar el archivo de Storage:', error);
++            alert('No se pudo eliminar el archivo del almacenamiento. Revisa permisos de Storage.');
++            return;
++        }
++    }
++
++    adjuntos.splice(index, 1);
++    const ok = await actualizarComandaEnHistorial(codigo, { adjuntos });
++    if (!ok) {
++        alert('No se pudo actualizar el expediente.');
++        return;
++    }
++
++    verExpedientePedido(codigo);
++}
++
+ async function abrirDocumentoPrivado(path) {
+     if (!path || !window.supabaseClient) {
+         alert('No se pudo abrir el archivo.');
+@@ -598,6 +620,13 @@ function _renderTotalTermosDetalle(comanda) {
+ 
+ function _renderDetalleComanda(comanda) {
+     const el = (id) => document.getElementById(id);
++    const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
++        '&': '&amp;',
++        '<': '&lt;',
++        '>': '&gt;',
++        '"': '&quot;',
++        "'": '&#39;'
++    })[char]);
+ 
+     if (el('detalleCodigo')) el('detalleCodigo').textContent = comanda.codigo || '';
+ 
+@@ -733,7 +762,6 @@ function _renderDetalleComanda(comanda) {
+             { label: 'Hora Evento', valor: logInline?.hora_evento },
+             { label: 'Dirección', valor: logInline?.direccion },
+             { label: 'Cód. Postal', valor: logInline?.codigo_postal },
+-            { label: 'Notas', valor: logInline?.notas_logistica },
+         ].filter(c => c.valor);
+ 
+         if (campos.length) {
+@@ -817,6 +845,20 @@ function _renderDetalleComanda(comanda) {
+         }
+     }
+ 
++    const secNotasLogistica = el('detalleNotasLogisticaSection');
++    const divNotasLogistica = el('detalleNotasLogistica');
++    const notasLogistica = (comanda.logistica_inline || comanda.logistica || {}).notas_logistica || '';
++
++    if (secNotasLogistica && divNotasLogistica) {
++        if (notasLogistica) {
++            secNotasLogistica.style.display = '';
++            divNotasLogistica.innerHTML = `<div class="detalle-logistica-notas">${textoSeguro(notasLogistica)}</div>`;
++        } else {
++            secNotasLogistica.style.display = 'none';
++            divNotasLogistica.innerHTML = '';
++        }
++    }
++
+     if (el('detalleEstado')) {
+         el('detalleEstado').textContent = comanda.estado
+             ? comanda.estado.charAt(0).toUpperCase() + comanda.estado.slice(1)
+@@ -851,7 +893,177 @@ function _renderDetalleComanda(comanda) {
+     }
+ }
+ 
+-function editarComanda() {
++function _clonarValorComanda(valor) {
++    try {
++        return JSON.parse(JSON.stringify(valor || null));
++    } catch (error) {
++        return valor;
++    }
++}
++
++function _inferirCategoriaMenuEdicion(menu) {
++    if (menu?.categoriaId) return Number(menu.categoriaId);
++    if (menu?._cat) return Number(menu._cat);
++    const texto = String(menu?.categoria || '').toLowerCase();
++    if (texto.includes('desayuno')) return 1;
++    if (texto.includes('foodbox lunch')) return 4;
++    if (texto.includes('bandeja') || texto.includes('diy')) return 5;
++    if (texto.includes('foodbox') || texto.includes('comida')) return 2;
++    return Number(document.getElementById('categoria')?.value) || 0;
++}
++
++function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
++    const categoriaId = _inferirCategoriaMenuEdicion(menu);
++    const item = {
++        ..._clonarValorComanda(menu),
++        id: menu?.id || menu?.menu_id || '',
++        nombre: menu?.nombre || menu?.menu_principal?.nombre || 'Menu',
++        categoriaId,
++        categoria: menu?.categoria || '',
++        pax: Number(menu?.pax || menu?.pax_adicional || (esPrincipal ? comanda?.pax : 0)) || 0,
++        tipo_menaje: menu?.tipo_menaje || comanda?.tipo_menaje || null,
++        material: _clonarValorComanda(menu?.material || null)
++    };
++
++    if (esPrincipal) {
++        if (!item.referencias_desayuno && comanda?.referencias_desayuno) {
++            item.referencias_desayuno = _clonarValorComanda(comanda.referencias_desayuno);
++        }
++        if (!item.referencias && comanda?.referencias) {
++            item.referencias = _clonarValorComanda(comanda.referencias);
++        }
++        if (!item.multiplicadores && comanda?.multiplicadores) {
++            item.multiplicadores = _clonarValorComanda(comanda.multiplicadores);
++        }
++        if (!item.foodbox_lunch && comanda?.foodbox_lunch) {
++            item.foodbox_lunch = _clonarValorComanda(comanda.foodbox_lunch);
++        }
++        if (!item.bandejas && comanda?.bandejas) {
++            item.bandejas = _clonarValorComanda(comanda.bandejas);
++        }
++    }
++
++    return item;
++}
++
++function _sumarMaterialParaEdicion(base, nuevo) {
++    const result = {
++        bebidas: [...(base?.bebidas || [])],
++        menaje: [...(base?.menaje || [])],
++        extras: [...(base?.extras || [])]
++    };
++
++    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
++        (nuevo?.[tipo] || []).forEach(item => {
++            const nombre = item?.nombre || item?.id || '';
++            const unidad = item?.unidad || '';
++            const existente = result[tipo].find(i => (i.nombre || i.id || '') === nombre && (i.unidad || '') === unidad);
++            if (existente) {
++                existente.cantidad = (Number(existente.cantidad) || 0) + (Number(item.cantidad) || 0);
++                existente.checked = existente.checked !== false || item.checked !== false;
++            } else {
++                result[tipo].push(_clonarValorComanda(item));
++            }
++        });
++    });
++
++    return result;
++}
++
++function _rellenarCampoEdicion(id, valor) {
++    const el = document.getElementById(id);
++    if (el) el.value = valor || '';
++}
++
++async function _activarPrimerMenuEdicion(menu) {
++    if (!menu) return;
++
++    const categoriaId = Number(menu.categoriaId || menu._cat || 0);
++    const categoriaSelect = document.getElementById('categoria');
++    if (!categoriaSelect) return;
++
++    categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
++    if (typeof cargarMenus === 'function') {
++        await cargarMenus();
++    }
++
++    const nodes = document.querySelectorAll('#menusContainer .menu-option');
++    let nodeEncontrado = null;
++    nodes.forEach(node => {
++        if (nodeEncontrado) return;
++        try {
++            const data = JSON.parse(node.dataset.menu || '{}');
++            if (String(data.id) === String(menu.id)) nodeEncontrado = node;
++        } catch (error) {}
++    });
++
++    if (nodeEncontrado && typeof seleccionarMenu === 'function') {
++        await seleccionarMenu(menu.id, nodeEncontrado);
++    } else {
++        window.menuSeleccionado = { ...menu, _cat: categoriaId };
++        _rellenarCampoEdicion('menu_id', menu.id || '');
++    }
++}
++
++async function cargarComandaEnFormularioEdicion(comanda) {
++    _rellenarCampoEdicion('empresa', comanda.empresa || '');
++    _rellenarCampoEdicion('responsable', comanda.responsable || '');
++    _rellenarCampoEdicion('pax', comanda.pax || '');
++    _rellenarCampoEdicion('hora_salida', comanda.hora_salida || '');
++    _rellenarCampoEdicion('fecha_evento', (comanda.fecha_evento || '').split('T')[0]);
++    _rellenarCampoEdicion('tipo_menaje', comanda.tipo_menaje || '');
++    _rellenarCampoEdicion('alergias_notas', comanda.alergias?.notas || '');
++
++    const logistica = comanda.logistica_inline || comanda.logistica || {};
++    _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
++    _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
++    _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
++    _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
++    _rellenarCampoEdicion('log_inline_direccion', logistica.direccion || '');
++    _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
++    _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
++
++    const menus = [];
++    if (comanda.menu_principal) {
++        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
++    }
++    (comanda.menus_adicionales || []).forEach(menu => {
++        menus.push(_normalizarMenuEdicion(menu, comanda, false));
++    });
++
++    if (!menus.length && comanda.menu_principal?.nombre) {
++        menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
++    }
++
++    window.MenusAdicionalesState = window.MenusAdicionalesState || { menusAdicionales: [] };
++    window.MenusAdicionalesState.menusAdicionales = menus;
++    window.menusAdicionales = menus;
++    window._materialAcumulado = _clonarValorComanda(comanda.material_logistica) || { bebidas: [], menaje: [], extras: [] };
++
++    if (!window._materialAcumulado.bebidas?.length && !window._materialAcumulado.menaje?.length && !window._materialAcumulado.extras?.length) {
++        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialParaEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
++    }
++
++    const paxTotal = menus.reduce((total, menu) => total + (Number(menu.pax) || 0), 0);
++    const paxTotalEl = document.getElementById('paxTotalValor');
++    if (paxTotalEl) paxTotalEl.textContent = paxTotal;
++    const paxWrap = document.getElementById('paxTotalWrap');
++    if (paxWrap) paxWrap.style.display = menus.length ? 'block' : 'none';
++
++    if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
++
++    try {
++        await _activarPrimerMenuEdicion(menus[0]);
++    } catch (error) {
++        console.warn('No se pudo activar el menu al editar:', error);
++    }
++
++    window.MenusAdicionalesState.menusAdicionales = menus;
++    window.menusAdicionales = menus;
++    if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
++}
++
++async function editarComanda() {
+     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
+         return;
+     }
+@@ -864,21 +1076,13 @@ function editarComanda() {
+         return;
+     }
+ 
+-    document.getElementById('empresa').value = window.comandaEditando.empresa || '';
+-    document.getElementById('responsable').value = window.comandaEditando.responsable || '';
+-    document.getElementById('pax').value = window.comandaEditando.pax || '';
+-    document.getElementById('hora_salida').value = window.comandaEditando.hora_salida || '';
+-    document.getElementById('fecha_evento').value = window.comandaEditando.fecha_evento || '';
+-
+-    const notasInput = document.getElementById('alergias_notas');
+-
+-    if (notasInput && window.comandaEditando.alergias) {
+-        notasInput.value = window.comandaEditando.alergias.notas || '';
+-    }
+-
+     document.getElementById('detalleComanda').style.display = 'none';
+     document.getElementById('comandaForm').style.display = 'block';
+     document.getElementById('dashboard').style.display = 'none';
++    const expedientePedido = document.getElementById('expedientePedido');
++    const historialPage = document.getElementById('historialPage');
++    if (expedientePedido) expedientePedido.style.display = 'none';
++    if (historialPage) historialPage.style.display = 'none';
+ 
+     const submitBtn = document.querySelector('#comandaCocinaForm button[type="submit"]');
+ 
+@@ -886,6 +1090,8 @@ function editarComanda() {
+         submitBtn.textContent = '💾 Guardar Cambios';
+     }
+ 
++    await cargarComandaEnFormularioEdicion(window.comandaEditando);
++
+     console.log('Comanda cargada para edición:', window.comandaEditando.codigo);
+ }
+ 
+diff --git a/js/main.js b/js/main.js
+index 6bc8e2c..062feda 100644
+--- a/js/main.js
++++ b/js/main.js
+@@ -445,9 +445,12 @@ async function manejarEnvioFormulario(e) {
+     }
+     
+     const categoriaId = parseInt(document.getElementById('categoria').value);
++    const menusParaValidar = typeof window.obtenerMenusAcumulados === 'function'
++        ? window.obtenerMenusAcumulados() : [];
++    const editandoConMenusGuardados = !!window.comandaEditando && menusParaValidar.length > 0;
+     
+     // Validaciones específicas por categoría
+-    if (categoriaId == 2 || categoriaId == 3) { // FOODBOX/COMIDA o SERVICIOS
++    if (!editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
+         const seleccionadasSaladas = window.referenciasSeleccionadas ? 
+             window.referenciasSeleccionadas.saladas.length : 0;
+         
+@@ -459,7 +462,7 @@ async function manejarEnvioFormulario(e) {
+     }
+     
+ // Validación para Foodbox Lunch (MEJORADA)
+-if (categoriaId == 4) { // FOODBOX LUNCH
++if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
+     // Usar la nueva función de validación mejorada
+     if (typeof validarFoodboxLunchMejorado === 'function') {
+         if (!validarFoodboxLunchMejorado()) {
+@@ -569,11 +572,19 @@ if (categoriaId == 4) { // FOODBOX LUNCH
+         estado: 'creada',
+         version: '1.0'
+     };
++    comandaData.logistica_inline = comandaData.logistica;
+     
+     try {
+         let codigo;
+         
+         if (window.comandaEditando) {
++            comandaData.fecha_creacion = window.comandaEditando.fecha_creacion || comandaData.fecha_creacion;
++            comandaData.creado_por_id = window.comandaEditando.creado_por_id || comandaData.creado_por_id;
++            comandaData.creado_por_nombre = window.comandaEditando.creado_por_nombre || comandaData.creado_por_nombre;
++            comandaData.creado_por_email = window.comandaEditando.creado_por_email || comandaData.creado_por_email;
++            comandaData.adjuntos = window.comandaEditando.adjuntos || comandaData.adjuntos || [];
++            comandaData.documentos = window.comandaEditando.documentos || comandaData.documentos || {};
++
+             // Actualizar comanda existente
+             const resultado = await actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
+             
+@@ -870,9 +881,9 @@ function guardarComandaLogisticaEnHistorial(datosLogistica) {
+         const comandaLogistica = {
+             codigo: codigo,
+             ...datosLogistica,
+-            fecha_modificacion: new Date().toISOString()
+-        };
+-        
++        fecha_modificacion: new Date().toISOString()
++    };
++
+         // Agregar al historial
+         historial.unshift(comandaLogistica);
+         

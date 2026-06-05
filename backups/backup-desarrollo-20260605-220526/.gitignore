@@ -1,0 +1,12 @@
+# Crear archivo .gitignore con contenido básico
+echo "# Archivos de Python" > .gitignore
+echo "__pycache__/" >> .gitignore
+echo "*.pyc" >> .gitignore
+echo "" >> .gitignore
+echo "# Entornos virtuales" >> .gitignore
+echo ".venv/" >> .gitignore
+echo "venv/" >> .gitignore
+echo "" >> .gitignore
+echo "# Sistema" >> .gitignore
+echo ".DS_Store" >> .gitignore
+echo "Thumbs.db" >> .gitignore

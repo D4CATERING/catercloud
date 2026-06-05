@@ -3867,3 +3867,530 @@ h3 {
   padding: 2px 4px;
   width: 40px;
 }
+
+/* Vista de logistica posterior a guardar: material ordenado */
+#logisticaForm .dc-material-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+  padding: 12px;
+}
+
+#logisticaForm .dc-material-col {
+  border-radius: 8px;
+  min-width: 0;
+}
+
+#logisticaForm .dc-material-col-header {
+  min-height: 54px;
+}
+
+#logisticaForm .dc-material-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px 28px;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+  padding: 8px 10px;
+}
+
+#logisticaForm .dc-material-item-info {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+#logisticaForm .dc-material-nombre {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: .74rem;
+  line-height: 1.22;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+#logisticaForm .dc-material-precio,
+#logisticaForm .dc-material-incluido {
+  justify-self: start;
+}
+
+#logisticaForm .dc-material-item-right {
+  display: contents;
+}
+
+#logisticaForm .dc-material-cantidad {
+  width: 62px;
+  min-height: 34px;
+  justify-self: center;
+  grid-column: 2;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 400;
+}
+
+#logisticaForm .dc-material-btn {
+  width: 28px;
+  height: 28px;
+  justify-self: end;
+  grid-column: 3;
+}
+
+#logisticaForm .dc-material-item:not(.dc-material-item--active) .dc-material-item-info {
+  padding-right: 4px;
+}
+
+#logisticaForm .dc-material-item-expandable .dc-material-item {
+  grid-template-columns: minmax(0, 1fr) 28px;
+}
+
+#logisticaForm .dc-material-item-expandable .dc-material-btn,
+#logisticaForm .dc-material-item-expandable .dc-material-expand-btn {
+  grid-column: 2;
+}
+
+#logisticaForm .dc-material-subitem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 62px 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px 18px;
+}
+
+#logisticaForm .dc-material-subitem .dc-material-cantidad {
+  width: 58px;
+}
+
+#logisticaForm .dc-material-unidad {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+#materialLogisticaPage .dc-material-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+#materialLogisticaPage .dc-material-col {
+  min-width: 0;
+}
+
+#materialLogisticaPage .dc-material-item,
+#materialLogisticaPage .dc-material-subitem {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 58px 42px;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 7px 11px;
+}
+
+#materialLogisticaPage .dc-material-item > input[type="checkbox"],
+#materialLogisticaPage .dc-material-subitem > input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  justify-self: center;
+  accent-color: var(--dc-rojo);
+}
+
+#materialLogisticaPage .dc-material-nombre {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  font-size: .75rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+#materialLogisticaPage .dc-material-cantidad {
+  width: 56px;
+  min-height: 34px;
+  justify-self: center;
+  padding: 3px 5px;
+  border-radius: 6px;
+  font-size: .78rem;
+  font-weight: 400;
+}
+
+#materialLogisticaPage .dc-material-unidad {
+  justify-self: end;
+  color: var(--dc-text);
+  font-size: .72rem;
+  white-space: nowrap;
+}
+
+#materialLogisticaPage .dc-material-expand-btn {
+  justify-self: end;
+}
+
+#materialLogisticaPage .dc-material-item:has(.dc-material-expand-btn) {
+  grid-template-columns: 18px minmax(0, 1fr) 34px;
+}
+
+/* Mobile forms */
+@media (max-width: 760px) {
+  .comanda-form-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .comanda-form-aside {
+    position: static;
+    order: 2;
+  }
+
+  .comanda-form-main {
+    min-width: 0;
+  }
+
+  .form-section,
+  .dc-section {
+    border-radius: 9px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .dc-section-header {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .dc-section-header h3,
+  .form-section h3,
+  h3 {
+    font-size: .72rem;
+    line-height: 1.2;
+  }
+
+  .dc-info-grid,
+  .dc-fields-grid,
+  .dc-two-column-grid,
+  .multiplicadores-container,
+  .checkbox-group {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: none !important;
+  }
+
+  .dc-info-grid > *,
+  .dc-field--wide,
+  .dc-log-wide,
+  .dc-log-full {
+    grid-column: auto !important;
+    grid-area: auto !important;
+  }
+
+  label,
+  .dc-label {
+    font-size: .76rem;
+  }
+
+  input,
+  select,
+  textarea,
+  .dc-input {
+    min-height: 38px;
+    font-size: .86rem;
+  }
+
+  textarea {
+    min-height: 86px;
+  }
+
+  .menu-selection,
+  #menusContainer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .menu-option {
+    padding: 10px;
+  }
+
+  .menu-option h4 {
+    font-size: .78rem;
+  }
+
+  .menu-option p {
+    font-size: .68rem;
+  }
+
+  .button-group,
+  .form-actions,
+  .form-actions--end,
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .button-group button,
+  .form-actions button,
+  .form-actions--end button,
+  .modal-footer button,
+  .btn-primary,
+  .btn-secondary,
+  .btn-submit {
+    width: 100%;
+    min-height: 40px;
+  }
+
+  .comanda-resumen {
+    border-radius: 9px;
+  }
+
+  .comanda-resumen-body {
+    max-height: none;
+  }
+
+  .resumen-footer .btn-guardar-comanda,
+  .resumen-footer button {
+    width: 100%;
+  }
+
+  .dc-material-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 10px;
+  }
+
+  .dc-material-grid,
+  #logisticaForm .logistics-summary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dc-material-item,
+  .dc-material-subitem {
+    align-items: flex-start;
+  }
+
+  .dc-material-item-right {
+    gap: 5px;
+  }
+
+  .dc-material-cantidad,
+  #logisticaInlineSection + #materialLogisticaInline .dc-material-cantidad,
+  #logisticaForm .dc-material-cantidad {
+    width: 44px;
+    min-height: 30px;
+  }
+
+  .diy-item-list,
+  .referencias-grid,
+  .referencias-grid--compact {
+    grid-template-columns: 1fr !important;
+  }
+
+  .diy-modal {
+    max-width: none;
+    width: calc(100vw - 24px);
+  }
+
+  #modalDesayunoOpciones.modal .modal-content {
+    width: calc(100vw - 24px);
+    max-width: none !important;
+  }
+}
+
+@media (max-width: 430px) {
+  input,
+  select,
+  textarea,
+  .dc-input {
+    font-size: .82rem;
+  }
+
+  .dc-material-item {
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .dc-material-nombre {
+    font-size: .72rem;
+  }
+}
+
+/* Ajuste final: material en pantalla de logistica posterior a guardar */
+#logisticaForm #materialLogisticaPage .dc-material-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-col {
+  display: block !important;
+  min-width: 0 !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-item {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 58px 34px !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 44px !important;
+  padding: 7px 10px !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-item-info {
+  min-width: 0 !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-item-right {
+  display: contents !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-nombre {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  font-size: .72rem !important;
+  line-height: 1.2 !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-cantidad {
+  grid-column: 2 !important;
+  width: 52px !important;
+  min-height: 30px !important;
+  justify-self: center !important;
+  padding: 2px 5px !important;
+  font-size: .76rem !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-btn {
+  grid-column: 3 !important;
+  width: 28px !important;
+  height: 28px !important;
+  justify-self: end !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-unidad {
+  grid-column: 3 !important;
+  justify-self: end !important;
+  white-space: nowrap !important;
+  font-size: .7rem !important;
+}
+
+@media (max-width: 760px) {
+  #logisticaForm #materialLogisticaPage .dc-material-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media print {
+  #logisticaForm #materialLogisticaPage .dc-material-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+}
+
+/* Logistica: quitar doble fondo y aprovechar ancho */
+#logisticaForm #materialLogisticaPage .dc-material-section {
+  background: #ffffff !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-grid {
+  background: #ffffff !important;
+  padding: 10px 14px 14px !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-col {
+  background: #ffffff !important;
+}
+
+#logisticaForm #materialLogisticaPage .dc-material-item {
+  min-height: 42px !important;
+  padding: 6px 10px !important;
+}
+
+/* Detalle de comanda: material necesario guardado */
+#detalleLogisticaSection {
+  background: var(--dc-crema) !important;
+}
+
+#detalleLogisticaSection .detalle-body {
+  background: var(--dc-crema) !important;
+  padding: 10px 14px 14px !important;
+}
+
+#detalleLogisticaContent {
+  background: var(--dc-crema) !important;
+}
+
+#detalleLogisticaContent .dc-material-grid {
+  background: var(--dc-crema) !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  padding: 0 !important;
+}
+
+#detalleLogisticaContent .dc-material-col {
+  background: #ffffff !important;
+  min-width: 0 !important;
+}
+
+#detalleLogisticaContent .dc-material-col h5 {
+  margin: 0 !important;
+  padding: 7px 10px !important;
+  min-height: 30px !important;
+}
+
+#detalleLogisticaContent .dc-material-item {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 42px 24px !important;
+  align-items: center !important;
+  gap: 4px !important;
+  min-height: 40px !important;
+  padding: 6px 10px !important;
+}
+
+#detalleLogisticaContent .dc-material-nombre {
+  display: block !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  overflow-wrap: anywhere !important;
+  font-size: .72rem !important;
+  line-height: 1.2 !important;
+}
+
+#detalleLogisticaContent .dc-material-cantidad {
+  justify-self: end !important;
+  text-align: right !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  font-size: .74rem !important;
+  font-weight: 500 !important;
+}
+
+#detalleLogisticaContent .dc-material-unidad {
+  justify-self: end !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  font-size: .7rem !important;
+}
+
+.detalle-logistica-notas {
+  margin: 4px 8px 0;
+  padding: 6px 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+@media print {
+  #detalleLogisticaContent .dc-material-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+}

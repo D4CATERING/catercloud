@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceso | Decuatro Catering</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    if (!window.supabase) {
+      document.write('<script src="vendor/supabase.min.js"><\\/script>');
+    }
+  </script>
+  <script src="js/auth.js?v=20260605b"></script>
+
+  <style>
+    :root{
+      --dc-rojo:#E1342E;
+      --dc-negro:#131B23;
+      --dc-blanco:#FFFFFF;
+      --dc-border:#e2e8f0;
+      --dc-muted:#64748b;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family:'Roboto', sans-serif;
+      background:
+        radial-gradient(900px 500px at 20% 20%, rgba(225,52,46,.18), transparent 60%),
+        radial-gradient(800px 450px at 80% 30%, rgba(225,52,46,.12), transparent 55%),
+        linear-gradient(180deg, #0b0f14, #131B23);
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    .login-header{
+      padding:40px 20px 20px;
+      text-align:center;
+    }
+
+    .login-header img{
+      height:60px;
+      object-fit:contain;
+      margin-bottom:12px;
+    }
+
+    .login-header h1{
+      font-family:'Oswald', sans-serif;
+      color:var(--dc-blanco);
+      letter-spacing:1px;
+      margin:0;
+    }
+
+    .login-content{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+
+    .login-card{
+      width:100%;
+      max-width:380px;
+      background:white;
+      border-radius:14px;
+      padding:30px;
+      box-shadow:0 20px 50px rgba(0,0,0,0.3);
+    }
+
+    .login-card h2{
+      font-family:'Oswald', sans-serif;
+      text-align:center;
+      margin:0 0 24px;
+      color:var(--dc-negro);
+    }
+
+    .field{
+      margin-bottom:16px;
+      display:flex;
+      flex-direction:column;
+    }
+
+    label{
+      font-size:.85rem;
+      margin-bottom:6px;
+      font-weight:500;
+      color:var(--dc-negro);
+    }
+
+    input{
+      width:100%;
+      padding:12px;
+      border-radius:10px;
+      border:1px solid var(--dc-border);
+      font-size:.95rem;
+      outline:none;
+    }
+
+    input:focus{
+      border-color:var(--dc-rojo);
+    }
+
+    .password-wrap{
+      position:relative;
+    }
+
+    .password-wrap input{
+      padding-right:52px;
+    }
+
+    .toggle-password{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      width:36px;
+      height:34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:none;
+      border-radius:8px;
+      background:#f8fafc;
+      color:#475569;
+      cursor:pointer;
+    }
+
+    .toggle-password:hover{
+      background:#eef2f7;
+      color:#1f2937;
+    }
+
+    .toggle-password svg{
+      width:18px;
+      height:18px;
+      stroke:currentColor;
+      pointer-events:none;
+    }
+
+    .toggle-password .icon-eye-off{
+      display:none;
+    }
+
+    .toggle-password.is-visible .icon-eye{
+      display:none;
+    }
+
+    .toggle-password.is-visible .icon-eye-off{
+      display:block;
+    }
+
+    .remember-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin:-2px 0 14px;
+      color:#475569;
+      font-size:.86rem;
+    }
+
+    .remember-row input{
+      width:16px;
+      height:16px;
+      padding:0;
+      accent-color:var(--dc-rojo);
+      cursor:pointer;
+    }
+
+    .remember-row label{
+      margin:0;
+      color:#475569;
+      font-size:.86rem;
+      font-weight:500;
+      cursor:pointer;
+    }
+
+    .btn{
+      width:100%;
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:var(--dc-rojo);
+      color:white;
+      font-family:'Oswald', sans-serif;
+      letter-spacing:.5px;
+      cursor:pointer;
+      transition:.2s ease;
+    }
+
+    .btn:hover{ opacity:.9; }
+    .btn:disabled{ opacity:.65; cursor:not-allowed; }
+
+    .login-link{
+      margin-top:12px;
+      text-align:center;
+    }
+
+    .login-link button{
+      border:none;
+      background:transparent;
+      color:var(--dc-rojo);
+      font-size:.85rem;
+      font-weight:600;
+      cursor:pointer;
+      padding:0;
+    }
+
+    .login-help{
+      color:var(--dc-muted);
+      font-size:.82rem;
+      line-height:1.4;
+      margin:-8px 0 16px;
+      text-align:center;
+    }
+
+    .msg{
+      text-align:center;
+      font-size:.9rem;
+      margin-top:12px;
+      min-height:18px;
+      color:#dc2626;
+    }
+
+    .msg.success{ color:#15803d; }
+
+    .footer{
+      padding:20px;
+      text-align:center;
+      font-size:.85rem;
+      color:#94a3b8;
+    }
+
+    .login-banner{
+      width:100%;
+      display:block;
+      line-height:0;
+    }
+
+    .login-banner img{
+      width:100%;
+      height:70px;
+      object-fit:cover;
+      object-position:center;
+      display:block;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="login-header">
+    <img src="assets/images/logo.png" alt="Decuatro Catering">
+    <h1>Decuatro Catering</h1>
+  </header>
+
+  <main class="login-content">
+    <div class="login-card">
+      <div id="loginView">
+        <h2>Iniciar sesion</h2>
+
+        <div class="field">
+          <label for="email">Correo</label>
+          <input id="email" type="email" placeholder="correo@empresa.com" autocomplete="email">
+        </div>
+
+        <div class="field">
+          <label for="password">Contrasena</label>
+          <div class="password-wrap">
+            <input id="password" type="password" placeholder="********" autocomplete="current-password">
+            <button type="button" class="toggle-password" data-target="password" aria-label="Mostrar contrasena">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3l18 18"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                <path d="M9.5 5.3A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.1 4.1"></path>
+                <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="remember-row">
+          <input id="rememberUser" type="checkbox">
+          <label for="rememberUser">Recordar usuario</label>
+        </div>
+
+        <button id="loginBtn" class="btn">Entrar</button>
+        <div class="login-link">
+          <button type="button" id="showResetBtn">Olvide mi contrasena</button>
+        </div>
+      </div>
+
+      <div id="resetView" style="display:none;">
+        <h2>Restablecer contrasena</h2>
+        <p class="login-help">Escribe tu correo y te enviaremos un enlace para crear una nueva contrasena.</p>
+        <div class="field">
+          <label for="resetEmail">Correo</label>
+          <input id="resetEmail" type="email" placeholder="correo@empresa.com" autocomplete="email">
+        </div>
+        <button id="resetBtn" class="btn">Enviar enlace</button>
+        <div class="login-link">
+          <button type="button" id="backToLoginBtn">Volver al login</button>
+        </div>
+      </div>
+
+      <div id="newPasswordView" style="display:none;">
+        <h2>Nueva contrasena</h2>
+        <p class="login-help">Crea una contrasena nueva para tu usuario.</p>
+        <div class="field">
+          <label for="newPassword">Nueva contrasena</label>
+          <div class="password-wrap">
+            <input id="newPassword" type="password" placeholder="Minimo 6 caracteres" autocomplete="new-password">
+            <button type="button" class="toggle-password" data-target="newPassword" aria-label="Mostrar contrasena">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3l18 18"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                <path d="M9.5 5.3A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.1 4.1"></path>
+                <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirmar contrasena</label>
+          <div class="password-wrap">
+            <input id="confirmPassword" type="password" placeholder="Repite la contrasena" autocomplete="new-password">
+            <button type="button" class="toggle-password" data-target="confirmPassword" aria-label="Mostrar contrasena">
+              <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3l18 18"></path>
+                <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+                <path d="M9.5 5.3A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17.8 17.8 0 0 1-3.1 4.1"></path>
+                <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.2-1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <button id="updatePasswordBtn" class="btn">Guardar nueva contrasena</button>
+      </div>
+
+      <div id="msg" class="msg"></div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    Sistema interno de gestion de comandas © <span id="year"></span>
+  </footer>
+
+  <div class="login-banner">
+    <img src="assets/images/Baner.JPG" alt="Decuatro Catering">
+  </div>
+
+<script>
+  const yearEl = document.getElementById("year");
+  const msg = document.getElementById("msg");
+  const loginView = document.getElementById("loginView");
+  const resetView = document.getElementById("resetView");
+  const newPasswordView = document.getElementById("newPasswordView");
+  const btn = document.getElementById("loginBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const updatePasswordBtn = document.getElementById("updatePasswordBtn");
+  const rememberUser = document.getElementById("rememberUser");
+  const emailInput = document.getElementById("email");
+  const rememberedEmailKey = "decuatro_remembered_email";
+
+  yearEl.textContent = new Date().getFullYear();
+
+  function setMsg(text, type = "error") {
+    msg.textContent = text || "";
+    msg.classList.toggle("success", type === "success");
+  }
+
+  function showView(view) {
+    loginView.style.display = view === "login" ? "block" : "none";
+    resetView.style.display = view === "reset" ? "block" : "none";
+    newPasswordView.style.display = view === "new-password" ? "block" : "none";
+    setMsg("");
+  }
+
+  function isRecoveryUrl() {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const query = new URLSearchParams(window.location.search);
+    return hash.get("type") === "recovery" || query.get("type") === "recovery";
+  }
+
+  async function authDisponible() {
+    if (window.Auth) return true;
+    if (window.AuthReady) await window.AuthReady;
+    if (window.Auth) return true;
+    setMsg("No se pudo cargar la autorizacion. Revisa la conexion a internet y vuelve a cargar la pagina.");
+    return false;
+  }
+
+  function loadRememberedEmail() {
+    const savedEmail = localStorage.getItem(rememberedEmailKey);
+    if (!savedEmail) return;
+    emailInput.value = savedEmail;
+    rememberUser.checked = true;
+  }
+
+  function saveRememberedEmail(email) {
+    if (rememberUser.checked) {
+      localStorage.setItem(rememberedEmailKey, email);
+    } else {
+      localStorage.removeItem(rememberedEmailKey);
+    }
+  }
+
+  rememberUser.addEventListener("change", () => {
+    if (!rememberUser.checked) {
+      localStorage.removeItem(rememberedEmailKey);
+      return;
+    }
+    const email = emailInput.value.trim();
+    if (email) localStorage.setItem(rememberedEmailKey, email);
+  });
+
+  document.querySelectorAll(".toggle-password").forEach(button => {
+    button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.target);
+      if (!input) return;
+      const visible = input.type === "text";
+      input.type = visible ? "password" : "text";
+      button.classList.toggle("is-visible", !visible);
+      button.setAttribute("aria-label", visible ? "Mostrar contrasena" : "Ocultar contrasena");
+    });
+  });
+
+  document.getElementById("showResetBtn").addEventListener("click", () => {
+    document.getElementById("resetEmail").value = document.getElementById("email").value.trim();
+    showView("reset");
+  });
+
+  document.getElementById("backToLoginBtn").addEventListener("click", () => showView("login"));
+
+  document.addEventListener("DOMContentLoaded", async () => {
+    loadRememberedEmail();
+
+    if (isRecoveryUrl()) {
+      showView("new-password");
+      return;
+    }
+
+    if (window.AuthReady) await window.AuthReady;
+
+    if (window.Auth) {
+      try {
+        const u = await Auth.getUser();
+        if (u) window.location.href = "index.html";
+      } catch (e) {
+        console.error("Error verificando sesion:", e);
+      }
+    }
+  });
+
+  btn.addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+    const pass = document.getElementById("password").value;
+
+    if (!email || !pass) {
+      setMsg("Correo y contrasena requeridos");
+      return;
+    }
+
+    if (!(await authDisponible())) return;
+
+    setMsg("");
+    btn.disabled = true;
+    btn.textContent = "Entrando...";
+
+    try {
+      saveRememberedEmail(email);
+      await Auth.signIn(email, pass);
+      window.location.href = "index.html";
+    } catch (e) {
+      if (e.message?.includes("Invalid login credentials")) {
+        setMsg("Correo o contrasena incorrectos");
+      } else if (e.message?.includes("Email not confirmed")) {
+        setMsg("Por favor confirma tu correo electronico");
+      } else {
+        setMsg(e.message || "Error de conexion");
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Entrar";
+    }
+  });
+
+  resetBtn.addEventListener("click", async () => {
+    const email = document.getElementById("resetEmail").value.trim();
+    if (!email) {
+      setMsg("Escribe el correo del usuario.");
+      return;
+    }
+
+    if (!(await authDisponible())) return;
+
+    resetBtn.disabled = true;
+    resetBtn.textContent = "Enviando...";
+
+    try {
+      const redirectTo = `${window.location.origin}${window.location.pathname}`;
+      await Auth.resetPassword(email, redirectTo);
+      setMsg("Te enviamos un enlace para restablecer la contrasena.", "success");
+    } catch (e) {
+      setMsg(e.message || "No se pudo enviar el enlace.");
+    } finally {
+      resetBtn.disabled = false;
+      resetBtn.textContent = "Enviar enlace";
+    }
+  });
+
+  updatePasswordBtn.addEventListener("click", async () => {
+    const pass = document.getElementById("newPassword").value;
+    const confirm = document.getElementById("confirmPassword").value;
+
+    if (pass.length < 6) {
+      setMsg("La contrasena debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    if (pass !== confirm) {
+      setMsg("Las contrasenas no coinciden.");
+      return;
+    }
+
+    if (!(await authDisponible())) return;
+
+    updatePasswordBtn.disabled = true;
+    updatePasswordBtn.textContent = "Guardando...";
+
+    try {
+      await Auth.updatePassword(pass);
+      setMsg("Contrasena actualizada. Entrando...", "success");
+      setTimeout(() => { window.location.href = "index.html"; }, 900);
+    } catch (e) {
+      setMsg(e.message || "No se pudo actualizar la contrasena.");
+    } finally {
+      updatePasswordBtn.disabled = false;
+      updatePasswordBtn.textContent = "Guardar nueva contrasena";
+    }
+  });
+</script>
+</body>
+</html>

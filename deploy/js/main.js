@@ -1,9 +1,9 @@
-// ========== CONFIGURACIÃ“N INICIAL ==========
+// ========== CONFIGURACIÓN INICIAL ==========
 
-// Variable global para comanda en ediciÃ³n
+// Variable global para comanda en edición
 window.comandaEditando = null;
 
-// InicializaciÃ³n cuando se carga el documento
+// Inicialización cuando se carga el documento
 document.addEventListener('DOMContentLoaded', function() {
     
     // Cargar calendario
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
         cargarEventosEjemplo();
     }
     
-    // Configurar fecha mÃ­nima para el formulario
+    // Configurar fecha mínima para el formulario
     const hoy = new Date().toISOString().split('T')[0];
     const fechaEventoInput = document.getElementById('fecha_evento');
     if (fechaEventoInput) {
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         inicializarContador();
     }
     
-    // Configurar el envÃ­o del formulario
+    // Configurar el envío del formulario
     const formulario = document.getElementById('comandaCocinaForm');
     if (formulario) {
         formulario.addEventListener('submit', manejarEnvioFormulario);
@@ -62,13 +62,13 @@ document.addEventListener('DOMContentLoaded', function() {
         inicializarPreferencias();
     }
     
-    console.log('CaterCloud inicializado correctamente');
+    console.log('✅ CaterCloud inicializado correctamente');
 });
 
 // ========== VALIDACIONES EN TIEMPO REAL ==========
 
 function configurarValidacionesEnTiempoReal() {
-    // Validar empresa (mÃ­nimo 2 caracteres)
+    // Validar empresa (mínimo 2 caracteres)
     const empresaInput = document.getElementById('empresa');
     if (empresaInput) {
         empresaInput.addEventListener('blur', validarEmpresa);
@@ -77,7 +77,7 @@ function configurarValidacionesEnTiempoReal() {
         });
     }
     
-    // Validar responsable (mÃ­nimo 2 caracteres)
+    // Validar responsable (mínimo 2 caracteres)
     const responsableInput = document.getElementById('responsable');
     if (responsableInput) {
         responsableInput.addEventListener('blur', validarResponsable);
@@ -113,7 +113,7 @@ function configurarValidacionesEnTiempoReal() {
         horaSalidaInput.addEventListener('change', validarHoraSalida);
     }
 
-    // Mostrar/ocultar secciÃ³n logÃ­stica inline segÃºn categorÃ­a
+    // Mostrar/ocultar sección logística inline según categoría
     const categoriaSelect = document.getElementById('categoria');
     if (categoriaSelect) {
         categoriaSelect.addEventListener('change', function() {
@@ -123,12 +123,12 @@ function configurarValidacionesEnTiempoReal() {
 }
 
 /**
- * Gestiona el material al cambiar categorÃ­a.
+ * Gestiona el material al cambiar categoría.
  * logisticaInlineSection siempre visible.
  * Solo se limpia el material para Servicios (3) que usa flujo separado.
  */
 function toggleLogisticaInline(categoriaId) {
-    // Limpiar zumos de desayuno al cambiar a otra categorÃ­a
+    // Limpiar zumos de desayuno al cambiar a otra categoría
     if (categoriaId !== 1 && window.materialLogistica?.bebidas) {
         window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
     }
@@ -136,17 +136,17 @@ function toggleLogisticaInline(categoriaId) {
     const matContainer = document.getElementById('materialLogisticaInline');
 
     if (categoriaId === 3) {
-        // Servicios: ocultar solo el material, la secciÃ³n de datos siempre visible
+        // Servicios: ocultar solo el material, la sección de datos siempre visible
         if (matContainer) matContainer.style.display = 'none';
         if (typeof window.limpiarMaterialLogistica === 'function') {
             window.limpiarMaterialLogistica();
         }
     }
-    // Para el resto: el material lo mostrarÃ¡ comanda-form.js al seleccionar menÃº
+    // Para el resto: el material lo mostrará comanda-form.js al seleccionar menú
 }
 
 /**
- * Limpia los campos de la secciÃ³n logÃ­stica inline
+ * Limpia los campos de la sección logística inline
  */
 function limpiarCamposLogisticaInline() {
     const ids = [
@@ -163,7 +163,7 @@ function limpiarCamposLogisticaInline() {
 }
 
 /**
- * Valida los campos de logÃ­stica inline (solo si la secciÃ³n estÃ¡ visible)
+ * Valida los campos de logística inline (solo si la sección está visible)
  */
 function validarLogisticaInline() {
     const seccion = document.getElementById('logisticaInlineSection');
@@ -174,9 +174,9 @@ function validarLogisticaInline() {
         { id: 'log_inline_hora_entrega',      label: 'Hora de entrega' },
         { id: 'log_inline_hora_evento',        label: 'Hora del evento' },
         { id: 'log_inline_nombre_contacto',    label: 'Nombre de contacto' },
-        { id: 'log_inline_telefono_contacto',  label: 'Telefono de contacto' },
-        { id: 'log_inline_direccion',          label: 'Direccion' },
-        { id: 'log_inline_codigo_postal',      label: 'Codigo postal' }
+        { id: 'log_inline_telefono_contacto',  label: 'Teléfono de contacto' },
+        { id: 'log_inline_direccion',          label: 'Dirección' },
+        { id: 'log_inline_codigo_postal',      label: 'Código postal' }
     ];
 
     requeridos.forEach(({ id, label }) => {
@@ -193,12 +193,12 @@ function validarLogisticaInline() {
         }
     });
 
-    // Validar formato telÃ©fono
+    // Validar formato teléfono
     const tel = document.getElementById('log_inline_telefono_contacto');
     if (tel && tel.value.trim() && !/^[0-9\s\+\-]{6,20}$/.test(tel.value.trim())) {
         tel.style.borderColor = '#dc2626';
         const errEl = document.getElementById('log_inline_telefono_contacto_err');
-        if (errEl) errEl.textContent = 'Formato de telefono no valido';
+        if (errEl) errEl.textContent = 'Formato de teléfono no válido';
         valido = false;
     }
 
@@ -206,7 +206,7 @@ function validarLogisticaInline() {
 }
 
 /**
- * Recoge los datos de logÃ­stica inline del formulario
+ * Recoge los datos de logística inline del formulario
  */
 function obtenerDatosLogisticaInline() {
     const seccion = document.getElementById('logisticaInlineSection');
@@ -223,7 +223,7 @@ function obtenerDatosLogisticaInline() {
 }
 
 
-// ========== FUNCIONES DE VALIDACIÃ“N INDIVIDUALES ==========
+// ========== FUNCIONES DE VALIDACIÓN INDIVIDUALES ==========
 
 function validarEmpresa() {
     const input = document.getElementById('empresa');
@@ -236,8 +236,8 @@ function validarEmpresa() {
         return false;
     }
     
-    if (!/^[\p{L}0-9\s\-&.,]+$/u.test(value)) {
-        mostrarErrorCampo(input, 'Solo se permiten letras, numeros y espacios');
+    if (!/^[a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-&.,]+$/.test(value)) {
+        mostrarErrorCampo(input, 'Solo se permiten letras, números y espacios');
         return false;
     }
     
@@ -267,12 +267,12 @@ function validarPax() {
     const value = parseInt(input.value);
     
     if (isNaN(value) || value < 1) {
-        mostrarErrorCampo(input, 'El numero de PAX debe ser mayor a 0');
+        mostrarErrorCampo(input, 'El número de PAX debe ser mayor a 0');
         return false;
     }
     
     if (value > 1000) {
-        mostrarErrorCampo(input, 'El numero de PAX no puede exceder 1000');
+        mostrarErrorCampo(input, 'El número de PAX no puede exceder 1000');
         return false;
     }
     
@@ -298,12 +298,12 @@ function validarFechaEvento() {
         return false;
     }
     
-    // No permitir fechas mÃ¡s allÃ¡ de 1 aÃ±o
+    // No permitir fechas más allá de 1 año
     const maxFecha = new Date();
     maxFecha.setFullYear(maxFecha.getFullYear() + 1);
     
     if (value > maxFecha) {
-        mostrarErrorCampo(input, 'La fecha no puede ser mayor a un ano desde hoy');
+        mostrarErrorCampo(input, 'La fecha no puede ser mayor a un año desde hoy');
         return false;
     }
     
@@ -330,25 +330,25 @@ function validarHoraSalida() {
     return true;
 }
 
-// ========== VALIDACIÃ“N COMPLETA DEL FORMULARIO ==========
+// ========== VALIDACIÓN COMPLETA DEL FORMULARIO ==========
 
 function validarFormularioCompleto() {
     const validacionesIndividuales = [
         validarEmpresa(),
         validarResponsable(),
-        // PAX se gestiona por menÃº individual â€” no se valida globalmente
+        // PAX se gestiona por menú individual — no se valida globalmente
         validarFechaEvento(),
         validarHoraSalida()
     ];
     
     const todasValidas = validacionesIndividuales.every(v => v === true);
     
-    // Verificar que hay al menos un menÃº acumulado
+    // Verificar que hay al menos un menú acumulado
     const menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
 
     if (menusAcumulados.length === 0) {
-        mostrarMensaje('Por favor, anade al menos un menu a la comanda', 'error');
+        mostrarMensaje('❌ Por favor, añade al menos un menú a la comanda', 'error');
         const menusContainer = document.getElementById('menusContainer');
         if (menusContainer) {
             menusContainer.style.border = '2px solid #dc2626';
@@ -363,13 +363,13 @@ function validarFormularioCompleto() {
     }
     
     if (!todasValidas) {
-        mostrarMensaje('Por favor, corrige los errores en el formulario', 'error');
+        mostrarMensaje('❌ Por favor, corrige los errores en el formulario', 'error');
         return false;
     }
 
-    // Validar logÃ­stica inline si estÃ¡ visible
+    // Validar logística inline si está visible
     if (!validarLogisticaInline()) {
-        mostrarMensaje('Por favor, completa los datos de logistica', 'error');
+        mostrarMensaje('❌ Por favor, completa los datos de logística', 'error');
         return false;
     }
     
@@ -413,10 +413,10 @@ function limpiarErrorCampo(input) {
     }
 }
 
-// ========== MANEJO DEL ENVÃO DEL FORMULARIO ==========
+// ========== MANEJO DEL ENVÍO DEL FORMULARIO ==========
 
 /**
- * Maneja el envÃ­o del formulario de comanda
+ * Maneja el envío del formulario de comanda
  * MODIFICADO: Incluye referencias de desayuno
  */
 async function manejarEnvioFormulario(e) {
@@ -426,13 +426,13 @@ async function manejarEnvioFormulario(e) {
         return;
     }
     
-    // Obtener el botÃ³n de submit con verificaciÃ³n
-    // BotÃ³n puede estar dentro del form o en el panel lateral del resumen
+    // Obtener el botón de submit con verificación
+    // Botón puede estar dentro del form o en el panel lateral del resumen
     const submitBtn = e.target.querySelector('button[type="submit"]')
                    || document.querySelector('.btn-guardar-comanda')
                    || document.getElementById('btnGuardarComanda');
     if (!submitBtn) {
-        mostrarMensaje('Error: No se encontro el boton de envio', 'error');
+        mostrarMensaje('❌ Error: No se encontró el botón de envío', 'error');
         return;
     }
     
@@ -445,37 +445,39 @@ async function manejarEnvioFormulario(e) {
     }
     
     const categoriaId = parseInt(document.getElementById('categoria').value);
-    const hayMenuActivo = !!window.menuSeleccionado;
+    const menusParaValidar = typeof window.obtenerMenusAcumulados === 'function'
+        ? window.obtenerMenusAcumulados() : [];
+    const editandoConMenusGuardados = !!window.comandaEditando && menusParaValidar.length > 0;
     
-    // Validaciones especÃ­ficas por categorÃ­a
-    if (hayMenuActivo && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
+    // Validaciones específicas por categoría
+    if (!editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
         const seleccionadasSaladas = window.referenciasSeleccionadas ? 
             window.referenciasSeleccionadas.saladas.length : 0;
         
         if (seleccionadasSaladas < window.menuSeleccionado.items_salados_min) {
-            mostrarMensaje(`Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
+            mostrarMensaje(`❌ Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
             submitBtn.innerHTML = originalText;
             return;
         }
     }
     
-// ValidaciÃ³n para Foodbox Lunch (MEJORADA)
-if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
-    // Usar la nueva funciÃ³n de validaciÃ³n mejorada
+// Validación para Foodbox Lunch (MEJORADA)
+if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
+    // Usar la nueva función de validación mejorada
     if (typeof validarFoodboxLunchMejorado === 'function') {
         if (!validarFoodboxLunchMejorado()) {
-            mostrarMensaje('Por favor, corrige la distribucion del Foodbox Lunch', 'error');
+            mostrarMensaje('❌ Por favor, corrige la distribución del Foodbox Lunch', 'error');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
             return;
         }
     }
 }    
-    // Deshabilitar botÃ³n y mostrar loader
+    // Deshabilitar botón y mostrar loader
     submitBtn.innerHTML = '<div class="loader"></div>';
     submitBtn.disabled = true;
     
-    // â”€â”€ Recoger menÃºs acumulados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Recoger menús acumulados ──────────────────────────────────────────────
     const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
 
@@ -489,7 +491,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
     const _paxTotal       = _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0)
                             || parseInt(document.getElementById('pax').value) || 0;
 
-    // â”€â”€ Preparar datos de la comanda â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Preparar datos de la comanda ─────────────────────────────────────────
     const usuarioActualNombre = typeof obtenerNombreUsuarioActual === 'function'
         ? obtenerNombreUsuarioActual()
         : (window.currentUser?.email || '');
@@ -507,7 +509,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
         menu_principal:    _menuPrincipal,
         menus_adicionales: _menusAdicionales,
 
-        // Referencias segÃºn categorÃ­a del menÃº principal
+        // Referencias según categoría del menú principal
         ...(_catPrincipal == 1 && (_menuPrincipal.referencias_desayuno || window.referenciasDesayuno) ? {
             referencias_desayuno: _menuPrincipal.referencias_desayuno || window.referenciasDesayuno
         } : {}),
@@ -558,7 +560,7 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
         tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
         logistica:   obtenerDatosLogisticaInline(),
 
-        // Material acumulado de todos los menÃºs
+        // Material acumulado de todos los menús
         material_logistica: window._materialAcumulado && (
             window._materialAcumulado.bebidas?.length ||
             window._materialAcumulado.menaje?.length  ||
@@ -570,22 +572,30 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
         estado: 'creada',
         version: '1.0'
     };
+    comandaData.logistica_inline = comandaData.logistica;
     
     try {
         let codigo;
         
         if (window.comandaEditando) {
+            comandaData.fecha_creacion = window.comandaEditando.fecha_creacion || comandaData.fecha_creacion;
+            comandaData.creado_por_id = window.comandaEditando.creado_por_id || comandaData.creado_por_id;
+            comandaData.creado_por_nombre = window.comandaEditando.creado_por_nombre || comandaData.creado_por_nombre;
+            comandaData.creado_por_email = window.comandaEditando.creado_por_email || comandaData.creado_por_email;
+            comandaData.adjuntos = window.comandaEditando.adjuntos || comandaData.adjuntos || [];
+            comandaData.documentos = window.comandaEditando.documentos || comandaData.documentos || {};
+
             // Actualizar comanda existente
             const resultado = await actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
             
             if (resultado) {
-                mostrarMensaje(`Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
+                mostrarMensaje(`✅ Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
                 
                 if (typeof agregarAlCalendario === 'function') {
                     agregarAlCalendario(comandaData);
                 }
                 
-                // Volver al dashboard despuÃ©s de actualizar
+                // Volver al dashboard después de actualizar
                 setTimeout(() => {
                     if (typeof volverAlDashboard === 'function') {
                         volverAlDashboard();
@@ -594,13 +604,13 @@ if (hayMenuActivo && categoriaId == 4) { // FOODBOX LUNCH
                 }, 2000);
                 
             } else {
-                mostrarMensaje('Error al actualizar la comanda', 'error');
+                mostrarMensaje('❌ Error al actualizar la comanda', 'error');
             }
             
         } else {
 // Leer material del DOM ANTES de guardar para incluirlo en el payload
-// â”€â”€ Capturar TODO el material del DOM en el momento del guardado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// FunciÃ³n universal: lee cualquier label.dc-material-item del selector dado
+// ── Capturar TODO el material del DOM en el momento del guardado ────────────
+// Función universal: lee cualquier label.dc-material-item del selector dado
 function _leerLabels(selector) {
     const items = [];
     document.querySelectorAll(selector).forEach(label => {
@@ -648,7 +658,7 @@ function _leerExtrasExpandibles(atributo) {
     return items;
 }
 
-// â”€â”€ Capturar todo el material en el momento del guardado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Capturar todo el material en el momento del guardado ────────────────────
 // Lee TODOS los labels del contenedor de un tipo dado (bebidas/menaje/extras)
 // excluyendo los que tienen atributos de inyectados (se leen por separado)
 function _leerContainerTipo(tipo, excluirAtributos) {
@@ -681,14 +691,14 @@ function _leerContainerTipo(tipo, excluirAtributos) {
     return items;
 }
 
-// â”€â”€ Leer material SOLO del DOM (fuente de verdad es lo que el usuario ve/marca) â”€â”€
+// ── Leer material SOLO del DOM (fuente de verdad es lo que el usuario ve/marca) ──
 // Bebidas y extras: solo los marcados con checkbox
 // Menaje: los marcados (el usuario puede desmarcar los pre-chequeados)
 const _domBebidas = _leerContainerTipo('bebidas', []);
 const _domMenaje  = _leerContainerTipo('menaje',  []);
 const _domExtras  = _leerContainerTipo('extras',  []);
 
-// Usar el material acumulado de todos los menÃºs aÃ±adidos
+// Usar el material acumulado de todos los menús añadidos
 // (capturado por anadirMenuAComanda en window._materialAcumulado)
 const _materialCompleto = (
     window._materialAcumulado &&
@@ -710,13 +720,13 @@ if (!comandaData.tipo_menaje) {
 // Crear nueva comanda
 codigo = await guardarComandaEnHistorial(comandaData);
 
-// DEBUG: Verificar el cÃ³digo generado
-console.log('Codigo generado:', codigo);
-console.log('Anio en codigo:', codigo.substring(2, 4));
+// DEBUG: Verificar el código generado
+console.log('Código generado:', codigo);
+console.log('Año en código:', codigo.substring(2, 4));
 
-mostrarMensaje(`Comanda ${codigo} creada exitosamente`, 'success');
+mostrarMensaje(`✅ Comanda ${codigo} creada exitosamente`, 'success');
 
-// GUARDAR EMPRESA FRECUENTE (si existe la funciÃ³n)
+// GUARDAR EMPRESA FRECUENTE (si existe la función)
 if (typeof guardarEmpresaFrecuente === 'function') {
     guardarEmpresaFrecuente(
         document.getElementById('empresa').value,
@@ -728,17 +738,17 @@ if (typeof agregarAlCalendario === 'function') {
     agregarAlCalendario(comandaData);
 }
 
-// Guardar cÃ³digo e ID globalmente para pasarlos al formulario de logÃ­stica
+// Guardar código e ID globalmente para pasarlos al formulario de logística
 window.ultimoCodigoCocina = codigo;
 window.ultimoOrdenId      = null;
 
 if (categoriaId === 3) {
-    // Cocteles/Celebraciones â†’ pÃ¡gina separada de logÃ­stica
+    // Cocteles/Celebraciones → página separada de logística
     setTimeout(() => {
         mostrarModalConfirmacionLogistica();
     }, 1000);
 } else {
-    // Resto de categorÃ­as â†’ guardar logÃ­stica inline en Supabase si hay datos
+    // Resto de categorías → guardar logística inline en Supabase si hay datos
     const datosLogInline = obtenerDatosLogisticaInline();
     if (datosLogInline && typeof guardarLogisticaInlineEnSupabase === 'function') {
         guardarLogisticaInlineEnSupabase(codigo, comandaData, datosLogInline);
@@ -748,7 +758,7 @@ if (categoriaId === 3) {
     const payloadParaDetalle = {
         ...comandaData,
         codigo,
-        logistica_inline: comandaData.logistica  // datos del formulario (direcciÃ³n, contacto, etc.)
+        logistica_inline: comandaData.logistica  // datos del formulario (dirección, contacto, etc.)
         // material_logistica ya viene en comandaData
     };
 
@@ -763,18 +773,18 @@ if (categoriaId === 3) {
         _renderDetalleComanda(payloadParaDetalle);
     }
 
-    // 3. Limpiar formulario DESPUÃ‰S (ya no afecta al detalle)
+    // 3. Limpiar formulario DESPUÉS (ya no afecta al detalle)
     limpiarFormularioComanda();
 }
         }
 
         
     } catch (error) {
-            mostrarMensaje('Error al guardar la comanda: ' + error.message, 'error');
+        mostrarMensaje('❌ Error al guardar la comanda: ' + error.message, 'error');
         console.error('Error en manejarEnvioFormulario:', error);
         
     } finally {
-        // Restaurar botÃ³n solo si no es ediciÃ³n
+        // Restaurar botón solo si no es edición
         if (!window.comandaEditando) {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -782,22 +792,22 @@ if (categoriaId === 3) {
     }
 }
 
-// ========== FUNCIONES PARA MODAL DE LOGÃSTICA ==========
+// ========== FUNCIONES PARA MODAL DE LOGÍSTICA ==========
 
 /**
- * Muestra el modal de confirmaciÃ³n para crear comanda de logÃ­stica
+ * Muestra el modal de confirmación para crear comanda de logística
  */
 function mostrarModalConfirmacionLogistica() {
     const modal = document.getElementById('modalConfirmacionLogistica');
     if (modal) {
         modal.style.display = 'flex';
-        // La categorÃ­a 3 ya fue validada antes de llamar esta funciÃ³n.
+        // La categoría 3 ya fue validada antes de llamar esta función.
         // No se usa preferencia guardada: siempre se pregunta al usuario.
     }
 }
 
 /**
- * Cierra el modal de confirmaciÃ³n
+ * Cierra el modal de confirmación
  */
 function cerrarModalConfirmacion() {
     const modal = document.getElementById('modalConfirmacionLogistica');
@@ -816,8 +826,8 @@ function cerrarModalConfirmacion() {
 }
 
 /**
- * Abre el formulario de logÃ­stica con los datos heredados de la comanda de cocina.
- * Se llama cuando el usuario confirma "SÃ­" en el modal de logÃ­stica.
+ * Abre el formulario de logística con los datos heredados de la comanda de cocina.
+ * Se llama cuando el usuario confirma "Sí" en el modal de logística.
  */
 function crearComandaLogistica() {
     const recordar = document.getElementById('recordarPreferencia')?.checked;
@@ -825,11 +835,11 @@ function crearComandaLogistica() {
         localStorage.setItem('crearLogisticaAutomaticamente', 'true');
     }
 
-    // Cerrar el modal de confirmaciÃ³n
+    // Cerrar el modal de confirmación
     const modal = document.getElementById('modalConfirmacionLogistica');
     if (modal) modal.style.display = 'none';
 
-    // Capturar datos base de la comanda de cocina reciÃ©n creada
+    // Capturar datos base de la comanda de cocina recién creada
     const datosBase = {
         empresa:      document.getElementById('empresa')?.value || '',
         responsable:  document.getElementById('responsable')?.value || '',
@@ -839,52 +849,52 @@ function crearComandaLogistica() {
         notas:        document.getElementById('alergias_notas')?.value || ''
     };
 
-    // El cÃ³digo de cocina estÃ¡ guardado en window.ultimoCodigoCocina
+    // El código de cocina está guardado en window.ultimoCodigoCocina
     const codigoCocina = window.ultimoCodigoCocina || '';
     const ordenId      = window.ultimoOrdenId      || null;
 
-    // Abrir formulario de logÃ­stica (definido en logistics.js)
+    // Abrir formulario de logística (definido en logistics.js)
     if (typeof abrirFormularioLogistica === 'function') {
         abrirFormularioLogistica(codigoCocina, ordenId, datosBase);
     } else {
-        console.error('logistics.js no est? cargado');
+        console.error('❌ logistics.js no está cargado');
     }
 }
 
 /**
- * Guarda una comanda de logÃ­stica en el historial
- * MODIFICADO: AÃ±o de 2 dÃ­gitos
- * @param {Object} datosLogistica - Datos de la comanda de logÃ­stica
- * @returns {string} CÃ³digo de la comanda
+ * Guarda una comanda de logística en el historial
+ * MODIFICADO: Año de 2 dígitos
+ * @param {Object} datosLogistica - Datos de la comanda de logística
+ * @returns {string} Código de la comanda
  */
 function guardarComandaLogisticaEnHistorial(datosLogistica) {
     try {
         // Obtener historial actual
         let historial = JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
         
-        // Generar cÃ³digo Ãºnico con aÃ±o de 2 dÃ­gitos
+        // Generar código único con año de 2 dígitos
         const fecha = new Date();
-        const anio = fecha.getFullYear().toString().slice(-2); // 2 ultimos digitos
-        const codigo = `LOG-${anio}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
+        const año = fecha.getFullYear().toString().slice(-2); // 2 últimos dígitos
+        const codigo = `LOG-${año}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
         
-        // Crear objeto de comanda de logÃ­stica
+        // Crear objeto de comanda de logística
         const comandaLogistica = {
             codigo: codigo,
             ...datosLogistica,
-            fecha_modificacion: new Date().toISOString()
-        };
-        
+        fecha_modificacion: new Date().toISOString()
+    };
+
         // Agregar al historial
         historial.unshift(comandaLogistica);
         
         // Guardar en localStorage
         localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
         
-        console.log(`Comanda de logÃ­stica ${codigo} guardada en historial`);
+        console.log(`Comanda de logística ${codigo} guardada en historial`);
         return codigo;
         
     } catch (error) {
-        console.error('Error al guardar comanda de logÃ­stica:', error);
+        console.error('Error al guardar comanda de logística:', error);
         throw error;
     }
 }
@@ -905,12 +915,12 @@ function limpiarFormularioComanda() {
     window.referenciasSeleccionadas = { saladas: [], postres: [] };
     window.referenciasDesayuno = {};
 
-    // Resetear menÃºs acumulados y material acumulado
+    // Resetear menús acumulados y material acumulado
     if (typeof window.resetearMenusAcumulados === 'function') {
         window.resetearMenusAcumulados();
     }
     
-    // CORRECCIÃ“N: Limpiar selecciones de Foodbox Lunch correctamente
+    // CORRECCIÓN: Limpiar selecciones de Foodbox Lunch correctamente
     if (window.seleccionesFoodbox) {
         window.seleccionesFoodbox.ensalada_principal = null;
         window.seleccionesFoodbox.sandwich_principal = null;
@@ -918,7 +928,7 @@ function limpiarFormularioComanda() {
         window.seleccionesFoodbox.adicionales = [];
     }
     
-    // Limpiar errores de validaciÃ³n
+    // Limpiar errores de validación
     document.querySelectorAll('.error-message').forEach(el => {
         el.style.display = 'none';
     });
@@ -928,12 +938,12 @@ function limpiarFormularioComanda() {
         input.style.backgroundColor = '';
     });
     
-    // Ocultar secciones dinÃ¡micas - AÃ‘ADIR 'foodboxLunchSection'
+    // Ocultar secciones dinámicas - AÑADIR 'foodboxLunchSection'
     const seccionesOcultar = [
         'multiplicadorSection',
         'referenciasSection',
         'desayunoReferencesSection',
-        'foodboxLunchSection',  // Â¡AÃ‘ADIR ESTA!
+        'foodboxLunchSection',  // ¡AÑADIR ESTA!
         'menusAdicionalesList',
         'menusAnadidosList'
     ];
@@ -945,13 +955,13 @@ function limpiarFormularioComanda() {
         }
     });
     
-    // Limpiar contenedores - AÃ‘ADIR LOS DE FOODBOX
+    // Limpiar contenedores - AÑADIR LOS DE FOODBOX
     const contenedoresLimpiar = [
         'menusContainer',
         'referenciasSaladasGrid',
         'referenciasPostresGrid',
         'referenciasDesayunoGrid',
-        'foodboxPrincipalGrid',      // Â¡AÃ‘ADIR ESTOS!
+        'foodboxPrincipalGrid',      // ¡AÑADIR ESTOS!
         'foodboxPostresGrid',
         'foodboxAdicionalesContainer'
     ];
@@ -973,10 +983,10 @@ function limpiarFormularioComanda() {
         responsableInput.value = obtenerNombreUsuarioActual();
     }
 
-    // Limpiar campos de logÃ­stica (secciÃ³n siempre visible)
+    // Limpiar campos de logística (sección siempre visible)
     if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
 
-    // Limpiar material de logÃ­stica: estado interno y DOM
+    // Limpiar material de logística: estado interno y DOM
     if (typeof window.limpiarMaterialLogistica === 'function') {
         window.limpiarMaterialLogistica();
     }
@@ -1002,7 +1012,7 @@ function mostrarMensaje(texto, tipo) {
     div.className = `message message-${tipo}`;
     div.style.display = 'block';
     
-    // Ocultar despuÃ©s de 5 segundos
+    // Ocultar después de 5 segundos
     setTimeout(() => {
         div.className = 'message';
         div.style.display = 'none';
@@ -1026,7 +1036,7 @@ document.getElementById("btnLogin")?.addEventListener("click", async () => {
 
   try {
     await Auth.signIn(email, pass);
-    if (msg) msg.textContent = "Sesi?n iniciada";
+    if (msg) msg.textContent = "Sesión iniciada ✅";
   } catch (error) {
     if (msg) msg.textContent = "Error: " + (error?.message || error);
     console.error(error);
@@ -1037,7 +1047,7 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
   const msg = document.getElementById("loginMsg");
   try {
     await Auth.signOut();
-    if (msg) msg.textContent = "Sesi?n cerrada";
+    if (msg) msg.textContent = "Sesión cerrada ✅";
   } catch (error) {
     if (msg) msg.textContent = "Error: " + (error?.message || error);
   }
@@ -1068,7 +1078,7 @@ document.getElementById("btnLogout")?.addEventListener("click", async () => {
 
 
 // ============================================================
-// FUNCIÃ“N GLOBAL: Actualizar tipo de menaje (termos)
+// FUNCIÓN GLOBAL: Actualizar tipo de menaje (termos)
 // ============================================================
 window.actualizarTipoMenajeGlobal = function() {
     const tipoMenaje = document.getElementById('tipo_menaje')?.value;
@@ -1089,7 +1099,7 @@ window.actualizarTipoMenajeGlobal = function() {
         }
     });
 
-    // 2. Propagar el tipo_menaje a todos los menÃºs ya acumulados
+    // 2. Propagar el tipo_menaje a todos los menús ya acumulados
     if (window.MenusAdicionalesState?.menusAdicionales) {
         window.MenusAdicionalesState.menusAdicionales.forEach(m => {
             m.tipo_menaje = tipoMenaje;
