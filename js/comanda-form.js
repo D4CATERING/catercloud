@@ -297,6 +297,27 @@ async function cargarMenus() {
         ];
     }
     
+    if (categoriaId == 3 && window.serviciosMode) {
+        const servicioTipo = document.getElementById('serviciosCategoria')?.value || '';
+        if (!servicioTipo) {
+            container.innerHTML = '';
+            return;
+        }
+        if (servicioTipo === 'vino') {
+            menus = [
+                { id: 301, nombre: 'BRINDIS', descripcion: 'Vino Español · selección de 4 ítems', items_salados_min: 4, items_salados_max: 4, servicio_categoria: 'vino' },
+                { id: 302, nombre: 'NETWORKING', descripcion: 'Vino Español · selección de 6 ítems', items_salados_min: 6, items_salados_max: 6, servicio_categoria: 'vino' },
+                { id: 303, nombre: 'AFTERWORK', descripcion: 'Vino Español · selección de 8 ítems', items_salados_min: 8, items_salados_max: 8, servicio_categoria: 'vino' }
+            ];
+        } else {
+            menus = [
+                { id: 13, nombre: 'ALUCINANCIA', descripcion: '10 referencias saladas + 1 postre', items_salados_min: 10, items_salados_max: 10, items_postres_min: 1, items_postres_max: 1, mult_postres: 1, servicio_categoria: 'cocteles' },
+                { id: 12, nombre: 'DECUATRO', descripcion: '12 referencias saladas + 2 postres · postres 0.75/pax', items_salados_min: 12, items_salados_max: 12, items_postres_min: 2, items_postres_max: 2, mult_postres: 0.75, servicio_categoria: 'cocteles' },
+                { id: 14, nombre: 'ATRACTIVIDAD', descripcion: '14 referencias saladas + 3 postres · postres 0.5/pax', items_salados_min: 14, items_salados_max: 14, items_postres_min: 3, items_postres_max: 3, mult_postres: 0.5, servicio_categoria: 'cocteles' }
+            ];
+        }
+    }
+
     mostrarMenusPrincipales(menus);
 }
 
@@ -431,9 +452,10 @@ async function seleccionarMenu(menuId, element) {
         const _norm = (s) => (s || '').toString().trim().toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         const _serviciosRules = {
-            'coctel decuatro': { saladas: 8, postres: 2 },
-            'alucinancia':     { saladas: 10, postres: 2 },
-            'atractividad':    { saladas: 14, postres: 3 }
+            'decuatro':        { saladas: 12, postres: 2, multPostres: 0.75 },
+            'coctel decuatro': { saladas: 12, postres: 2, multPostres: 0.75 },
+            'alucinancia':     { saladas: 10, postres: 1, multPostres: 1 },
+            'atractividad':    { saladas: 14, postres: 3, multPostres: 0.5 }
         };
 
         const _menuKey = _norm(window.menuSeleccionado?.nombre);
@@ -445,6 +467,7 @@ async function seleccionarMenu(menuId, element) {
             window.menuSeleccionado.items_salados_max = _rule.saladas;
             window.menuSeleccionado.items_postres_min = _rule.postres;
             window.menuSeleccionado.items_postres_max = _rule.postres;
+            window.menuSeleccionado.mult_postres = _rule.multPostres;
         }
 
         // Multiplicador desactivado para cat 2 y 3
@@ -491,6 +514,7 @@ async function seleccionarMenu(menuId, element) {
         // Inicializar logística para Foodbox/Comida (2) y Servicios (3)
         // setTimeout para asegurar que el DOM esté listo antes de renderizar
         const _catId = categoriaId;
+        if (!(categoriaId === 3 && window.serviciosMode)) {
         setTimeout(async () => {
             // Solo mostrar el material (logística siempre visible)
             const matInline = document.getElementById('materialLogisticaInline');
@@ -502,6 +526,7 @@ async function seleccionarMenu(menuId, element) {
                 }
             }
         }, 100);
+        }
 
         return;
     }

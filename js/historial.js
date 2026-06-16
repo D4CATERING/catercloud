@@ -147,6 +147,7 @@ function _renderExpedientePedido(comanda) {
     const puedeCrearComanda = estado !== 'anulada';
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
     const archivosHtml = _renderArchivosSolicitud(comanda);
+    const tieneLogistica = !!comanda.documentos?.logistica || _pedidoTieneComandaLogistica(comanda.codigo);
 
     cont.innerHTML = `
         <div class="expediente-header">
@@ -182,7 +183,8 @@ function _renderExpedientePedido(comanda) {
                 <div class="expediente-actions">
                     ${esSolicitud
                         ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
-                        : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>`}
+                        : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>
+                           ${tieneLogistica ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}`}
                 </div>
             </section>
 
@@ -193,9 +195,29 @@ function _renderExpedientePedido(comanda) {
         </div>`;
 }
 
+function _pedidoTieneComandaLogistica(codigo) {
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    return historialLogistica.some(item => (item.codigo_cocina || item.codigo) === codigo);
+}
+
+function _obtenerComandaLogisticaPorCodigo(codigo) {
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const index = historialLogistica.findIndex(item => (item.codigo_cocina || item.codigo) === codigo || item.codigo === codigo);
+    return index >= 0 ? { item: historialLogistica[index], index, historial: historialLogistica } : null;
+}
+
 function _renderArchivosSolicitud(comanda) {
     const adjuntos = comanda.adjuntos || [];
+    const documentos = comanda.documentos || {};
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+    const documentosHtml = documentos.logistica
+        ? `<div class="expediente-file expediente-file-documento">
+                <span>${documentos.logistica.nombre || 'Comanda Logistica'}</span>
+                <div class="expediente-file-actions">
+                    <button type="button" class="expediente-file-link" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir</button>
+                </div>
+            </div>`
+        : '';
     const adjuntosHtml = adjuntos.length
         ? adjuntos.map((a, index) => `
             <div class="expediente-file">
@@ -210,7 +232,7 @@ function _renderArchivosSolicitud(comanda) {
                 </div>
             </div>
         `).join('')
-        : '<p class="expediente-muted">Aun no hay archivos cargados para esta solicitud.</p>';
+        : (!documentosHtml ? '<p class="expediente-muted">Aun no hay archivos cargados para esta solicitud.</p>' : '');
 
     const uploadHtml = puedeEditar ? `<div class="expediente-upload"
             ondragover="event.preventDefault(); this.classList.add('is-dragging')"
@@ -231,6 +253,7 @@ function _renderArchivosSolicitud(comanda) {
 
     return `${uploadHtml}
         <div class="expediente-files expediente-files-adjuntos">
+            ${documentosHtml}
             ${adjuntosHtml}
         </div>`;
 }
@@ -242,6 +265,17 @@ function abrirComandaDesdeExpediente(codigo) {
         expedientePedido.style.display = 'none';
     }
     verDetalleComanda(codigo);
+}
+
+function abrirComandaLogisticaDesdeExpediente(codigo) {
+    const resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+
+    if (!resultado) {
+        alert('No se encontro la comanda de logistica para este pedido.');
+        return;
+    }
+
+    verDetalleComandaLogistica(resultado.item);
 }
 
 function convertirSolicitudEnComanda(codigo) {
@@ -619,6 +653,7 @@ function _renderTotalTermosDetalle(comanda) {
 }
 
 function _renderDetalleComanda(comanda) {
+    window.detalleDocumentoActivo = { tipo: 'cocina', codigo: comanda.codigo };
     const el = (id) => document.getElementById(id);
     const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
         '&': '&amp;',
@@ -627,6 +662,9 @@ function _renderDetalleComanda(comanda) {
         '"': '&quot;',
         "'": '&#39;'
     })[char]);
+
+    const menuSection = el('detalleMenuPrincipal')?.closest('.dc-section');
+    if (menuSection) menuSection.style.display = '';
 
     if (el('detalleCodigo')) el('detalleCodigo').textContent = comanda.codigo || '';
 
@@ -733,6 +771,33 @@ function _renderDetalleComanda(comanda) {
 
     const secMul = el('detalleMultiplicadoresSection');
     if (secMul) secMul.style.display = 'none';
+
+    const secIntolerancias = el('detalleIntoleranciasSection');
+    const divIntolerancias = el('detalleIntolerancias');
+    const intolerancias = comanda.alergias?.intolerancias || {};
+    const intoleranciasItems = Array.isArray(intolerancias.items) ? intolerancias.items : [];
+    const intoleranciasNotas = intolerancias.notas || '';
+
+    if (secIntolerancias && divIntolerancias) {
+        if (intoleranciasItems.length || intoleranciasNotas) {
+            secIntolerancias.style.display = '';
+            const itemsHtml = intoleranciasItems.length
+                ? `<div class="detalle-intolerancias-grid">${intoleranciasItems.map(item => `
+                    <div class="detalle-intolerancia-item">
+                        <span>${textoSeguro(item.nombre)}</span>
+                        <span class="detalle-intolerancia-pax">${item.pax ? `${textoSeguro(item.pax)} pax` : 'Informado'}</span>
+                    </div>
+                `).join('')}</div>`
+                : '';
+            const notasHtml = intoleranciasNotas
+                ? `<div class="detalle-intolerancias-notas">${textoSeguro(intoleranciasNotas)}</div>`
+                : '';
+            divIntolerancias.innerHTML = itemsHtml + notasHtml;
+        } else {
+            secIntolerancias.style.display = 'none';
+            divIntolerancias.innerHTML = '';
+        }
+    }
 
     const secNotas = el('detalleNotasSection');
     const divNotas = el('detalleNotas');
@@ -893,6 +958,143 @@ function _renderDetalleComanda(comanda) {
     }
 }
 
+function verDetalleComandaLogistica(comandaLogistica) {
+    const dashboard = document.getElementById('dashboard');
+    const comandaForm = document.getElementById('comandaForm');
+    const historialPage = document.getElementById('historialPage');
+    const expedientePedido = document.getElementById('expedientePedido');
+    const logisticaForm = document.getElementById('logisticaForm');
+    const detalleComanda = document.getElementById('detalleComanda');
+
+    if (dashboard) dashboard.style.display = 'none';
+    if (comandaForm) comandaForm.style.display = 'none';
+    if (historialPage) historialPage.style.display = 'none';
+    if (expedientePedido) expedientePedido.style.display = 'none';
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    if (detalleComanda) detalleComanda.style.display = 'block';
+
+    _renderDetalleComandaLogistica(comandaLogistica);
+}
+
+function _renderDetalleComandaLogistica(comanda) {
+    window.detalleDocumentoActivo = {
+        tipo: 'logistica',
+        codigo: comanda.codigo,
+        codigoCocina: comanda.codigo_cocina || comanda.codigo
+    };
+
+    const el = (id) => document.getElementById(id);
+    const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[char]);
+
+    if (el('detalleCodigo')) el('detalleCodigo').textContent = `Comanda Logistica - ${comanda.codigo_cocina || comanda.codigo || ''}`;
+    if (el('detalleFecha')) {
+        el('detalleFecha').textContent = comanda.fecha_creacion
+            ? 'Creada el ' + new Date(comanda.fecha_creacion).toLocaleDateString('es-ES')
+            : '';
+    }
+
+    if (el('detalleEmpresa')) el('detalleEmpresa').textContent = comanda.empresa || '—';
+    if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '—';
+    if (el('detallePax')) el('detallePax').textContent = comanda.pax || '0';
+    if (el('detalleFechaEvento')) {
+        const fe = comanda.fecha_evento ? new Date(comanda.fecha_evento + 'T00:00:00') : null;
+        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '—';
+    }
+    if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '—';
+
+    const menuSection = el('detalleMenuPrincipal')?.closest('.dc-section');
+    if (menuSection) menuSection.style.display = 'none';
+
+    const menajeBadge = el('detalleMenajeBadge');
+    if (menajeBadge) menajeBadge.style.display = 'none';
+
+    const menuPrincipal = el('detalleMenuPrincipal');
+    if (menuPrincipal) {
+        menuPrincipal.innerHTML = '';
+    }
+
+    ['detalleMenusAdicionalesSection', 'detalleReferenciasSection', 'detalleMultiplicadoresSection',
+     'detalleIntoleranciasSection', 'detalleNotasSection'].forEach(id => {
+        const node = el(id);
+        if (node) node.style.display = 'none';
+    });
+
+    const secEntrega = el('detalleDatosLogisticaSection');
+    const contEntrega = el('detalleDatosLogisticaContent');
+    const li = comanda.logistica || {};
+    if (secEntrega && contEntrega) {
+        const tieneDatos = li.nombre_contacto || li.telefono_contacto || li.direccion || li.codigo_postal || li.hora_entrega || li.hora_evento;
+        if (tieneDatos) {
+            secEntrega.style.display = '';
+            contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
+                <tr>
+                    ${li.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value">${textoSeguro(li.nombre_contacto)}</div></td>` : ''}
+                    ${li.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Telefono</div><div class="detalle-field-value">${textoSeguro(li.telefono_contacto)}</div></td>` : ''}
+                    ${li.direccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Direccion</div><div class="detalle-field-value">${textoSeguro(li.direccion)}</div></td>` : ''}
+                    ${li.codigo_postal ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Cod. Postal</div><div class="detalle-field-value">${textoSeguro(li.codigo_postal)}</div></td>` : ''}
+                    ${li.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${textoSeguro(li.hora_entrega)}</div></td>` : ''}
+                    ${li.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${textoSeguro(li.hora_evento)}</div></td>` : ''}
+                </tr>
+            </table>`;
+        } else {
+            secEntrega.style.display = 'none';
+            contEntrega.innerHTML = '';
+        }
+    }
+
+    const secLog = el('detalleLogisticaSection');
+    const contLog = el('detalleLogisticaContent');
+    const material = comanda.material_logistica || {};
+    if (secLog && contLog) {
+        const categorias = [
+            { key: 'bebidas', icono: '🥤', titulo: 'Bebidas' },
+            { key: 'menaje', icono: '🍽️', titulo: 'Menaje' },
+            { key: 'extras', icono: '✨', titulo: 'Material' }
+        ];
+
+        const html = categorias.map(cat => {
+            const items = (material[cat.key] || []).filter(item => item.checked !== false && Number(item.cantidad || 0) > 0);
+            if (!items.length) return '';
+            return `<div class="dc-material-col">
+                <h5>${cat.icono} ${cat.titulo}</h5>
+                <div class="dc-material-list">
+                    ${items.map(item => `<div class="dc-material-item">
+                        <span class="dc-material-nombre">${textoSeguro(item.nombre)}</span>
+                        <span class="dc-material-cantidad">${textoSeguro(item.cantidad || 0)}</span>
+                        <span class="dc-material-unidad">${textoSeguro(item.unidad || 'uds')}</span>
+                    </div>`).join('')}
+                </div>
+            </div>`;
+        }).join('');
+
+        if (html) {
+            secLog.style.display = '';
+            contLog.innerHTML = `<div class="dc-material-grid">${html}</div>`;
+        } else {
+            secLog.style.display = 'none';
+            contLog.innerHTML = '';
+        }
+    }
+
+    const secNotas = el('detalleNotasLogisticaSection');
+    const contNotas = el('detalleNotasLogistica');
+    if (secNotas && contNotas) {
+        if (li.notas_logistica) {
+            secNotas.style.display = '';
+            contNotas.innerHTML = `<div class="detalle-logistica-notas">${textoSeguro(li.notas_logistica)}</div>`;
+        } else {
+            secNotas.style.display = 'none';
+            contNotas.innerHTML = '';
+        }
+    }
+}
+
 function _clonarValorComanda(valor) {
     try {
         return JSON.parse(JSON.stringify(valor || null));
@@ -1013,6 +1215,9 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     _rellenarCampoEdicion('fecha_evento', (comanda.fecha_evento || '').split('T')[0]);
     _rellenarCampoEdicion('tipo_menaje', comanda.tipo_menaje || '');
     _rellenarCampoEdicion('alergias_notas', comanda.alergias?.notas || '');
+    if (typeof rellenarIntolerancias === 'function') {
+        rellenarIntolerancias(comanda.alergias?.intolerancias || {});
+    }
 
     const logistica = comanda.logistica_inline || comanda.logistica || {};
     _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
@@ -1064,6 +1269,11 @@ async function cargarComandaEnFormularioEdicion(comanda) {
 }
 
 async function editarComanda() {
+    if (window.detalleDocumentoActivo?.tipo === 'logistica') {
+        await editarComandaLogistica();
+        return;
+    }
+
     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
         return;
     }
@@ -1100,6 +1310,11 @@ function imprimirComanda() {
 }
 
 function eliminarComanda() {
+    if (window.detalleDocumentoActivo?.tipo === 'logistica') {
+        eliminarComandaLogistica();
+        return;
+    }
+
     if (window.AppPermissions && !AppPermissions.isAdmin()) {
         alert('Solo un administrador puede eliminar comandas.');
         return;
@@ -1115,6 +1330,99 @@ function eliminarComanda() {
             volverAlHistorial();
         }
     }
+}
+
+async function editarComandaLogistica() {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
+        return;
+    }
+
+    const codigo = window.detalleDocumentoActivo?.codigoCocina || '';
+    const resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+    if (!resultado) {
+        alert('Comanda de logistica no encontrada.');
+        return;
+    }
+
+    const item = resultado.item;
+    window._logisticaEditando = item;
+
+    if (typeof abrirFormularioLogistica !== 'function') {
+        alert('No se pudo abrir el formulario de logistica.');
+        return;
+    }
+
+    await abrirFormularioLogistica(item.codigo_cocina || item.codigo, item.orden_id || null, {
+        codigoLogistica: item.codigo,
+        empresa: item.empresa || '',
+        responsable: item.responsable || '',
+        pax: item.pax || 0,
+        hora_salida: item.hora_salida || '',
+        fecha_evento: item.fecha_evento || ''
+    });
+
+    const log = item.logistica || {};
+    _rellenarCampoEdicion('log_nombre_contacto', log.nombre_contacto || '');
+    _rellenarCampoEdicion('log_telefono_contacto', log.telefono_contacto || '');
+    _rellenarCampoEdicion('log_hora_entrega', log.hora_entrega || '');
+    _rellenarCampoEdicion('log_hora_evento', log.hora_evento || '');
+    _rellenarCampoEdicion('log_direccion', log.direccion || '');
+    _rellenarCampoEdicion('log_codigo_postal', log.codigo_postal || '');
+    _rellenarCampoEdicion('log_page_notas', log.notas_logistica || '');
+
+    if (window.materialLogistica && item.material_logistica) {
+        ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+            const actuales = window.materialLogistica[tipo] || [];
+            const guardados = item.material_logistica[tipo] || [];
+            window.materialLogistica[tipo] = actuales.map(actual => {
+                const guardado = guardados.find(mat => String(mat.id || mat.item_id || mat.nombre) === String(actual.id || actual.item_id || actual.nombre)
+                    || String(mat.nombre || '') === String(actual.nombre || ''));
+                return guardado
+                    ? { ...actual, ...guardado, checked: true, cantidad: Number(guardado.cantidad || 0) }
+                    : { ...actual, checked: false, cantidad: 0 };
+            });
+        });
+        if (typeof window.renderizarMaterialLogisticaActual === 'function') {
+            window.renderizarMaterialLogisticaActual('materialLogisticaPage');
+        }
+    }
+}
+
+function eliminarComandaLogistica() {
+    if (window.AppPermissions && !AppPermissions.isAdmin()) {
+        alert('Solo un administrador puede eliminar comandas.');
+        return;
+    }
+
+    const codigo = window.detalleDocumentoActivo?.codigoCocina || '';
+    const resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+    if (!resultado) {
+        alert('Comanda de logistica no encontrada.');
+        return;
+    }
+
+    if (!confirm(`Eliminar la comanda de logistica ${resultado.item.codigo || codigo}? Esta accion no se puede deshacer.`)) return;
+
+    const historial = resultado.historial.filter((_, index) => index !== resultado.index);
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+
+    const historialPrincipal = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const idx = historialPrincipal.findIndex(item => item.codigo === codigo);
+    if (idx >= 0) {
+        const documentos = { ...(historialPrincipal[idx].documentos || {}) };
+        delete documentos.logistica;
+        historialPrincipal[idx] = {
+            ...historialPrincipal[idx],
+            documentos,
+            logistica_creada: false,
+            fecha_modificacion: new Date().toISOString()
+        };
+        localStorage.setItem('historialComandas', JSON.stringify(historialPrincipal));
+    }
+
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    alert('Comanda de logistica eliminada correctamente.');
+    verExpedientePedido(codigo);
 }
 
 async function verDetalleComandaPorCodigo(codigo) {

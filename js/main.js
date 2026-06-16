@@ -120,6 +120,8 @@ function configurarValidacionesEnTiempoReal() {
             toggleLogisticaInline(parseInt(this.value));
         });
     }
+
+    configurarIntolerancias();
 }
 
 /**
@@ -224,6 +226,71 @@ function obtenerDatosLogisticaInline() {
 
 
 // ========== FUNCIONES DE VALIDACIÓN INDIVIDUALES ==========
+
+const INTOLERANCIAS_CONFIG = [
+    { id: 'int_gluten', qty: 'int_gluten_pax', nombre: 'Sin gluten' },
+    { id: 'int_lactosa', qty: 'int_lactosa_pax', nombre: 'Sin lactosa' },
+    { id: 'int_frutos_secos', qty: 'int_frutos_secos_pax', nombre: 'Sin frutos secos' },
+    { id: 'int_huevo', qty: 'int_huevo_pax', nombre: 'Sin huevo' },
+    { id: 'int_marisco', qty: 'int_marisco_pax', nombre: 'Sin marisco' },
+    { id: 'int_vegetariano', qty: 'int_vegetariano_pax', nombre: 'Vegetariano' },
+    { id: 'int_vegano', qty: 'int_vegano_pax', nombre: 'Vegano' },
+    { id: 'int_otro', qty: 'int_otro_pax', nombre: 'Otro' }
+];
+
+function configurarIntolerancias() {
+    INTOLERANCIAS_CONFIG.forEach(({ id, qty }) => {
+        const check = document.getElementById(id);
+        const cantidad = document.getElementById(qty);
+        if (!check || !cantidad) return;
+
+        check.addEventListener('change', () => {
+            if (!check.checked) cantidad.value = '';
+            if (check.checked && !cantidad.value) cantidad.value = '1';
+        });
+
+        cantidad.addEventListener('input', () => {
+            const valor = Number(cantidad.value || 0);
+            check.checked = valor > 0 || check.checked;
+            if (valor <= 0 && cantidad.value !== '') check.checked = false;
+        });
+    });
+}
+
+function obtenerDatosIntolerancias() {
+    const items = INTOLERANCIAS_CONFIG.map(({ id, qty, nombre }) => {
+        const check = document.getElementById(id);
+        const cantidad = document.getElementById(qty);
+        const pax = Number(cantidad?.value || 0);
+        const activo = !!check?.checked || pax > 0;
+        if (!activo) return null;
+
+        return {
+            nombre,
+            pax: pax > 0 ? pax : null
+        };
+    }).filter(Boolean);
+
+    const notas = document.getElementById('intolerancias_notas')?.value.trim() || '';
+    return {
+        items,
+        notas
+    };
+}
+
+function rellenarIntolerancias(datos = {}) {
+    const items = Array.isArray(datos.items) ? datos.items : [];
+    INTOLERANCIAS_CONFIG.forEach(({ id, qty, nombre }) => {
+        const check = document.getElementById(id);
+        const cantidad = document.getElementById(qty);
+        const item = items.find(i => i.nombre === nombre);
+        if (check) check.checked = !!item;
+        if (cantidad) cantidad.value = item?.pax || '';
+    });
+
+    const notas = document.getElementById('intolerancias_notas');
+    if (notas) notas.value = datos.notas || '';
+}
 
 function validarEmpresa() {
     const input = document.getElementById('empresa');
@@ -552,9 +619,12 @@ if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
                 })
         } : {}),
 
-        // Notas
+        // Notas e intolerancias de cocina
         ...(document.getElementById('alergias_notas') ? {
-            alergias: { notas: document.getElementById('alergias_notas').value }
+            alergias: {
+                notas: document.getElementById('alergias_notas').value,
+                intolerancias: obtenerDatosIntolerancias()
+            }
         } : {}),
 
         tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
@@ -741,12 +811,21 @@ if (typeof agregarAlCalendario === 'function') {
 // Guardar código e ID globalmente para pasarlos al formulario de logística
 window.ultimoCodigoCocina = codigo;
 window.ultimoOrdenId      = null;
+window.ultimaComandaCocinaData = {
+    codigo,
+    empresa: comandaData.empresa || '',
+    responsable: comandaData.responsable || '',
+    pax: Number(comandaData.pax || 0),
+    hora_salida: comandaData.hora_salida || '',
+    fecha_evento: comandaData.fecha_evento || '',
+    notas: comandaData.alergias?.notas || ''
+};
 
-if (categoriaId === 3) {
+if (Number(_catPrincipal) === 3) {
     // Cocteles/Celebraciones → página separada de logística
     setTimeout(() => {
         mostrarModalConfirmacionLogistica();
-    }, 1000);
+    }, 600);
 } else {
     // Resto de categorías → guardar logística inline en Supabase si hay datos
     const datosLogInline = obtenerDatosLogisticaInline();
@@ -840,13 +919,14 @@ function crearComandaLogistica() {
     if (modal) modal.style.display = 'none';
 
     // Capturar datos base de la comanda de cocina recién creada
+    const comandaBase = window.ultimaComandaCocinaData || {};
     const datosBase = {
-        empresa:      document.getElementById('empresa')?.value || '',
-        responsable:  document.getElementById('responsable')?.value || '',
-        pax:          parseInt(document.getElementById('pax')?.value) || 0,
-        hora_salida:  document.getElementById('hora_salida')?.value || '',
-        fecha_evento: document.getElementById('fecha_evento')?.value || '',
-        notas:        document.getElementById('alergias_notas')?.value || ''
+        empresa:      comandaBase.empresa || document.getElementById('empresa')?.value || '',
+        responsable:  comandaBase.responsable || document.getElementById('responsable')?.value || '',
+        pax:          Number(comandaBase.pax || document.getElementById('pax')?.value || 0),
+        hora_salida:  comandaBase.hora_salida || document.getElementById('hora_salida')?.value || '',
+        fecha_evento: comandaBase.fecha_evento || document.getElementById('fecha_evento')?.value || '',
+        notas:        comandaBase.notas || document.getElementById('alergias_notas')?.value || ''
     };
 
     // El código de cocina está guardado en window.ultimoCodigoCocina
@@ -867,35 +947,186 @@ function crearComandaLogistica() {
  * @param {Object} datosLogistica - Datos de la comanda de logística
  * @returns {string} Código de la comanda
  */
-function guardarComandaLogisticaEnHistorial(datosLogistica) {
-    try {
-        // Obtener historial actual
-        let historial = JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
-        
-        // Generar código único con año de 2 dígitos
-        const fecha = new Date();
-        const año = fecha.getFullYear().toString().slice(-2); // 2 últimos dígitos
-        const codigo = `LOG-${año}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
-        
-        // Crear objeto de comanda de logística
-        const comandaLogistica = {
-            codigo: codigo,
-            ...datosLogistica,
-        fecha_modificacion: new Date().toISOString()
+async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
+    window._logisticaBase = {
+        codigoCocina,
+        ordenId,
+        ...datosBase
+    };
+    window.pax = Number(datosBase.pax || window.pax || document.getElementById('pax')?.value || 0);
+
+    const comandaForm = document.getElementById('comandaForm');
+    const dashboard = document.getElementById('dashboard');
+    const detalle = document.getElementById('detalleComanda');
+    const historial = document.getElementById('historialPage');
+    const expediente = document.getElementById('expedientePedido');
+    const logisticaForm = document.getElementById('logisticaForm');
+
+    if (comandaForm) comandaForm.style.display = 'none';
+    if (dashboard) dashboard.style.display = 'none';
+    if (detalle) detalle.style.display = 'none';
+    if (historial) historial.style.display = 'none';
+    if (expediente) expediente.style.display = 'none';
+    if (logisticaForm) logisticaForm.style.display = 'block';
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || '—';
+    };
+    const setValue = (id, value) => {
+        const el = document.getElementById(id);
+        if (el && value) el.value = value;
     };
 
-        // Agregar al historial
-        historial.unshift(comandaLogistica);
-        
-        // Guardar en localStorage
-        localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
-        
-        console.log(`Comanda de logística ${codigo} guardada en historial`);
-        return codigo;
-        
+    setText('log_codigo_cocina', codigoCocina);
+    setText('log_empresa', datosBase.empresa);
+    setText('log_responsable', datosBase.responsable);
+    setText('log_pax', datosBase.pax ? String(datosBase.pax) : '0');
+    setText('log_fecha_evento', datosBase.fecha_evento);
+    setText('log_hora_salida', datosBase.hora_salida);
+
+    setValue('log_nombre_contacto', document.getElementById('log_inline_nombre_contacto')?.value || '');
+    setValue('log_telefono_contacto', document.getElementById('log_inline_telefono_contacto')?.value || '');
+    setValue('log_direccion', document.getElementById('log_inline_direccion')?.value || '');
+    setValue('log_codigo_postal', document.getElementById('log_inline_codigo_postal')?.value || '');
+    setValue('log_hora_entrega', document.getElementById('log_inline_hora_entrega')?.value || '');
+    setValue('log_hora_evento', document.getElementById('log_inline_hora_evento')?.value || '');
+    setValue('log_page_notas', document.getElementById('log_inline_notas')?.value || '');
+
+    const materialPage = document.getElementById('materialLogisticaPage');
+    if (materialPage) materialPage.style.display = 'block';
+    if (typeof inicializarMaterialLogistica === 'function') {
+        await inicializarMaterialLogistica('materialLogisticaPage');
+        if (typeof autocompletarMaterialPorCategoria === 'function') {
+            await autocompletarMaterialPorCategoria(3, 'materialLogisticaPage');
+        }
+    }
+
+    if (typeof setNavActive === 'function') setNavActive('nav-servicios');
+}
+
+function volverDesdeCancelLogistica() {
+    const logisticaForm = document.getElementById('logisticaForm');
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    if (typeof volverAlDashboard === 'function') {
+        volverAlDashboard();
+    }
+}
+
+function guardarComandaLogistica() {
+    const base = window._logisticaBase || {};
+    const datosLogistica = {
+        tipo_registro: 'logistica',
+        codigo_original: base.codigoLogistica || window._logisticaEditando?.codigo || '',
+        codigo_cocina: base.codigoCocina || '',
+        orden_id: base.ordenId || null,
+        empresa: base.empresa || '',
+        responsable: base.responsable || '',
+        pax: base.pax || 0,
+        fecha_evento: base.fecha_evento || '',
+        hora_salida: base.hora_salida || '',
+        logistica: {
+            nombre_contacto: document.getElementById('log_nombre_contacto')?.value.trim() || '',
+            telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',
+            hora_entrega: document.getElementById('log_hora_entrega')?.value || '',
+            hora_evento: document.getElementById('log_hora_evento')?.value || '',
+            direccion: document.getElementById('log_direccion')?.value.trim() || '',
+            codigo_postal: document.getElementById('log_codigo_postal')?.value.trim() || '',
+            notas_logistica: document.getElementById('log_page_notas')?.value.trim() || ''
+        },
+        material_logistica: typeof obtenerMaterialSeleccionado === 'function'
+            ? obtenerMaterialSeleccionado()
+            : null,
+        logistics_status: 'sin_preparar',
+        logistics_assigned_to: '',
+        logistics_prepared_items: 0,
+        fecha_creacion: new Date().toISOString(),
+        estado: 'sin_preparar'
+    };
+
+    try {
+        const codigo = guardarComandaLogisticaEnHistorial(datosLogistica);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje(`Comanda de logística ${codigo} creada`, 'success');
+        }
+        if (typeof cargarCalendario === 'function') {
+            cargarCalendario();
+        }
+        window._logisticaEditando = null;
+        volverDesdeCancelLogistica();
     } catch (error) {
-        console.error('Error al guardar comanda de logística:', error);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje('Error al guardar logística: ' + error.message, 'error');
+        }
+        console.error('Error al guardar logística:', error);
+    }
+}
+
+function guardarComandaLogisticaEnHistorial(datosLogistica) {
+    try {
+        let historial = JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
+
+        const fecha = new Date();
+        const year = fecha.getFullYear().toString().slice(-2);
+        const codigo = datosLogistica.codigo_original || datosLogistica.codigo_cocina
+            || `LOG-${year}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
+        const existente = historial.find(item => item.codigo === datosLogistica.codigo_original);
+
+        const comandaLogistica = {
+            codigo,
+            ...datosLogistica,
+            fecha_creacion: existente?.fecha_creacion || datosLogistica.fecha_creacion,
+            fecha_modificacion: new Date().toISOString()
+        };
+
+        const indexExistente = historial.findIndex(item => item.codigo === codigo || item.codigo === datosLogistica.codigo_original);
+        if (indexExistente >= 0) {
+            historial[indexExistente] = comandaLogistica;
+        } else {
+            historial.unshift(comandaLogistica);
+        }
+
+        localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+        vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica);
+
+        console.log(`Comanda de logistica ${codigo} guardada en historial`);
+        return codigo;
+
+    } catch (error) {
+        console.error('Error al guardar comanda de logistica:', error);
         throw error;
+    }
+}
+function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
+    const codigoPedido = comandaLogistica.codigo_cocina || comandaLogistica.codigo;
+    if (!codigoPedido) return;
+
+    try {
+        const historialPrincipal = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+        const index = historialPrincipal.findIndex(item => item.codigo === codigoPedido);
+        if (index === -1) return;
+
+        const comanda = historialPrincipal[index];
+        const documentos = {
+            ...(comanda.documentos || {}),
+            logistica: {
+                tipo: 'logistica',
+                nombre: 'Comanda Logistica',
+                codigo: comandaLogistica.codigo,
+                fecha_creacion: comandaLogistica.fecha_creacion || new Date().toISOString()
+            }
+        };
+
+        historialPrincipal[index] = {
+            ...comanda,
+            documentos,
+            logistica_creada: true,
+            fecha_modificacion: new Date().toISOString()
+        };
+
+        localStorage.setItem('historialComandas', JSON.stringify(historialPrincipal));
+    } catch (error) {
+        console.warn('No se pudo vincular la comanda de logistica al expediente:', error);
     }
 }
 

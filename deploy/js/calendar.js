@@ -17,6 +17,8 @@ function formatoFechaLocal(date) {
 
 function getEventosPorFecha() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const codigosConLogistica = new Set(historialLogistica.map(item => item.codigo_cocina || item.codigo).filter(Boolean));
     const map = {};
 
     historial.forEach(c => {
@@ -32,6 +34,7 @@ function getEventosPorFecha() {
             hora: c.logistica_inline?.hora_entrega || c.hora_salida || '',
             estado: c.estado || 'creada',
             tipo: c.tipo_registro || 'comanda',
+            tieneLogistica: !!c.documentos?.logistica || codigosConLogistica.has(c.codigo || ''),
         });
     });
 

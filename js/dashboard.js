@@ -8,6 +8,24 @@ function mostrarComandaCocina() {
         return;
     }
 
+    window.serviciosMode = false;
+    const title = document.getElementById('comandaFormTitle');
+    const subtitle = document.getElementById('comandaFormSubtitle');
+    const categoriaGroup = document.getElementById('categoriaMenuGroup');
+    const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const comandaFormEl = document.getElementById('comandaForm');
+    const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
+    if (title) title.textContent = 'Nueva Comanda';
+    if (subtitle) subtitle.textContent = 'Completa los datos del pedido de catering';
+    if (categoriaGroup) categoriaGroup.style.display = '';
+    if (serviciosGroup) serviciosGroup.style.display = 'none';
+    if (comandaFormEl) comandaFormEl.classList.remove('servicios-mode');
+    if (notasLogisticaInline) notasLogisticaInline.style.display = '';
+
+    const logisticaForm = document.getElementById('logisticaForm');
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    const logisticaPage = document.getElementById('logisticaPage');
+    if (logisticaPage) logisticaPage.style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'block';
     const historialPage = document.getElementById('historialPage');
@@ -26,6 +44,9 @@ function mostrarComandaCocina() {
     // Limpiar formulario si no estamos editando
     if (!window.comandaEditando) {
         document.getElementById('comandaCocinaForm').reset();
+        if (typeof limpiarBuscadorClientes === 'function') {
+            limpiarBuscadorClientes();
+        }
         if (typeof rellenarResponsableConUsuarioActual === 'function') {
             rellenarResponsableConUsuarioActual(true);
         }
@@ -67,14 +88,610 @@ function mostrarComandaCocina() {
 }
 
 /**
+ * Muestra el apartado independiente de Servicios.
+ * Reutiliza el formulario de cocina, pero carga directamente los menus de servicios.
+ */
+async function mostrarServicios() {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear servicios.')) {
+        return;
+    }
+
+    window.serviciosMode = true;
+    mostrarComandaCocina();
+    window.serviciosMode = true;
+
+    const title = document.getElementById('comandaFormTitle');
+    const subtitle = document.getElementById('comandaFormSubtitle');
+    const categoriaGroup = document.getElementById('categoriaMenuGroup');
+    const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const categoria = document.getElementById('categoria');
+    const comandaFormEl = document.getElementById('comandaForm');
+    const logisticaInline = document.getElementById('logisticaInlineSection');
+    const materialInline = document.getElementById('materialLogisticaInline');
+    const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
+    const serviciosCategoria = document.getElementById('serviciosCategoria');
+
+    if (title) title.textContent = 'Servicios';
+    if (subtitle) subtitle.textContent = 'Selecciona el servicio y completa la comanda de cocina';
+    if (categoriaGroup) categoriaGroup.style.display = 'none';
+    if (serviciosGroup) serviciosGroup.style.display = '';
+    if (serviciosCategoria) serviciosCategoria.value = '';
+    if (comandaFormEl) comandaFormEl.classList.add('servicios-mode');
+    if (categoria) {
+        if (!categoria.querySelector('option[value="3"]')) {
+            const serviciosOption = document.createElement('option');
+            serviciosOption.value = '3';
+            serviciosOption.textContent = 'Servicios';
+            serviciosOption.hidden = true;
+            categoria.appendChild(serviciosOption);
+        }
+        categoria.value = '3';
+    }
+    if (logisticaInline) logisticaInline.style.display = 'none';
+    if (notasLogisticaInline) notasLogisticaInline.style.display = 'none';
+    if (materialInline) {
+        materialInline.style.display = 'none';
+        materialInline.innerHTML = '';
+    }
+
+    if (typeof cargarMenus === 'function') {
+        await cargarMenus();
+    }
+    if (typeof setNavActive === 'function') setNavActive('nav-servicios');
+}
+
+/**
  * Muestra el módulo de logística
  */
 function mostrarLogistica() {
-    if (typeof mostrarMensaje === 'function') {
-        mostrarMensaje('🚚 Módulo de Logística - En desarrollo. Próximamente disponible', 'info');
-    } else {
-        alert('🚚 Módulo de Logística - En desarrollo\nPróximamente disponible');
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('comandaForm').style.display = 'none';
+    const logisticaForm = document.getElementById('logisticaForm');
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    document.getElementById('historialPage').style.display = 'none';
+    const expedientePedido = document.getElementById('expedientePedido');
+    if (expedientePedido) expedientePedido.style.display = 'none';
+    document.getElementById('detalleComanda').style.display = 'none';
+    const clientesPanel = document.getElementById('clientesPanel');
+    if (clientesPanel) clientesPanel.style.display = 'none';
+
+    const logisticaPage = document.getElementById('logisticaPage');
+    if (logisticaPage) logisticaPage.style.display = 'block';
+
+    if (typeof setNavActive === 'function') setNavActive('nav-logistica');
+    cargarModuloLogistica();
+}
+
+async function cargarModuloLogistica() {
+    renderizarComandasLogistica();
+    await renderizarInventarioLogistica();
+}
+
+function cambiarTabLogistica(tab) {
+    const eventosPanel = document.getElementById('logisticaEventosPanel');
+    const inventarioPanel = document.getElementById('logisticaInventarioPanel');
+    const tabEventos = document.getElementById('logTabEventos');
+    const tabInventario = document.getElementById('logTabInventario');
+
+    if (eventosPanel) eventosPanel.style.display = tab === 'eventos' ? '' : 'none';
+    if (inventarioPanel) inventarioPanel.style.display = tab === 'inventario' ? '' : 'none';
+    if (tabEventos) tabEventos.classList.toggle('active', tab === 'eventos');
+    if (tabInventario) tabInventario.classList.toggle('active', tab === 'inventario');
+}
+
+function getHistorialLogistica() {
+    return JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+}
+
+function guardarHistorialLogistica(historial) {
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
+}
+
+function normalizarEstadoLogistica(estado) {
+    if (estado === 'proceso') return 'en_preparacion';
+    if (estado === 'completada') return 'listo';
+    if (estado === 'creada') return 'sin_preparar';
+    return estado || 'sin_preparar';
+}
+
+function getLabelEstadoLogistica(estado) {
+    const labels = {
+        sin_preparar: 'Sin preparar',
+        en_preparacion: 'En preparación',
+        listo: 'Listo para evento'
+    };
+    return labels[normalizarEstadoLogistica(estado)] || 'Sin preparar';
+}
+
+function getCategoriasMaterialLogistica() {
+    return [
+        { key: 'menaje', label: 'Menaje', icon: '▧' },
+        { key: 'bebidas', label: 'Bebidas', icon: '◌' },
+        { key: 'extras', label: 'Material', icon: '▤' }
+    ];
+}
+
+function escapeLogisticaHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function leerNumeroInventarioLogistica(value) {
+    const normalizado = String(value ?? '0').replace(',', '.').trim();
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function getMaterialLogisticaPlano(material) {
+    const resultado = [];
+    ['menaje', 'bebidas', 'extras'].forEach(tipo => {
+        (material?.[tipo] || []).forEach(item => {
+            resultado.push({ ...item, tipo });
+        });
+    });
+    return resultado;
+}
+
+function getCodigosLogistica(historial) {
+    return new Set((historial || []).map(item => item.codigo_cocina || item.codigo).filter(Boolean));
+}
+
+function getComandasServicioSinLogistica(historialLogistica) {
+    const codigosLogistica = getCodigosLogistica(historialLogistica);
+    const historialCocina = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+
+    return historialCocina.filter(item => {
+        const codigo = item.codigo || item.codigo_comanda || item.id;
+        const categoria = item.categoria_id || item.categoriaId || item.categoria;
+        const menu = item.menu_principal || item.menu || item.menu_nombre || '';
+        const esServicio = Number(categoria) === 3
+            || item.servicio_categoria
+            || /brindis|networking|afterwork|decuatro|alucinancia|atractividad|coctel/i.test(menu);
+        return esServicio && codigo && !codigosLogistica.has(codigo);
+    });
+}
+
+function actualizarKpisLogistica(historial) {
+    const counts = { sin_preparar: 0, en_preparacion: 0, listo: 0 };
+    (historial || []).forEach(item => {
+        const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
+        if (counts[estado] !== undefined) counts[estado]++;
+    });
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    };
+
+    setText('logisticaKpiPendientes', counts.sin_preparar);
+    setText('logisticaKpiProceso', counts.en_preparacion);
+    setText('logisticaKpiListas', counts.listo);
+}
+
+function renderizarAlertasLogistica(historial) {
+    const box = document.getElementById('logisticaMissingBox');
+    const title = document.getElementById('logisticaMissingTitle');
+    const list = document.getElementById('logisticaMissingList');
+    if (!box || !title || !list) return;
+
+    const faltantes = getComandasServicioSinLogistica(historial);
+    if (!faltantes.length) {
+        box.style.display = 'none';
+        list.innerHTML = '';
+        return;
     }
+
+    box.style.display = '';
+    title.textContent = `${faltantes.length} comandas sin hoja de logística`;
+    list.innerHTML = faltantes.slice(0, 8).map(item => {
+        const codigo = item.codigo || item.codigo_comanda || item.id || '';
+        const empresa = item.empresa || item.company_name || 'Sin empresa';
+        const menu = item.menu_nombre || item.menu_principal || item.menu || 'Servicio';
+        return `<button type="button" class="logistics-missing-chip" onclick="mostrarHistorial()">+ ${empresa} — ${menu}</button>`;
+    }).join('');
+
+}
+
+function renderizarComandasLogistica() {
+    const cont = document.getElementById('logisticaComandasList');
+    if (!cont) return;
+
+    const historial = getHistorialLogistica();
+    actualizarKpisLogistica(historial);
+    renderizarAlertasLogistica(historial);
+
+    if (!historial.length) {
+        cont.innerHTML = '<div class="logistics-empty">Aún no hay eventos activos en logística.</div>';
+        return;
+    }
+
+    cont.innerHTML = historial.slice(0, 30).map((item, index) => {
+        const fecha = item.fecha_evento || item.fecha_creacion || '';
+        const material = item.material_logistica || {};
+        const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
+        const preparados = Number(item.logistics_prepared_items || 0);
+        const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
+        const responsable = item.logistics_assigned_to || '';
+        const progreso = totalMaterial ? Math.min(100, Math.round((preparados / totalMaterial) * 100)) : 0;
+
+        return `
+            <article class="logistics-event-card" onclick="abrirPreparacionLogistica(${index})">
+                <div class="logistics-event-main">
+                    <div>
+                        <strong>${item.codigo_cocina || item.codigo || 'Sin código'}</strong>
+                        <span>${item.empresa || 'Sin empresa'}</span>
+                    </div>
+                    <span class="logistics-status-pill logistics-status-pill--${estado}">${getLabelEstadoLogistica(estado)}</span>
+                </div>
+
+                <div class="logistics-event-meta">
+                    <span>📅 ${fecha || 'Sin fecha'}</span>
+                    <span>${item.pax || 0} pax</span>
+                    <span>${totalMaterial} artículos</span>
+                </div>
+
+                <div class="logistics-progress-row">
+                    <span>${preparados} preparados</span>
+                    <div class="logistics-progress-bar"><span style="width:${progreso}%"></span></div>
+                    <span>${progreso}%</span>
+                </div>
+
+                <div class="logistics-event-controls">
+                    <label>
+                        Responsable
+                        <input type="text" value="${responsable}" placeholder="Asignar persona"
+                            onclick="event.stopPropagation()"
+                            onchange="actualizarResponsableLogistica(${index}, this.value)">
+                    </label>
+                    <label>
+                        Estado
+                        <select onclick="event.stopPropagation()" onchange="actualizarEstadoLogistica(${index}, this.value)">
+                            <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
+                            <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
+                            <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
+                        </select>
+                    </label>
+                    <label>
+                        Preparados
+                        <input type="number" min="0" max="${totalMaterial || 0}" value="${preparados}"
+                            onclick="event.stopPropagation()"
+                            onchange="actualizarPreparadosLogistica(${index}, this.value)">
+                    </label>
+                </div>
+            </article>
+        `;
+    }).join('');
+
+}
+
+function abrirModalArticuloLogistica(id = '') {
+    const modal = document.getElementById('logisticaArticuloModal');
+    const form = document.getElementById('logisticaArticuloForm');
+    if (!modal || !form) return;
+
+    const item = id ? (window.logisticaInventarioItems || []).find(mat => String(mat.id) === String(id)) : null;
+    document.getElementById('logisticaArticuloTitulo').textContent = item ? 'Editar articulo' : 'Nuevo articulo';
+    document.getElementById('logisticaArticuloId').value = item?.id || '';
+    document.getElementById('logisticaArticuloNombre').value = item?.nombre || '';
+    document.getElementById('logisticaArticuloTipo').value = item?.tipo || 'menaje';
+    document.getElementById('logisticaArticuloStock').value = Number(item?.stock_total ?? item?.stock ?? 0);
+    document.getElementById('logisticaArticuloSubcategoria').value = item?.subcategoria || item?.descripcion || '';
+    document.getElementById('logisticaArticuloUnidad').value = item?.unidad || 'ud';
+
+    modal.style.display = 'block';
+    setTimeout(() => document.getElementById('logisticaArticuloNombre')?.focus(), 50);
+}
+
+function cerrarModalArticuloLogistica() {
+    const modal = document.getElementById('logisticaArticuloModal');
+    const form = document.getElementById('logisticaArticuloForm');
+    if (modal) modal.style.display = 'none';
+    if (form) form.reset();
+    const idInput = document.getElementById('logisticaArticuloId');
+    if (idInput) idInput.value = '';
+}
+
+async function guardarArticuloInventarioLogistica(event) {
+    event.preventDefault();
+    if (!window.supabaseClient) {
+        alert('No se pudo conectar con Supabase para guardar el articulo.');
+        return;
+    }
+
+    const id = document.getElementById('logisticaArticuloId')?.value || '';
+    const nombre = document.getElementById('logisticaArticuloNombre')?.value.trim();
+    const tipo = document.getElementById('logisticaArticuloTipo')?.value || 'menaje';
+    const stockTotal = leerNumeroInventarioLogistica(document.getElementById('logisticaArticuloStock')?.value);
+    const subcategoria = document.getElementById('logisticaArticuloSubcategoria')?.value.trim() || '';
+    const unidad = document.getElementById('logisticaArticuloUnidad')?.value.trim() || 'ud';
+
+    if (!nombre) {
+        alert('Indica el nombre del articulo.');
+        return;
+    }
+
+    const items = window.logisticaInventarioItems || [];
+    const payload = {
+        nombre,
+        tipo,
+        unidad,
+        subcategoria,
+        stock_total: stockTotal,
+        activo: true,
+        parent_id: null
+    };
+
+    if (!id) {
+        const maxOrden = items.reduce((max, item) => Math.max(max, Number(item.orden || 0)), 0);
+        payload.orden = maxOrden + 10;
+    }
+
+    try {
+        const query = id
+            ? window.supabaseClient.from('logistics_materials').update(payload).eq('id', id).select('*').maybeSingle()
+            : window.supabaseClient.from('logistics_materials').insert(payload).select('*').maybeSingle();
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data) {
+            throw new Error('Supabase no devolvio el articulo actualizado. Revisa permisos de edicion para logistics_materials.');
+        }
+
+        cerrarModalArticuloLogistica();
+        window.logisticaInventarioItems = id
+            ? (window.logisticaInventarioItems || []).map(item => String(item.id) === String(id) ? data : item)
+            : [...(window.logisticaInventarioItems || []), data];
+        const filtroActivo = document.querySelector('.logistics-filter-chip.active')?.dataset.filter || 'todos';
+        pintarInventarioLogistica(filtroActivo);
+    } catch (error) {
+        console.error('Error guardando articulo de logistica:', error);
+        const msg = String(error?.message || '');
+        if (/stock_total|subcategoria/i.test(msg)) {
+            alert('Faltan columnas de inventario en Supabase. Ejecuta el SQL de actualizacion y vuelve a guardar.');
+        } else if (/no devolvio|permisos|permission|policy|row-level|rls/i.test(msg)) {
+            alert('No se pudo actualizar el articulo. Revisa los permisos de edicion de logistics_materials en Supabase.');
+        } else {
+            alert('No se pudo guardar el articulo. Revisa permisos o politicas de Supabase.');
+        }
+    }
+}
+
+async function eliminarArticuloInventarioLogistica(id) {
+    if (!window.supabaseClient) {
+        alert('No se pudo conectar con Supabase para eliminar el articulo.');
+        return;
+    }
+
+    const item = (window.logisticaInventarioItems || []).find(mat => String(mat.id) === String(id));
+    const nombre = item?.nombre || 'este articulo';
+    if (!window.confirm(`Eliminar ${nombre} del inventario?`)) return;
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('logistics_materials')
+            .update({ activo: false })
+            .eq('id', id);
+        if (error) throw error;
+        await renderizarInventarioLogistica();
+    } catch (error) {
+        console.error('Error eliminando articulo de logistica:', error);
+        alert('No se pudo eliminar el articulo. Revisa permisos o politicas de Supabase.');
+    }
+}
+
+function abrirPreparacionLogistica(index) {
+    const historial = getHistorialLogistica();
+    const item = historial[index];
+    const modal = document.getElementById('logisticaPreparacionModal');
+    const content = document.getElementById('logisticaPreparacionContent');
+    if (!item || !modal || !content) return;
+
+    const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
+    const material = item.material_logistica || {};
+
+    content.innerHTML = `
+        <div class="logistics-prep-header">
+            <div>
+                <h2>${item.empresa || item.codigo_cocina || item.codigo || 'Servicio'}</h2>
+                <p>${item.codigo_cocina || item.codigo || ''} · ${item.pax || 0} pax · ${item.fecha_evento || 'Sin fecha'}</p>
+            </div>
+        </div>
+
+        <div class="logistics-prep-state">
+            <label>Estado general:</label>
+            <select onchange="actualizarEstadoLogistica(${index}, this.value); abrirPreparacionLogistica(${index});">
+                <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
+                <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
+                <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
+            </select>
+        </div>
+
+        ${getCategoriasMaterialLogistica().map(cat => {
+            const items = material[cat.key] || [];
+            if (!items.length) return '';
+            return `
+                <section class="logistics-prep-group">
+                    <h3>${cat.label.toUpperCase()}</h3>
+                    <div class="logistics-prep-list">
+                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex)).join('')}
+                    </div>
+                </section>
+            `;
+        }).join('')}
+
+        <div class="logistics-prep-actions">
+            <button type="button" class="btn-secondary" onclick="cerrarPreparacionLogistica()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="cerrarPreparacionLogistica()">Guardar cambios</button>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+function renderizarItemPreparacionLogistica(index, tipo, item, matIndex) {
+    const preparado = !!item.preparado;
+    return `
+        <label class="logistics-prep-item">
+            <input type="checkbox" ${preparado ? 'checked' : ''}
+                onchange="togglePreparadoLogistica(${index}, '${tipo}', ${matIndex}, this.checked)">
+            <span class="logistics-prep-check">${preparado ? '✓' : ''}</span>
+            <span class="logistics-prep-name">
+                <strong>${item.nombre || 'Material'}</strong>
+                <small>${item.cantidad || 0} ${item.unidad || ''}</small>
+            </span>
+            <span class="logistics-prep-pill ${preparado ? 'is-ready' : ''}">${preparado ? 'Preparado' : 'Pendiente'}</span>
+        </label>
+    `;
+}
+
+function cerrarPreparacionLogistica() {
+    const modal = document.getElementById('logisticaPreparacionModal');
+    if (modal) modal.style.display = 'none';
+    renderizarComandasLogistica();
+}
+
+function togglePreparadoLogistica(index, tipo, matIndex, checked) {
+    const historial = getHistorialLogistica();
+    const item = historial[index];
+    if (!item?.material_logistica?.[tipo]?.[matIndex]) return;
+
+    item.material_logistica[tipo][matIndex].preparado = checked;
+    const total = getMaterialLogisticaPlano(item.material_logistica).length;
+    const preparados = getMaterialLogisticaPlano(item.material_logistica).filter(mat => mat.preparado).length;
+    item.logistics_prepared_items = preparados;
+    if (preparados > 0 && normalizarEstadoLogistica(item.logistics_status || item.estado) === 'sin_preparar') {
+        item.logistics_status = 'en_preparacion';
+        item.estado = 'en_preparacion';
+    }
+    if (total > 0 && preparados === total) {
+        item.logistics_status = 'listo';
+        item.estado = 'listo';
+        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+    }
+    item.fecha_modificacion = new Date().toISOString();
+    guardarHistorialLogistica(historial);
+    abrirPreparacionLogistica(index);
+}
+
+function actualizarResponsableLogistica(index, value) {
+    const historial = getHistorialLogistica();
+    if (!historial[index]) return;
+    historial[index].logistics_assigned_to = value.trim();
+    historial[index].fecha_modificacion = new Date().toISOString();
+    guardarHistorialLogistica(historial);
+    renderizarComandasLogistica();
+}
+
+function actualizarEstadoLogistica(index, value) {
+    const historial = getHistorialLogistica();
+    if (!historial[index]) return;
+    historial[index].logistics_status = value;
+    historial[index].estado = value;
+    historial[index].fecha_modificacion = new Date().toISOString();
+    if (value === 'listo') {
+        historial[index].logistics_ready_at = new Date().toISOString();
+        historial[index].logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+    }
+    guardarHistorialLogistica(historial);
+    renderizarComandasLogistica();
+}
+
+function actualizarPreparadosLogistica(index, value) {
+    const historial = getHistorialLogistica();
+    if (!historial[index]) return;
+    const material = historial[index].material_logistica || {};
+    const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
+    historial[index].logistics_prepared_items = Math.max(0, Math.min(Number(value) || 0, totalMaterial || 0));
+    historial[index].fecha_modificacion = new Date().toISOString();
+    guardarHistorialLogistica(historial);
+    renderizarComandasLogistica();
+}
+
+async function renderizarInventarioLogistica() {
+    const cont = document.getElementById('logisticaInventarioList');
+    if (!cont) return;
+
+    if (!window.supabaseClient) {
+        cont.innerHTML = '<div class="logistics-empty">No se pudo conectar con Supabase para cargar el inventario.</div>';
+        return;
+    }
+
+    cont.innerHTML = '<div class="logistics-empty">Cargando inventario...</div>';
+
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('logistics_materials')
+            .select('*')
+            .eq('activo', true)
+            .order('orden', { ascending: true });
+
+        if (error) throw error;
+
+        const items = data || [];
+        window.logisticaInventarioItems = items;
+        pintarInventarioLogistica('todos');
+    } catch (error) {
+        console.error('Error cargando inventario de logística:', error);
+        cont.innerHTML = '<div class="logistics-empty">No se pudo cargar el inventario.</div>';
+    }
+}
+
+function filtrarInventarioLogistica(tipo) {
+    document.querySelectorAll('.logistics-filter-chip').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.filter === tipo);
+    });
+    pintarInventarioLogistica(tipo);
+}
+
+function pintarInventarioLogistica(filtro = 'todos') {
+    const cont = document.getElementById('logisticaInventarioList');
+    if (!cont) return;
+    const items = (window.logisticaInventarioItems || []).filter(item => !item.parent_id);
+    const categorias = getCategoriasMaterialLogistica().filter(cat => filtro === 'todos' || cat.key === filtro);
+
+    cont.innerHTML = categorias.map(cat => {
+        const list = items.filter(item => item.tipo === cat.key);
+        return `
+            <section class="logistics-inventory-group">
+                <h3><span>${cat.icon}</span> ${cat.label} <small>(${list.length})</small></h3>
+                <div class="logistics-inventory-cards">
+                    ${list.length ? list.map(item => `
+                        <article class="logistics-inventory-card" data-logistica-id="${item.id}">
+                            <div>
+                                <strong>${escapeLogisticaHtml(item.nombre)}</strong>
+                                <span>${escapeLogisticaHtml(item.subcategoria || item.descripcion || item.categoria || item.unidad || 'Inventario')}</span>
+                                <small><b>${Number(item.stock_total ?? item.stock ?? 0)}</b> ${escapeLogisticaHtml(item.unidad || 'ud')} en stock</small>
+                            </div>
+                            <div class="logistics-inventory-actions">
+                                <button type="button" class="inventory-action-btn inventory-action-btn--edit" title="Editar" aria-label="Editar"></button>
+                                <button type="button" class="inventory-action-btn inventory-action-btn--delete" title="Eliminar" aria-label="Eliminar"></button>
+                            </div>
+                        </article>
+                    `).join('') : '<div class="logistics-empty logistics-empty--small">Sin elementos</div>'}
+                </div>
+            </section>
+        `;
+    }).join('');
+
+    cont.querySelectorAll('.logistics-inventory-actions button[title="Editar"]').forEach(btn => {
+        btn.addEventListener('click', event => {
+            event.stopPropagation();
+            const id = event.currentTarget.closest('.logistics-inventory-card')?.dataset.logisticaId;
+            if (id) abrirModalArticuloLogistica(id);
+        });
+    });
+
+    cont.querySelectorAll('.logistics-inventory-actions button[title="Eliminar"]').forEach(btn => {
+        btn.addEventListener('click', event => {
+            event.stopPropagation();
+            const id = event.currentTarget.closest('.logistics-inventory-card')?.dataset.logisticaId;
+            if (id) eliminarArticuloInventarioLogistica(id);
+        });
+    });
 }
 
 /**
@@ -82,6 +699,8 @@ function mostrarLogistica() {
  */
 function mostrarHistorial() {
     document.getElementById('dashboard').style.display = 'none';
+    const logisticaPage = document.getElementById('logisticaPage');
+    if (logisticaPage) logisticaPage.style.display = 'none';
     const expedientePedido = document.getElementById('expedientePedido');
     if (expedientePedido) expedientePedido.style.display = 'none';
     document.getElementById('historialPage').style.display = 'block';
@@ -95,8 +714,24 @@ function mostrarHistorial() {
  * Vuelve al dashboard principal
  */
 function volverAlDashboard() {
+    window.serviciosMode = false;
+    const categoriaGroup = document.getElementById('categoriaMenuGroup');
+    const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const title = document.getElementById('comandaFormTitle');
+    const subtitle = document.getElementById('comandaFormSubtitle');
+    if (categoriaGroup) categoriaGroup.style.display = '';
+    if (serviciosGroup) serviciosGroup.style.display = 'none';
+    const comandaFormEl = document.getElementById('comandaForm');
+    if (comandaFormEl) comandaFormEl.classList.remove('servicios-mode');
+    if (title) title.textContent = 'Nueva Comanda';
+    if (subtitle) subtitle.textContent = 'Completa los datos del pedido de catering';
+
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('comandaForm').style.display = 'none';
+    const logisticaForm = document.getElementById('logisticaForm');
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    const logisticaPage = document.getElementById('logisticaPage');
+    if (logisticaPage) logisticaPage.style.display = 'none';
     document.getElementById('historialPage').style.display = 'none';
     const expedientePedido = document.getElementById('expedientePedido');
     if (expedientePedido) expedientePedido.style.display = 'none';
@@ -124,6 +759,9 @@ function volverAlDashboard() {
     // Limpiar formulario
     const form = document.getElementById('comandaCocinaForm');
     if (form) form.reset();
+    if (typeof limpiarBuscadorClientes === 'function') {
+        limpiarBuscadorClientes();
+    }
 
     // Limpiar PAX explícitamente
     const paxInput = document.getElementById('pax');

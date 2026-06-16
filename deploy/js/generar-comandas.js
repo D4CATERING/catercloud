@@ -167,6 +167,13 @@ window.generarBlobsComandasDocx = async function(datos) {
         ["Hora salida", datos.hora_salida||""],
         ["PAX",         String(datos.pax||"")],
     ];
+    const intolerancias = datos.alergias?.intolerancias || {};
+    const intoleranciasItems = Array.isArray(intolerancias.items) ? intolerancias.items : [];
+    const resumenIntolerancias = intoleranciasItems
+        .map(i => `${i.nombre}${i.pax ? ` (${i.pax} pax)` : ''}`)
+        .join(', ');
+    const detalleIntolerancias = [resumenIntolerancias, intolerancias.notas].filter(Boolean).join(' - ');
+    if (detalleIntolerancias) infoBasica.push(["Intolerancias / restricciones", detalleIntolerancias]);
     if (datos.alergias?.notas) infoBasica.push(["Notas / alergias", datos.alergias.notas]);
 
     const propsPagina = { page: { size:{ width:11906, height:16838 }, margin:{ top:720, right:720, bottom:720, left:720 } } };

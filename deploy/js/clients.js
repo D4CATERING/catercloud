@@ -261,6 +261,7 @@
         input.addEventListener('input', function () {
             clearTimeout(timer);
             window._clienteSeleccionadoId = null;
+            document.getElementById('clienteVinculadoBadge')?.remove();
             const term = this.value.trim();
             if (term.length < 2) { dropdown.style.display = 'none'; return; }
             timer = setTimeout(() => buscarClientes(term, dropdown, input), 300);

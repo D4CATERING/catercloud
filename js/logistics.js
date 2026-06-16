@@ -64,7 +64,13 @@
             const padres = [];
 
             data.forEach(item => {
-                itemsMap.set(item.id, { ...item, subitems: [] });
+                itemsMap.set(item.id, {
+                    ...item,
+                    source_table: 'logistics_materials',
+                    unidad_inventario: item.unidad_inventario || item.unidad || 'ud',
+                    conversion_a_stock: Number(item.conversion_a_stock || 1),
+                    subitems: []
+                });
             });
 
             data.forEach(item => {
@@ -86,6 +92,66 @@
             console.error('Error cargando catálogo:', err);
             return [];
         }
+    }
+
+    async function cargarCatalogoServiciosLogistica() {
+        if (!window.supabaseClient) return null;
+
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('service_logistics_materials')
+                .select('*')
+                .eq('activo', true)
+                .order('orden', { ascending: true });
+
+            if (error) throw error;
+            if (!Array.isArray(data) || !data.length) return null;
+
+            return data.map(item => ({
+                id: item.id,
+                item_id: item.id,
+                nombre: item.nombre,
+                tipo: item.tipo === 'material' ? 'extras' : item.tipo,
+                subcategoria: item.subcategoria || '',
+                unidad: item.unidad_comanda || item.unidad || 'uds',
+                unidad_inventario: item.unidad_inventario || item.unidad || 'uds',
+                presentacion: item.presentacion || '',
+                contenido_por_unidad: item.contenido_por_unidad || null,
+                cantidad_por_pax: Number(item.cantidad_por_pax || 0),
+                cantidad_base: Number(item.cantidad_base || 0),
+                redondeo_a: Number(item.redondeo_a || 1),
+                auto_calcular: !!item.auto_calcular,
+                stock_total: item.stock_total || 0,
+                source_table: 'service_logistics_materials',
+                conversion_a_stock: Number(item.conversion_a_stock || item.contenido_por_unidad || 1),
+                cantidad: 0,
+                checked: false,
+                tiene_subitems: false,
+                subitems: [],
+                subitems_selected: []
+            }));
+        } catch (err) {
+            console.warn('Catalogo exclusivo de servicios no disponible, usando logistica general:', err);
+            return null;
+        }
+    }
+
+    function obtenerPaxLogistica() {
+        const paxLogistica = parseInt(document.getElementById('log_pax')?.textContent || 0);
+        const paxFormulario = parseInt(document.getElementById('pax')?.value || 0);
+        return paxLogistica || window.pax || paxFormulario || 0;
+    }
+
+    function calcularCantidadServicio(item, pax) {
+        if (!item?.auto_calcular) return Number(item.cantidad || 0);
+
+        const base = Number(item.cantidad_base || 0);
+        const porPax = Number(item.cantidad_por_pax || 0);
+        const redondeo = Math.max(1, Number(item.redondeo_a || 1));
+        const calculado = base + (pax * porPax);
+
+        if (calculado <= 0) return 0;
+        return Math.ceil(calculado / redondeo) * redondeo;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -208,10 +274,13 @@
 
         const materialMenu = await cargarMaterialPorMenu(menuTipo);
         const incluidosIds = INCLUIDOS_POR_MENU[menuTipo] || [];
-        const pax = window.pax || parseInt(document.getElementById('pax')?.value) || 0;
+        const pax = obtenerPaxLogistica();
+        const catalogoServicios = menuTipo === 'servicios'
+            ? await cargarCatalogoServiciosLogistica()
+            : null;
 
         const materialIds = new Set(materialMenu.map(m => m.material_id));
-        const catalogo = window.materialLogistica.catalogoCompleto || [];
+        const catalogo = catalogoServicios || window.materialLogistica.catalogoCompleto || [];
         const tipoMenaje = document.getElementById('tipo_menaje')?.value || 'desechable';
         const esLoza = tipoMenaje === 'loza';
 
@@ -232,10 +301,12 @@
                     .map(item => {
                         const incluido = incluidosIds.includes(item.id);
                         const asociado = materialIds.has(item.id);
+                        const cantidadServicio = catalogoServicios ? calcularCantidadServicio(item, pax) : 0;
+                        const checkedServicio = catalogoServicios ? cantidadServicio > 0 : false;
                         return {
                             ...item,
-                            cantidad: incluido ? pax : 0,
-                            checked: incluido,
+                            cantidad: catalogoServicios ? cantidadServicio : (incluido ? pax : 0),
+                            checked: catalogoServicios ? checkedServicio : incluido,
                             incluido_en: incluido ? [menuTipo] : (item.incluido_en || []),
                             asociado_menu: asociado,
                             subitems_expanded: false,
@@ -298,7 +369,10 @@
                             item_id: item.item_id,
                             nombre: item.nombre,
                             cantidad: item.cantidad,
-                            unidad: item.unidad
+                            unidad: item.unidad,
+                            source_table: item.source_table || 'logistics_materials',
+                            unidad_inventario: item.unidad_inventario || item.unidad || 'ud',
+                            conversion_a_stock: Number(item.conversion_a_stock || item.contenido_por_unidad || 1)
                         });
                     }
                 }
@@ -325,6 +399,11 @@
     // RENDERIZADO
     // ──────────────────────────────────────────────────────────
     function renderizarMaterial(containerId) {
+        if (containerId === 'materialLogisticaPage') {
+            renderizarMaterialLogisticaBuilder(containerId);
+            return;
+        }
+
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             const lista = document.getElementById(`${containerId}_${tipo}`);
             if (!lista) return;
@@ -416,6 +495,192 @@
     // ──────────────────────────────────────────────────────────
     // INTERACCIONES
     // ──────────────────────────────────────────────────────────
+    function getMetaMaterial(tipo) {
+        const meta = {
+            bebidas: { label: 'Bebidas', hint: 'Agua, zumos y refrescos' },
+            menaje: { label: 'Menaje', hint: 'Piezas y servicio' },
+            extras: { label: 'Material', hint: 'Apoyos y adicionales' }
+        };
+        return meta[tipo] || { label: tipo, hint: '' };
+    }
+
+    function getItemsSeleccionados(tipo) {
+        return (window.materialLogistica[tipo] || []).filter(item =>
+            item.checked || (item.subitems_selected || []).length
+        );
+    }
+
+    function renderizarMaterialLogisticaBuilder(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const totalSeleccionados = ['bebidas', 'menaje', 'extras']
+            .reduce((total, tipo) => total + getItemsSeleccionados(tipo).length, 0);
+
+        container.innerHTML = `
+            <div class="logistics-builder">
+                <div class="logistics-builder-actions">
+                    ${['bebidas', 'menaje', 'extras'].map(tipo => {
+                        const meta = getMetaMaterial(tipo);
+                        const count = getItemsSeleccionados(tipo).length;
+                        return `
+                            <button type="button" class="logistics-builder-btn" onclick="abrirSelectorMaterialLogistica('${tipo}', '${containerId}')">
+                                <strong>${meta.label}</strong>
+                                <span>${count} seleccionados</span>
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="logistics-builder-selected">
+                    <div class="logistics-builder-selected-header">
+                        <h4>Material seleccionado</h4>
+                        <span>${totalSeleccionados} items</span>
+                    </div>
+                    <div id="${containerId}_selected" class="logistics-builder-list"></div>
+                </div>
+                <div id="${containerId}_selectorModal" class="modal logistics-selector-modal">
+                    <div class="modal-content logistics-selector-content">
+                        <button type="button" class="logistics-article-close" onclick="cerrarSelectorMaterialLogistica('${containerId}')">×</button>
+                        <h2 id="${containerId}_selectorTitle">Seleccionar material</h2>
+                        <div id="${containerId}_selectorBody" class="logistics-selector-body"></div>
+                        <div class="logistics-selector-footer">
+                            <button type="button" class="btn-primary" onclick="cerrarSelectorMaterialLogistica('${containerId}')">Aplicar seleccion</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        renderizarSeleccionadosLogistica(containerId);
+    }
+
+    function renderizarMaterialLogisticaBuilder(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="logistics-builder logistics-builder--inline">
+                ${['bebidas', 'menaje', 'extras'].map(tipo => renderizarCajaCategoriaLogistica(tipo, containerId)).join('')}
+            </div>
+        `;
+    }
+
+    function renderizarCajaCategoriaLogistica(tipo, containerId) {
+        const meta = getMetaMaterial(tipo);
+        const items = window.materialLogistica[tipo] || [];
+        const seleccionados = getItemsSeleccionados(tipo);
+
+        return `
+            <section class="logistics-builder-category">
+                <div class="logistics-builder-category-header">
+                    <div>
+                        <h4>${meta.label}</h4>
+                        <span>${meta.hint}</span>
+                    </div>
+                    <strong>${seleccionados.length}</strong>
+                </div>
+                <div class="logistics-builder-category-body">
+                    <div class="logistics-builder-picker">
+                        ${items.length
+                            ? items.map(item => renderizarOpcionMaterialServicio(item, tipo, containerId)).join('')
+                            : '<p class="dc-material-empty">No hay items disponibles.</p>'}
+                    </div>
+                </div>
+            </section>
+        `;
+    }
+
+    function renderizarOpcionMaterialServicio(item, tipo, containerId) {
+        const activo = item.checked || Number(item.cantidad || 0) > 0;
+        const detalle = [
+            item.presentacion,
+            item.subcategoria
+        ].filter(Boolean).join(' - ');
+
+        return `
+            <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}">
+                <label class="logistics-builder-pick-main">
+                    <input type="checkbox" ${activo ? 'checked' : ''}
+                        onchange="toggleMaterialItemBuilder('${tipo}', '${item.id}', this.checked, '${containerId}')">
+                    <span>${item.nombre}</span>
+                </label>
+                <small>${detalle || 'Agregar a la comanda'}</small>
+                <div class="logistics-builder-qty">
+                    <input type="number" min="0" value="${item.cantidad || 0}"
+                        onchange="updateMaterialCantidadServicio('${tipo}', '${item.id}', this.value, '${containerId}')">
+                    <span>${item.unidad || 'uds'}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderizarSeleccionadosLogistica(containerId) {
+        const lista = document.getElementById(`${containerId}_selected`);
+        if (!lista) return;
+
+        const html = ['bebidas', 'menaje', 'extras'].map(tipo => {
+            const items = getItemsSeleccionados(tipo);
+            if (!items.length) return '';
+            const meta = getMetaMaterial(tipo);
+            return `
+                <section class="logistics-builder-group">
+                    <h5>${meta.label}</h5>
+                    ${items.map(item => renderizarSeleccionadoLogistica(item, tipo, containerId)).join('')}
+                </section>
+            `;
+        }).join('');
+
+        lista.innerHTML = html || '<p class="dc-material-empty">Aun no has seleccionado material.</p>';
+    }
+
+    function renderizarSeleccionadoLogistica(item, tipo, containerId) {
+        if (item.tiene_subitems && item.subitems_selected?.length) {
+            return item.subitems_selected.map(subitem => `
+                <div class="logistics-builder-selected-item">
+                    <span>${subitem.nombre}</span>
+                    <input type="number" min="0" value="${subitem.cantidad || 0}" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
+                    <small>${subitem.unidad || 'uds'}</small>
+                    <button type="button" onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">Quitar</button>
+                </div>
+            `).join('');
+        }
+
+        return `
+            <div class="logistics-builder-selected-item">
+                <span>${item.nombre}</span>
+                <input type="number" min="0" value="${item.cantidad || 0}" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">
+                <small>${item.unidad || 'uds'}</small>
+                <button type="button" onclick="toggleMaterialItemBuilder('${tipo}', '${item.id}', false, '${containerId}')">Quitar</button>
+            </div>
+        `;
+    }
+
+    function renderizarOpcionesSelector(tipo, containerId) {
+        const body = document.getElementById(`${containerId}_selectorBody`);
+        const title = document.getElementById(`${containerId}_selectorTitle`);
+        if (!body || !title) return;
+
+        const meta = getMetaMaterial(tipo);
+        const items = window.materialLogistica[tipo] || [];
+        title.textContent = `Seleccionar ${meta.label}`;
+
+        body.innerHTML = items.length ? items.map(item => {
+            const activo = item.checked || (item.subitems_selected || []).length;
+            const detalle = item.tiene_subitems && item.subitems_selected?.length
+                ? item.subitems_selected.map(s => s.nombre).join(', ')
+                : (item.unidad || '');
+            return `
+                <button type="button" class="logistics-selector-option ${activo ? 'is-selected' : ''}"
+                    onclick="${item.tiene_subitems
+                        ? `abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')`
+                        : `toggleMaterialItemBuilder('${tipo}', '${item.id}', ${!activo}, '${containerId}')`}">
+                    <span>${item.nombre}</span>
+                    <small>${detalle || 'Seleccionar'}</small>
+                </button>
+            `;
+        }).join('') : '<p class="dc-material-empty">Sin elementos.</p>';
+    }
+
     window.toggleMaterialItem = function(tipo, itemId, checked) {
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
         if (!item) return;
@@ -445,6 +710,38 @@
         }
         const cId = containerId || 'materialLogisticaInline';
         renderizarMaterial(cId);
+    };
+
+    window.abrirSelectorMaterialLogistica = function(tipo, containerId = 'materialLogisticaPage') {
+        const modal = document.getElementById(`${containerId}_selectorModal`);
+        if (!modal) return;
+        modal.dataset.tipo = tipo;
+        renderizarOpcionesSelector(tipo, containerId);
+        modal.style.display = 'flex';
+    };
+
+    window.cerrarSelectorMaterialLogistica = function(containerId = 'materialLogisticaPage') {
+        const modal = document.getElementById(`${containerId}_selectorModal`);
+        if (modal) modal.style.display = 'none';
+        renderizarMaterial(containerId);
+    };
+
+    window.toggleMaterialItemBuilder = function(tipo, itemId, checked, containerId = 'materialLogisticaPage') {
+        const item = window.materialLogistica[tipo].find(i => i.id == itemId);
+        if (!item) return;
+        item.checked = checked;
+        if (!checked) {
+            item.cantidad = 0;
+            item.subitems_selected = [];
+        } else if (!item.cantidad || item.cantidad === 0) {
+            const sugerida = calcularCantidadServicio(item, obtenerPaxLogistica());
+            item.cantidad = sugerida > 0 ? sugerida : 1;
+        } else if (tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
+            const pax = parseInt(document.getElementById('log_pax')?.textContent || document.getElementById('pax')?.value || 0);
+            if (pax > 0) item.cantidad = pax;
+        }
+
+        renderizarMaterial(containerId);
     };
 
     window.toggleMaterialItemExpandable = function(tipo, itemId, checked, containerId) {
@@ -480,17 +777,37 @@
                     item_id: subitem.item_id,
                     nombre: subitem.nombre,
                     cantidad: calcularCantidadSugerida(subitem.item_id, window.pax || 0, 1),
-                    unidad: subitem.unidad
+                    unidad: subitem.unidad,
+                    source_table: subitem.source_table || 'logistics_materials',
+                    unidad_inventario: subitem.unidad_inventario || subitem.unidad || 'ud',
+                    conversion_a_stock: Number(subitem.conversion_a_stock || subitem.contenido_por_unidad || 1)
                 });
             }
         } else {
             parent.subitems_selected = parent.subitems_selected.filter(s => s.id !== subitemId);
+        }
+
+        if (containerId === 'materialLogisticaPage') {
+            renderizarSeleccionadosLogistica(containerId);
+            const modal = document.getElementById(`${containerId}_selectorModal`);
+            const tipoActivo = modal?.dataset.tipo || tipo;
+            renderizarOpcionesSelector(tipoActivo, containerId);
         }
     };
 
     window.updateMaterialCantidad = function(tipo, itemId, cantidad) {
         const item = window.materialLogistica[tipo].find(i => i.id === itemId);
         if (item) item.cantidad = parseInt(cantidad) || 0;
+    };
+
+    window.updateMaterialCantidadServicio = function(tipo, itemId, cantidad, containerId = 'materialLogisticaPage') {
+        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
+        if (!item) return;
+
+        const valor = parseFloat(cantidad) || 0;
+        item.cantidad = valor;
+        item.checked = valor > 0;
+        renderizarMaterial(containerId);
     };
 
     window.updateSubitemCantidad = function(tipo, parentId, subitemId, cantidad, containerId) {
@@ -500,6 +817,10 @@
         const selected = parent.subitems_selected.find(s => s.id === subitemId);
         if (selected) {
             selected.cantidad = parseInt(cantidad) || 0;
+        }
+
+        if (containerId === 'materialLogisticaPage') {
+            renderizarSeleccionadosLogistica(containerId);
         }
     };
 
@@ -559,6 +880,8 @@
         const modal = document.getElementById('modalMaterialSubitems');
         if (modal) modal.style.display = 'none';
     };
+
+    window.renderizarMaterialLogisticaActual = renderizarMaterial;
 
     document.addEventListener('click', function(e) {
         const modal = document.getElementById('modalMaterialSubitems');

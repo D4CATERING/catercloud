@@ -6,10 +6,10 @@
     <title>CaterCloud - Sistema de Comandas</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css?v=20260605n">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260605n">
-    <link rel="stylesheet" href="css/calendar.css?v=20260605n">
-    <link rel="stylesheet" href="css/forms.css?v=20260605p">
+    <link rel="stylesheet" href="css/styles.css?v=20260615a">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260615j">
+    <link rel="stylesheet" href="css/calendar.css?v=20260615b">
+    <link rel="stylesheet" href="css/forms.css?v=20260615o">
 
     <!-- Fuentes corporativas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,12 +35,22 @@
     <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda" data-requires-write>
       <span class="nav-icon">＋</span> Nueva Comanda
     </div>
+    <div class="dc-nav-item" onclick="mostrarServicios()" id="nav-servicios" data-requires-write>
+      <span class="nav-icon">◇</span> Servicios
+    </div>
     <div class="dc-nav-sep"></div>
     <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
       <span class="nav-icon">☰</span> Historial
     </div>
     <div class="dc-nav-item" onclick="mostrarLogistica()" id="nav-logistica">
-      <span class="nav-icon">◎</span> Logística
+      <span class="nav-icon nav-icon--truck" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M3 7h11v9H3z"></path>
+          <path d="M14 10h4l3 3v3h-7z"></path>
+          <circle cx="7" cy="18" r="2"></circle>
+          <circle cx="18" cy="18" r="2"></circle>
+        </svg>
+      </span> Logística
     </div>
   </nav>
 
@@ -104,8 +114,8 @@
     <div id="comandaForm" style="display: none;">
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
-        <h1>Nueva Comanda</h1>
-        <p>Completa los datos del pedido de catering</p>
+        <h1 id="comandaFormTitle">Nueva Comanda</h1>
+        <p id="comandaFormSubtitle">Completa los datos del pedido de catering</p>
       </div>
 
       <div class="dc-page-content">
@@ -152,14 +162,24 @@
                     </div>
 
                     <div class="dc-two-column-grid">
-                        <div class="form-group">
+                        <div class="form-group" id="categoriaMenuGroup">
                             <label for="categoria">Categoría del Menú</label>
                             <select id="categoria" onchange="cargarMenus()">
                                 <option value="">Selecciona una categoría</option>
                                 <option value="1">Desayunos</option>
                                 <option value="2">Foodbox / Comida</option>
+                                <option value="3" hidden>Servicios</option>
                                 <option value="4">Foodbox Lunch</option>
                                 <option value="5">Bandejas Preparadas</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="serviciosCategoriaGroup" style="display:none;">
+                            <label for="serviciosCategoria">Categoría de Servicio</label>
+                            <select id="serviciosCategoria" onchange="cargarMenus()">
+                                <option value="">Selecciona una categoría</option>
+                                <option value="vino">Vino Español</option>
+                                <option value="cocteles">Cócteles</option>
                             </select>
                         </div>
 
@@ -278,6 +298,74 @@
                     </div>
                 </div>
                 
+                <!-- Comanda: Intolerancias y restricciones -->
+                <div class="form-section">
+                    <h3>⚠️ Intolerancias / Restricciones</h3>
+
+                    <div class="intolerancias-grid">
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_gluten" data-intolerancia="Sin gluten">
+                            <span>Sin gluten</span>
+                            <input type="number" id="int_gluten_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_lactosa" data-intolerancia="Sin lactosa">
+                            <span>Sin lactosa</span>
+                            <input type="number" id="int_lactosa_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_frutos_secos" data-intolerancia="Sin frutos secos">
+                            <span>Sin frutos secos</span>
+                            <input type="number" id="int_frutos_secos_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_huevo" data-intolerancia="Sin huevo">
+                            <span>Sin huevo</span>
+                            <input type="number" id="int_huevo_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_marisco" data-intolerancia="Sin marisco">
+                            <span>Sin marisco</span>
+                            <input type="number" id="int_marisco_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_vegetariano" data-intolerancia="Vegetariano">
+                            <span>Vegetariano</span>
+                            <input type="number" id="int_vegetariano_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_vegano" data-intolerancia="Vegano">
+                            <span>Vegano</span>
+                            <input type="number" id="int_vegano_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+
+                        <label class="intolerancia-item">
+                            <input type="checkbox" id="int_otro" data-intolerancia="Otro">
+                            <span>Otro</span>
+                            <input type="number" id="int_otro_pax" min="0" placeholder="0">
+                            <small>pax</small>
+                        </label>
+                    </div>
+
+                    <div class="form-group intolerancias-notas">
+                        <label for="intolerancias_notas">Detalle de intolerancias</label>
+                        <textarea id="intolerancias_notas" rows="2" placeholder="Ej: 1 persona celiaca estricta, evitar trazas, separar preparación, etc..."></textarea>
+                    </div>
+                </div>
+
                 <!-- Comanda: Notas adicionales -->
                 <div class="form-section">
                     <h3>📝 Notas Adicionales</h3>
@@ -344,7 +432,7 @@
                 <div id="materialLogisticaInline" style="display: none;"></div>
 
                 <!-- Comanda: Notas adicionales logística -->
-                <div class="form-section">
+                <div class="form-section" id="logisticaInlineNotasSection">
                     <h3>📝 Notas Adicionales Logística</h3>
 
                     <div class="form-group">
@@ -534,6 +622,125 @@
         </div>
     </div>
 
+    <!-- Vista: Logística -->
+    <div id="logisticaPage" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Logística</h1>
+        <p>Gestión de menaje, bebidas y material por evento</p>
+      </div>
+
+      <div class="dc-page-content">
+        <div class="logistics-dashboard">
+          <div class="logistics-kpi-grid">
+            <article class="logistics-kpi-card logistics-kpi-card--pending">
+              <span class="logistics-kpi-icon">⚠</span>
+              <div>
+                <strong id="logisticaKpiPendientes">0</strong>
+                <span>Sin preparar</span>
+              </div>
+            </article>
+
+            <article class="logistics-kpi-card logistics-kpi-card--progress">
+              <span class="logistics-kpi-icon">▤</span>
+              <div>
+                <strong id="logisticaKpiProceso">0</strong>
+                <span>En preparación</span>
+              </div>
+            </article>
+
+            <article class="logistics-kpi-card logistics-kpi-card--ready">
+              <span class="logistics-kpi-icon">□</span>
+              <div>
+                <strong id="logisticaKpiListas">0</strong>
+                <span>Listos para evento</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="logistics-tabs" role="tablist">
+            <button type="button" id="logTabEventos" class="logistics-tab active" onclick="cambiarTabLogistica('eventos')">Eventos activos</button>
+            <button type="button" id="logTabInventario" class="logistics-tab" onclick="cambiarTabLogistica('inventario')">Inventario</button>
+          </div>
+
+          <section id="logisticaEventosPanel" class="logistics-tab-panel">
+            <div id="logisticaMissingBox" class="logistics-missing-box" style="display:none;">
+              <strong id="logisticaMissingTitle">0 comandas sin hoja de logística</strong>
+              <div id="logisticaMissingList" class="logistics-missing-list"></div>
+            </div>
+
+            <div id="logisticaComandasList" class="logistics-events-list"></div>
+          </section>
+
+          <section id="logisticaInventarioPanel" class="logistics-tab-panel" style="display:none;">
+            <div class="logistics-inventory-toolbar">
+              <div class="logistics-filter-chips">
+                <button type="button" class="logistics-filter-chip active" data-filter="todos" onclick="filtrarInventarioLogistica('todos')">Todos</button>
+                <button type="button" class="logistics-filter-chip" data-filter="menaje" onclick="filtrarInventarioLogistica('menaje')">Menaje</button>
+                <button type="button" class="logistics-filter-chip" data-filter="bebidas" onclick="filtrarInventarioLogistica('bebidas')">Bebidas</button>
+                <button type="button" class="logistics-filter-chip" data-filter="extras" onclick="filtrarInventarioLogistica('extras')">Material</button>
+              </div>
+              <button type="button" class="logistics-add-btn" onclick="abrirModalArticuloLogistica()">+ Añadir artículo</button>
+            </div>
+            <div id="logisticaInventarioList" class="logistics-inventory-grid"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div id="logisticaPreparacionModal" class="modal">
+      <div class="modal-content logistics-prep-modal">
+        <button type="button" class="logistics-prep-close" onclick="cerrarPreparacionLogistica()">×</button>
+        <div id="logisticaPreparacionContent"></div>
+      </div>
+    </div>
+
+    <div id="logisticaArticuloModal" class="modal">
+      <div class="modal-content logistics-article-modal">
+        <button type="button" class="logistics-article-close" onclick="cerrarModalArticuloLogistica()">×</button>
+        <form id="logisticaArticuloForm" onsubmit="guardarArticuloInventarioLogistica(event)">
+          <input type="hidden" id="logisticaArticuloId">
+          <h2 id="logisticaArticuloTitulo">Nuevo artículo</h2>
+
+          <label class="logistics-article-field logistics-article-field--full">
+            <span>Nombre *</span>
+            <input type="text" id="logisticaArticuloNombre" placeholder="Ej: Platos llanos" required>
+          </label>
+
+          <div class="logistics-article-grid">
+            <label class="logistics-article-field">
+              <span>Categoría</span>
+              <select id="logisticaArticuloTipo">
+                <option value="menaje">Menaje</option>
+                <option value="bebidas">Bebidas</option>
+                <option value="extras">Material</option>
+              </select>
+            </label>
+
+            <label class="logistics-article-field">
+              <span>Stock total</span>
+              <input type="number" id="logisticaArticuloStock" min="0" step="0.01" value="0">
+            </label>
+
+            <label class="logistics-article-field">
+              <span>Subcategoría</span>
+              <input type="text" id="logisticaArticuloSubcategoria" placeholder="Ej: Vajilla">
+            </label>
+
+            <label class="logistics-article-field">
+              <span>Unidad</span>
+              <input type="text" id="logisticaArticuloUnidad" placeholder="ud" value="ud">
+            </label>
+          </div>
+
+          <div class="logistics-article-actions">
+            <button type="button" class="btn-secondary" onclick="cerrarModalArticuloLogistica()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Vista: Historial -->
     <div id="historialPage" style="display: none;">
       <div class="dc-page-header">
@@ -687,6 +894,18 @@
                     </div>
 
                     <div id="detalleReferencias"></div>
+                </div>
+            </div>
+
+            <!-- Detalle: Intolerancias y restricciones -->
+            <div class="dc-section" id="detalleIntoleranciasSection" style="display:none;">
+                <div class="dc-section-header">
+                    <span>⚠️</span>
+                    <h3>Intolerancias / Restricciones</h3>
+                </div>
+
+                <div class="detalle-body">
+                    <div id="detalleIntolerancias"></div>
                 </div>
             </div>
 
@@ -846,6 +1065,16 @@
                 <!-- Logística: Material necesario -->
                 <div id="materialLogisticaPage"></div>
 
+                <!-- Logística: Notas adicionales -->
+                <div class="form-section" id="logisticaPageNotasSection">
+                    <h3>📝 Notas Adicionales Logística</h3>
+
+                    <div class="form-group">
+                        <label for="log_page_notas">Información importante para logística</label>
+                        <textarea id="log_page_notas" rows="3" placeholder="Instrucciones de entrega, acceso, montaje, parking, ascensor, persona de recepción, etc..."></textarea>
+                    </div>
+                </div>
+
                 <!-- Logística: Acciones -->
                 <div class="form-actions form-actions--end">
                     <button type="button" class="btn-secondary" onclick="volverDesdeCancelLogistica()">
@@ -892,22 +1121,22 @@
 
     <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
-    <script src="js/clients.js"></script>
-    <script src="js/calendar.js?v=20260605"></script>
-    <script src="js/dashboard.js?v=20260605"></script>
+    <script src="js/clients.js?v=20260612a"></script>
+    <script src="js/calendar.js?v=20260615b"></script>
+    <script src="js/dashboard.js?v=20260615h"></script>
     <script src="js/dom-utils.js"></script>
     <script src="js/desayunos.js"></script>
-    <script src="js/referencias.js"></script>
+    <script src="js/referencias.js?v=20260615d"></script>
     <script src="js/menus-adicionales.js"></script>
     <script src="js/multiplicadores.js"></script>
     <script src="js/bandejas-preparadas.js"></script>
     <script src="js/foodbox-lunch.js"></script>
-    <script src="js/comanda-form.js"></script>
-    <script src="js/historial.js?v=20260605b"></script>
-    <script src="js/main.js?v=20260605b"></script>
+    <script src="js/comanda-form.js?v=20260615b"></script>
+    <script src="js/historial.js?v=20260615e"></script>
+    <script src="js/main.js?v=20260615h"></script>
     <script src="js/preferencias.js"></script>
-    <script src="js/logistics.js"></script>
-    <script src="js/generar-comandas.js"></script>
+    <script src="js/logistics.js?v=20260615f"></script>
+    <script src="js/generar-comandas.js?v=20260608a"></script>
 
     <!-- Scripts: Sidebar y navegación -->
     <script>
@@ -943,6 +1172,10 @@
       function mostrarDashboard() {
         document.getElementById('dashboard').style.display = '';
         document.getElementById('comandaForm').style.display = 'none';
+        const logisticaForm = document.getElementById('logisticaForm');
+        if (logisticaForm) logisticaForm.style.display = 'none';
+        const logisticaPage = document.getElementById('logisticaPage');
+        if (logisticaPage) logisticaPage.style.display = 'none';
         document.getElementById('historialPage').style.display = 'none';
         document.getElementById('expedientePedido').style.display = 'none';
         document.getElementById('detalleComanda').style.display = 'none';
