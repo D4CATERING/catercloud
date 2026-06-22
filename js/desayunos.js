@@ -61,7 +61,7 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: 0, unidad: 'termo', selectorTermo: true },
                 { id: 'healthy_infusion', nombre: 'Termo de infusión', tipo: 'termo', 
                   cantidadPorPax: termosPorPersona, unidad: 'termo', selectorTermo: true },
-                { id: 'healthy_tostada', nombre: 'Tostada de aguacate y tomate', tipo: 'simple', 
+                { id: 'healthy_tostada', nombre: 'Tostada de aguacate y tomate', tipo: 'simple',
                   cantidadPorPax: 1, unidad: 'uds' },
                 { id: 'healthy_zumo', nombre: 'Zumo natural', tipo: 'zumo', 
                   cantidadPorPax: 1/5, unidad: 'litro' },
@@ -372,7 +372,7 @@ function generarHTMLBolleria(ref) {
     const sel = refData?.opcionesSeleccionadas || [];
     const texto = sel.length === 0 ? 'Seleccionar tipos'
         : sel.length === 1 ? sel[0]
-        : sel.length + ' tipos seleccionados';
+        : sel.join(' + ');
     return `
         <div class="dropdown-bolleria">
             <button type="button" class="dropdown-btn" onclick="abrirModalDesayunoBolleria('${ref.id}')">
@@ -495,7 +495,7 @@ function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
             window.referenciasDesayuno[ref.id].sandwiches.push({
                 id: `${ref.id}_${i}`,
                 sabor: '',
-                cantidad: Math.ceil(cantidadTotal / ref.cantidadSandwiches)
+                cantidad: 0
             });
         }
     } else if (ref.tipo === 'sandwich') {
@@ -517,8 +517,8 @@ function inicializarDatosReferenciaDesayuno(ref, cantidadTotal) {
             tipo: ref.tipo,
             modo: 'sandwich',
             sandwiches: [
-                { id: ref.id + '_1', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) },
-                { id: ref.id + '_2', sabor: '', cantidad: Math.ceil(cantidadTotal / 2) }
+                { id: ref.id + '_1', sabor: '', cantidad: 0 },
+                { id: ref.id + '_2', sabor: '', cantidad: 0 }
             ],
             pulguita: '',
             opcionesDisponibles: ref.opciones || [],
@@ -566,9 +566,9 @@ function actualizarSandwichMultipleSeleccion(refId, sandwichNum, sabor) {
             // Recalcular cantidades por sabor
             const sandwichesConSabor = refData.sandwiches.filter(s => s.sabor);
             if (sandwichesConSabor.length > 0) {
-                const cantidadPorSabor = Math.ceil(refData.cantidad / sandwichesConSabor.length);
-                sandwichesConSabor.forEach(s => {
-                    s.cantidad = cantidadPorSabor;
+                const cantidades = distribuirCantidadDesayuno(refData.cantidad || 0, sandwichesConSabor.length);
+                sandwichesConSabor.forEach((s, index) => {
+                    s.cantidad = cantidades[index] || 0;
                 });
             }
             
@@ -604,9 +604,11 @@ function actualizarCantidadDesayuno(refId, nuevaCantidad) {
         const sandwichesConSabor = refData.sandwiches.filter(s => s.sabor);
         
         if (sandwichesConSabor.length > 0) {
-            const cantidadPorSabor = Math.ceil(cantidad / sandwichesConSabor.length);
-            sandwichesConSabor.forEach(s => {
-                s.cantidad = cantidadPorSabor;
+            const cantidades = typeof distribuirCantidadDesayuno === 'function'
+                ? distribuirCantidadDesayuno(cantidad, sandwichesConSabor.length)
+                : sandwichesConSabor.map(() => Math.ceil(cantidad / sandwichesConSabor.length));
+            sandwichesConSabor.forEach((s, index) => {
+                s.cantidad = cantidades[index] || 0;
             });
         }
     }
@@ -663,9 +665,11 @@ function actualizarCantidadesDesayuno() {
             const sandwichesConSabor = refData.sandwiches.filter(s => s.sabor);
             
             if (sandwichesConSabor.length > 0) {
-                const cantidadPorSabor = Math.ceil(nuevaCantidad / sandwichesConSabor.length);
-                sandwichesConSabor.forEach(s => {
-                    s.cantidad = cantidadPorSabor;
+                const cantidades = typeof distribuirCantidadDesayuno === 'function'
+                    ? distribuirCantidadDesayuno(nuevaCantidad, sandwichesConSabor.length)
+                    : sandwichesConSabor.map(() => Math.ceil(nuevaCantidad / sandwichesConSabor.length));
+                sandwichesConSabor.forEach((s, index) => {
+                    s.cantidad = cantidades[index] || 0;
                 });
             }
         }
@@ -758,12 +762,10 @@ function actualizarSandwichSeleccion(sandwichId, sabor) {
             const sandwichIndex = refData.sandwiches.findIndex(s => s.id === sandwichId);
             if (sandwichIndex !== -1) {
                 refData.sandwiches[sandwichIndex].sabor = sabor;
-                refData.sandwiches[sandwichIndex].nombre = sabor;
                 return;
             }
         } else if (refData.tipo === 'sandwich' && refId === sandwichId) {
             refData.sabor = sabor;
-            refData.nombre = sabor;
             return;
         }
     }
@@ -1788,17 +1790,38 @@ window.cambiarCantidadDesayuno = cambiarCantidadDesayuno;
 // ══════════════════════════════════════════════════════
 
 let _modalDesayunoCallback = null;
+let _modalDesayunoRefId = null;
+let _modalDesayunoSnapshot = null;
 
-function _abrirModalDesayuno(titulo, bodyHTML, footerVisible, callback) {
+function _clonarDesayunoModal(value) {
+    return value ? JSON.parse(JSON.stringify(value)) : value;
+}
+
+function _abrirModalDesayuno(titulo, bodyHTML, footerVisible, callback, refId = null) {
     document.getElementById('modalDesayunoTitle').textContent = titulo;
     document.getElementById('modalDesayunoBody').innerHTML = bodyHTML;
-    document.getElementById('modalDesayunoFooter').style.display = footerVisible ? 'block' : 'none';
+    document.getElementById('modalDesayunoFooter').style.display = 'flex';
     _modalDesayunoCallback = callback || null;
+    _modalDesayunoRefId = refId;
+    _modalDesayunoSnapshot = refId && window.referenciasDesayuno?.[refId]
+        ? _clonarDesayunoModal(window.referenciasDesayuno[refId])
+        : null;
     document.getElementById('modalDesayunoOpciones').style.display = 'flex';
 }
 
 window.cerrarModalDesayunoOpciones = function() {
     document.getElementById('modalDesayunoOpciones').style.display = 'none';
+    _modalDesayunoCallback = null;
+    _modalDesayunoRefId = null;
+    _modalDesayunoSnapshot = null;
+};
+
+window.cancelarModalDesayunoOpciones = function() {
+    if (_modalDesayunoRefId && _modalDesayunoSnapshot && window.referenciasDesayuno) {
+        window.referenciasDesayuno[_modalDesayunoRefId] = _clonarDesayunoModal(_modalDesayunoSnapshot);
+        actualizarTextoDropdownDesayuno(_modalDesayunoRefId);
+    }
+    cerrarModalDesayunoOpciones();
 };
 
 window.confirmarModalDesayunoOpciones = function() {
@@ -1808,8 +1831,42 @@ window.confirmarModalDesayunoOpciones = function() {
 
 document.addEventListener('click', function(e) {
     const modal = document.getElementById('modalDesayunoOpciones');
-    if (modal && e.target === modal) cerrarModalDesayunoOpciones();
+    if (modal && e.target === modal) cancelarModalDesayunoOpciones();
 });
+
+function actualizarTextoDropdownDesayuno(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    const btn = document.getElementById('dropdown-text-' + refId);
+    if (!ref || !btn) return;
+
+    if (ref.tipo === 'bolleria') {
+        const sel = ref.opcionesSeleccionadas || [];
+        btn.textContent = sel.length === 0 ? 'Seleccionar tipos'
+            : sel.length === 1 ? sel[0]
+            : sel.join(' + ');
+        return;
+    }
+
+    if (ref.tipo === 'sandwich') {
+        btn.textContent = ref.sabor || 'Elegir sabor...';
+        return;
+    }
+
+    if (ref.tipo === 'sandwich_multiple') {
+        const seleccionadas = obtenerSaboresSandwichMultiple(ref);
+        btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
+        return;
+    }
+
+    if (ref.tipo === 'sandwich_o_pulguita') {
+        if (ref.modo === 'pulguita') {
+            btn.textContent = ref.pulguita || 'Elegir pulguita...';
+        } else {
+            const seleccionadas = obtenerSaboresSandwichMultiple(ref);
+            btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
+        }
+    }
+}
 
 // Bollería
 window.abrirModalDesayunoBolleria = function(refId) {
@@ -1819,19 +1876,23 @@ window.abrirModalDesayunoBolleria = function(refId) {
     const maxSelecciones = obtenerMaximoOpcionesDesayuno(ref);
     ref.opcionesSeleccionadas = (ref.opcionesSeleccionadas || []).slice(0, maxSelecciones);
     const seleccionadas = ref.opcionesSeleccionadas;
+    const variadaSeleccionada = seleccionadas.some(esOpcionBolleriaVariada);
     const body = opciones.map(opcion => `
         <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:4px;
                       border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;
+                      opacity:${variadaSeleccionada && !seleccionadas.includes(opcion) ? '.45' : '1'};
                       background:${seleccionadas.includes(opcion) ? 'rgba(219,234,254,0.5)' : 'white'}">
             <input type="checkbox" value="${opcion}" ${seleccionadas.includes(opcion) ? 'checked' : ''}
+                   ${variadaSeleccionada && !seleccionadas.includes(opcion) ? 'disabled' : ''}
                    onchange="toggleBolleriaModalCheck('${refId}','${opcion}',this.checked,this)">
             <span style="font-size:0.82rem">${opcion}</span>
         </label>`).join('');
     _abrirModalDesayuno(
         'Seleccionar tipos de bollería',
         `<p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona ${maxSelecciones} ${maxSelecciones === 1 ? 'opción' : 'opciones'}.</p><div style="display:flex;flex-direction:column;gap:2px;">${body}</div>`,
-        false,
-        null
+        true,
+        null,
+        refId
     );
 };
 
@@ -1840,10 +1901,15 @@ window.toggleBolleriaModalCheck = function(refId, opcion, checked, el) {
     if (!ref) return;
     if (!ref.opcionesSeleccionadas) ref.opcionesSeleccionadas = [];
     const maxSelecciones = obtenerMaximoOpcionesDesayuno(ref);
+    const esVariada = esOpcionBolleriaVariada(opcion);
+    const yaTieneVariada = ref.opcionesSeleccionadas.some(esOpcionBolleriaVariada);
 
     if (checked && !ref.opcionesSeleccionadas.includes(opcion)) {
-        if (maxSelecciones === 1) {
+        if (esVariada || maxSelecciones === 1) {
             ref.opcionesSeleccionadas = [opcion];
+        } else if (yaTieneVariada) {
+            el.checked = false;
+            return;
         } else if (ref.opcionesSeleccionadas.length >= maxSelecciones) {
             el.checked = false;
             return;
@@ -1855,11 +1921,16 @@ window.toggleBolleriaModalCheck = function(refId, opcion, checked, el) {
     }
 
     ref.opcionesSeleccionadas = [...new Set(ref.opcionesSeleccionadas)].slice(0, maxSelecciones);
+    const variadaSeleccionada = ref.opcionesSeleccionadas.some(esOpcionBolleriaVariada);
     document.querySelectorAll('#modalDesayunoBody input[type="checkbox"]').forEach(input => {
         const activo = ref.opcionesSeleccionadas.includes(input.value);
         input.checked = activo;
+        input.disabled = variadaSeleccionada && !activo;
         const label = input.closest('label');
-        if (label) label.style.background = activo ? 'rgba(219,234,254,0.5)' : 'white';
+        if (label) {
+            label.style.background = activo ? 'rgba(219,234,254,0.5)' : 'white';
+            label.style.opacity = input.disabled ? '.45' : '1';
+        }
     });
 
     const btn = document.getElementById('dropdown-text-' + refId);
@@ -1867,13 +1938,15 @@ window.toggleBolleriaModalCheck = function(refId, opcion, checked, el) {
         const sel = ref.opcionesSeleccionadas;
         btn.textContent = sel.length === 0 ? 'Seleccionar tipos'
             : sel.length === 1 ? sel[0]
-            : sel.length + ' tipos seleccionados';
+            : sel.join(' + ');
     }
 
-    if (checked && ref.opcionesSeleccionadas.length >= maxSelecciones) {
-        cerrarModalDesayunoOpciones();
-    }
+    actualizarTextoDropdownDesayuno(refId);
 };
+
+function esOpcionBolleriaVariada(opcion) {
+    return String(opcion || '').toLowerCase().includes('variada');
+}
 
 function obtenerMaximoOpcionesDesayuno(ref) {
     const cantidad = Number(ref?.cantidadPorPax);
@@ -1887,14 +1960,14 @@ window.abrirModalDesayunoSandwichSimple = function(refId) {
     const opciones = ref.opcionesDisponibles || [];
     const seleccionado = ref.sabor || '';
     const body = opciones.map(opcion => `
-        <div onclick="seleccionarSandwichSimpleModal('${refId}','${opcion}')"
+        <div data-option="${opcion}" onclick="seleccionarSandwichSimpleModal('${refId}','${opcion}')"
              style="padding:9px 14px;border-radius:6px;border:1px solid #E8E6E1;cursor:pointer;
                     font-size:0.82rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;
                     background:${seleccionado===opcion?'rgba(219,234,254,0.5)':'white'}">
             <span>${opcion}</span>
-            ${seleccionado===opcion?'<span style="color:#1d4ed8">✓</span>':''}
+            <span class="modal-option-check" style="color:#1d4ed8">${seleccionado===opcion?'✓':''}</span>
         </div>`).join('');
-    _abrirModalDesayuno('Elegir sabor', body, false, null);
+    _abrirModalDesayuno('Elegir sabor', body, true, null, refId);
 };
 
 window.seleccionarSandwichSimpleModal = function(refId, opcion) {
@@ -1903,7 +1976,12 @@ window.seleccionarSandwichSimpleModal = function(refId, opcion) {
     if (ref) ref.sabor = opcion;
     const btn = document.getElementById('dropdown-text-' + refId);
     if (btn) btn.textContent = opcion;
-    cerrarModalDesayunoOpciones();
+    document.querySelectorAll('#modalDesayunoBody [data-option]').forEach(option => {
+        const activo = option.dataset.option === opcion;
+        option.style.background = activo ? 'rgba(219,234,254,0.5)' : 'white';
+        const check = option.querySelector('.modal-option-check');
+        if (check) check.textContent = activo ? '✓' : '';
+    });
 };
 
 // Sandwich múltiple
@@ -1925,8 +2003,9 @@ window.abrirModalDesayunoSandwichMultiple = function(refId) {
     _abrirModalDesayuno(
         'Elegir sabores',
         `<p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona ${maxSelecciones} sabores.</p><div style="display:flex;flex-direction:column;gap:2px;">${body}</div>`,
-        false,
-        null
+        true,
+        null,
+        refId
     );
 };
 
@@ -1959,23 +2038,29 @@ window.toggleSandwichMultipleModalCheck = function(refId, opcion, checked, el) {
     const btn = document.getElementById('dropdown-text-' + refId);
     if (btn) btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
 
-    if (checked && seleccionadas.length >= maxSelecciones) {
-        cerrarModalDesayunoOpciones();
-    }
+    actualizarTextoDropdownDesayuno(refId);
 };
 
 function obtenerSaboresSandwichMultiple(ref) {
     return (ref?.sandwiches || []).map(s => s.sabor).filter(Boolean);
 }
 
+function distribuirCantidadDesayuno(total, partes) {
+    const cantidadTotal = Math.max(0, Number(total) || 0);
+    const cantidadPartes = Math.max(1, Number(partes) || 1);
+    const base = Math.floor(cantidadTotal / cantidadPartes);
+    const resto = cantidadTotal % cantidadPartes;
+    return Array.from({ length: cantidadPartes }, (_, index) => base + (index < resto ? 1 : 0));
+}
+
 function sincronizarSandwichesMultiples(ref, sabores) {
     const max = ref.cantidadSandwiches || ref.sandwiches?.length || sabores.length || 2;
-    const cantidadPorSabor = Math.ceil((ref.cantidad || 0) / Math.max(sabores.length || max, 1));
+    const cantidades = distribuirCantidadDesayuno(ref.cantidad || 0, sabores.length || max);
     const anteriores = ref.sandwiches || [];
     ref.sandwiches = Array.from({ length: max }, (_, index) => ({
         id: anteriores[index]?.id || `${ref.nombre || 'sandwich'}_${index + 1}`,
         sabor: sabores[index] || '',
-        cantidad: sabores[index] ? cantidadPorSabor : 0
+        cantidad: sabores[index] ? cantidades[index] || 0 : 0
     }));
 }
 
@@ -2040,12 +2125,17 @@ window.abrirModalDesayunoSandwichOPulguita = function(refId) {
             const s2 = r.sandwiches?.[1]?.sabor || '';
             btn.textContent = [s1,s2].filter(Boolean).join(' + ') || 'Elegir sabores...';
         }
-    });
+    }, refId);
 };
 
 window.cambiarTipoSOPModal = function(refId, tipo) {
+    const snapshot = _modalDesayunoSnapshot ? _clonarDesayunoModal(_modalDesayunoSnapshot) : null;
     toggleSandwichOPulguita(refId, tipo);
     abrirModalDesayunoSandwichOPulguita(refId);
+    if (snapshot) {
+        _modalDesayunoRefId = refId;
+        _modalDesayunoSnapshot = snapshot;
+    }
 };
 
 window.seleccionarSOPSandwichModal = function(refId, num, opcion) {
@@ -2056,10 +2146,13 @@ window.seleccionarSOPSandwichModal = function(refId, num, opcion) {
     if (btn && ref) {
         btn.textContent = ref.sandwiches.map(s => s.sabor).filter(Boolean).join(' + ') || 'Elegir sabores...';
     }
-    if (completos) {
-        cerrarModalDesayunoOpciones();
-    } else {
+    if (!completos) {
+        const snapshot = _modalDesayunoSnapshot ? _clonarDesayunoModal(_modalDesayunoSnapshot) : null;
         abrirModalDesayunoSandwichOPulguita(refId);
+        if (snapshot) {
+            _modalDesayunoRefId = refId;
+            _modalDesayunoSnapshot = snapshot;
+        }
     }
 };
 
@@ -2092,14 +2185,17 @@ window.toggleSOPSandwichModalCheck = function(refId, opcion, checked, el) {
     const btn = document.getElementById('dropdown-text-' + refId);
     if (btn) btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
 
-    if (checked && seleccionadas.length >= maxSelecciones) {
-        cerrarModalDesayunoOpciones();
-    }
+    actualizarTextoDropdownDesayuno(refId);
 };
 
 window.seleccionarSOPPulguitaModal = function(refId, opcion) {
+    const snapshot = _modalDesayunoSnapshot ? _clonarDesayunoModal(_modalDesayunoSnapshot) : null;
     actualizarPulguitaSeleccion(refId, opcion);
     const btn = document.getElementById('dropdown-text-' + refId);
     if (btn) btn.textContent = opcion;
-    cerrarModalDesayunoOpciones();
+    abrirModalDesayunoSandwichOPulguita(refId);
+    if (snapshot) {
+        _modalDesayunoRefId = refId;
+        _modalDesayunoSnapshot = snapshot;
+    }
 };

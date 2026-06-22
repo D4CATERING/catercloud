@@ -772,6 +772,31 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Área de contenido dentro de sección */
+/* Detalle/comanda logistica: informacion del evento mas compacta */
+.detalle-container .dc-section:first-of-type .detalle-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.25fr) 70px 125px 86px;
+    padding: 5px 12px 7px;
+}
+
+.detalle-container .dc-section:first-of-type .detalle-field {
+    padding: 2px 5px;
+}
+
+.detalle-container .dc-section:first-of-type .detalle-field-label {
+    margin-bottom: 1px;
+}
+
+.detalle-container .dc-section:first-of-type .detalle-field-value {
+    line-height: 1.15;
+}
+
+@media (max-width: 760px) {
+    .detalle-container .dc-section:first-of-type .detalle-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 6px 10px;
+    }
+}
+
 .detalle-body {
     padding: 6px 14px 10px;
 }
@@ -1416,10 +1441,10 @@ textarea.dc-input {
 */
 .dc-log-grid {
     display: grid;
-    grid-template-columns: 1fr 150px 120px;
+    grid-template-columns: 1fr 120px 110px 120px;
     grid-template-areas:
-        "contacto   telefono   hora-entrega"
-        "direccion  cp         hora-evento";
+        "contacto   telefono   telefono   hora-entrega"
+        "calle      numero     cp         hora-evento";
     gap: 6px 10px;
     padding: 10px 12px 12px;
     background: #ffffff;
@@ -1428,7 +1453,8 @@ textarea.dc-input {
 .dc-log-contacto     { grid-area: contacto; }
 .dc-log-telefono     { grid-area: telefono; }
 .dc-log-hora-entrega { grid-area: hora-entrega; }
-.dc-log-direccion    { grid-area: direccion; }
+.dc-log-calle        { grid-area: calle; }
+.dc-log-numero       { grid-area: numero; }
 .dc-log-cp           { grid-area: cp; }
 .dc-log-hora-evento  { grid-area: hora-evento; }
 
@@ -1438,8 +1464,9 @@ textarea.dc-input {
         grid-template-areas:
             "contacto    contacto"
             "telefono    hora-entrega"
-            "direccion   direccion"
-            "cp          hora-evento";
+            "calle       calle"
+            "numero      cp"
+            "hora-evento hora-evento";
     }
 }
 
@@ -3789,14 +3816,16 @@ h3 {
 
 #logisticaInlineSection .dc-log-grid,
 #logisticaForm .dc-log-grid {
-  grid-template-columns: minmax(220px, 1.2fr) minmax(140px, .8fr) minmax(120px, .65fr);
+  grid-template-columns: minmax(220px, 1.25fr) minmax(110px, .6fr) minmax(110px, .6fr) minmax(120px, .65fr);
   gap: 5px 8px;
   padding: 7px 9px 8px;
   background: #ffffff;
 }
 
-#logisticaInlineSection .dc-log-direccion,
-#logisticaForm .dc-log-direccion {
+#logisticaInlineSection .dc-log-calle,
+#logisticaInlineSection .dc-log-numero,
+#logisticaForm .dc-log-calle,
+#logisticaForm .dc-log-numero {
   border-left: 2px solid #10b981;
 }
 
@@ -3805,6 +3834,19 @@ h3 {
 #logisticaForm .dc-log-hora-entrega,
 #logisticaForm .dc-log-hora-evento {
   border-left: 2px solid #bae6fd;
+}
+
+@media (max-width: 600px) {
+  #logisticaInlineSection .dc-log-grid,
+  #logisticaForm .dc-log-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "contacto    contacto"
+      "telefono    hora-entrega"
+      "calle       calle"
+      "numero      cp"
+      "hora-evento hora-evento";
+  }
 }
 
 #logisticaInlineSection .dc-field,
@@ -4341,7 +4383,7 @@ h3 {
 
 #detalleLogisticaSection .detalle-body {
   background: var(--dc-crema) !important;
-  padding: 6px 8px 10px !important;
+  padding: 4px 6px 8px !important;
 }
 
 #detalleLogisticaContent {
@@ -4352,8 +4394,8 @@ h3 {
   background: var(--dc-crema) !important;
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 8px !important;
-  padding: 4px !important;
+  gap: 6px !important;
+  padding: 2px !important;
 }
 
 #detalleLogisticaContent .dc-material-col {
@@ -4628,6 +4670,54 @@ h3 {
 .logistics-tab-panel {
   display: grid;
   gap: 16px;
+}
+
+.logistics-events-toolbar {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid #e5ddd3;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.logistics-events-toolbar label {
+  display: grid;
+  gap: 4px;
+  color: #795f4b;
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+.logistics-events-toolbar input {
+  height: 34px;
+  min-width: 170px;
+  border: 1px solid #d8cfc4;
+  border-radius: 8px;
+  padding: 0 10px;
+  color: #111827;
+  font-family: 'Roboto', sans-serif;
+  font-size: .84rem;
+}
+
+.logistics-events-toolbar button {
+  height: 34px;
+  border: 1px solid #d1aa68;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: #7a4f12;
+  font-family: 'Roboto', sans-serif;
+  font-size: .82rem;
+  cursor: pointer;
+}
+
+.logistics-events-toolbar button:hover {
+  background: #f8f0df;
 }
 
 .logistics-missing-box {
@@ -5492,6 +5582,90 @@ h3 {
   text-transform: uppercase;
 }
 
+/* Formulario de comanda logistica: seleccion de material compacta */
+#logisticaForm #materialLogisticaPage .logistics-builder--inline {
+  gap: 8px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category {
+  border-radius: 7px;
+  box-shadow: none;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category-header {
+  padding: 7px 9px;
+  gap: 8px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category-header h4 {
+  font-size: .78rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category-header span {
+  margin-top: 1px;
+  font-size: .64rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category-header strong {
+  min-width: 22px;
+  height: 22px;
+  font-size: .68rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-category-body {
+  gap: 7px;
+  padding: 8px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-picker {
+  gap: 5px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick {
+  grid-template-columns: minmax(0, 1fr) 70px;
+  min-height: 42px;
+  gap: 2px 6px;
+  padding: 5px 7px;
+  border-radius: 6px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main {
+  grid-template-columns: 14px minmax(0, 1fr);
+  gap: 5px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main input {
+  width: 13px;
+  height: 13px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main span {
+  font-size: .68rem;
+  line-height: 1.12;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick small {
+  padding-left: 19px;
+  font-size: .58rem;
+  line-height: 1.1;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-qty {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 4px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-qty input {
+  width: 40px;
+  min-height: 24px;
+  font-size: .68rem;
+  padding: 2px 4px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-qty span {
+  font-size: .58rem;
+}
+
 /* Ajuste corporativo para la seccion de Logistica */
 #logisticaPage .dc-page-header h1,
 .logistics-prep-header h2,
@@ -5714,5 +5888,151 @@ h3 {
     grid-column: auto;
     grid-row: auto;
     width: max-content;
+  }
+}
+
+/* Impresion: lectura mas clara sin tocar margenes */
+@media print {
+  body {
+    font-size: 10.8pt !important;
+  }
+
+  .detalle-container {
+    padding: 10mm 12mm !important;
+  }
+
+  .dc-section-header h3 {
+    font-size: 8.4pt !important;
+  }
+
+  .detalle-fecha-sub,
+  .detalle-field-label,
+  .dc-label {
+    font-size: 7.2pt !important;
+  }
+
+  .detalle-field-value,
+  .dc-input,
+  .log-readonly,
+  #detalleNotas,
+  .detalle-menaje-inline {
+    font-size: 9.1pt !important;
+  }
+
+  .detalle-menu-nombre,
+  .detalle-menu-cantidad {
+    font-size: 8.6pt !important;
+  }
+
+  .detalle-menu-nombre.es-titulo {
+    font-size: 9.5pt !important;
+  }
+
+  #detalleLogisticaContent .dc-material-grid {
+    gap: 7px !important;
+    padding: 2px !important;
+  }
+
+  #detalleLogisticaContent .dc-material-col h5 {
+    font-size: 8.2pt !important;
+    padding: 6px 8px !important;
+  }
+
+  #detalleLogisticaContent .dc-material-item {
+    grid-template-columns: minmax(0, 1fr) max-content max-content !important;
+    column-gap: 5px !important;
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+  }
+
+  #detalleLogisticaContent .dc-material-nombre {
+    font-size: 8.4pt !important;
+    line-height: 1.18 !important;
+  }
+
+  #detalleLogisticaContent .dc-material-cantidad {
+    font-size: 8.5pt !important;
+    min-width: 18px !important;
+    justify-self: end !important;
+    text-align: right !important;
+  }
+
+  #detalleLogisticaContent .dc-material-unidad {
+    font-size: 8pt !important;
+    justify-self: start !important;
+    text-align: left !important;
+  }
+
+  .detalle-logistica-notas {
+    font-size: 8.4pt !important;
+  }
+}
+
+/* Comanda en pantalla: cantidad y unidad juntas y alineadas */
+#detalleLogisticaContent .dc-material-item {
+  grid-template-columns: minmax(0, 1fr) max-content max-content !important;
+  column-gap: 5px !important;
+}
+
+#detalleLogisticaContent .dc-material-cantidad {
+  min-width: 20px !important;
+}
+
+#detalleLogisticaContent .dc-material-unidad {
+  min-width: 32px !important;
+}
+
+.detalle-menu-row--spacer {
+  min-height: 8px;
+  border-bottom: none;
+}
+
+.detalle-menu-row--spacer span {
+  display: none;
+}
+
+.resumen-detalle-row--spacer {
+  min-height: 8px;
+}
+
+/* Impresion: cantidad y unidad de logistica en la misma linea */
+@media print {
+  #detalleLogisticaContent .dc-material-item {
+    display: flex !important;
+    grid-template-columns: none !important;
+    gap: 0 !important;
+    align-items: center !important;
+  }
+
+  #detalleLogisticaContent .dc-material-cantidad,
+  #detalleLogisticaContent .dc-material-unidad {
+    align-self: center !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    white-space: nowrap !important;
+    width: auto !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  #detalleLogisticaContent .dc-material-cantidad {
+    flex: 0 0 26pt !important;
+    min-width: 26pt !important;
+    text-align: right !important;
+  }
+
+  #detalleLogisticaContent .dc-material-unidad {
+    flex: 0 0 38pt !important;
+    min-width: 38pt !important;
+    padding-left: 5pt !important;
+    text-align: left !important;
+  }
+
+  #detalleLogisticaContent .dc-material-nombre {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    padding-right: 8pt !important;
   }
 }

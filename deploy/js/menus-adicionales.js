@@ -657,7 +657,8 @@
       return;
     }
 
-    const categoriaId = parseInt(document.getElementById('categoria')?.value) || 0;
+    const categoriaSelectId = parseInt(document.getElementById('categoria')?.value) || 0;
+    const categoriaId = window.menuSeleccionado?._cat || categoriaSelectId;
 
     const paxEl = document.getElementById('pax');
     const pax = parseInt(paxEl?.value) || 0;
@@ -679,7 +680,9 @@
       id:          window.menuSeleccionado.id || '',
       nombre:      window.menuSeleccionado.nombre || '',
       categoriaId,
-      categoria:   document.getElementById('categoria')?.selectedOptions[0]?.text || '',
+      categoriaOriginalId: categoriaSelectId,
+      categoria:   window.serviciosMode ? 'Servicios' : (document.getElementById('categoria')?.selectedOptions[0]?.text || ''),
+      servicio_categoria: window.menuSeleccionado.servicio_categoria || null,
       pax,
       tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
       material:    materialSnapshot,
@@ -764,7 +767,7 @@
 
     // Resetear campos del menú principal
     const catSelect = document.getElementById('categoria');
-    if (catSelect) catSelect.value = '';
+    if (catSelect) catSelect.value = window.serviciosMode ? '3' : '';
     const menuIdInput = document.getElementById('menu_id');
     if (menuIdInput) menuIdInput.value = '';
     if (paxEl) paxEl.value = '';
@@ -774,11 +777,19 @@
 
     // Ocultar botón hasta próxima selección de categoría
     const btnWrap = document.getElementById('btnAnadirMenuWrap');
-    if (btnWrap) btnWrap.style.display = 'none';
+    if (btnWrap) btnWrap.style.display = window.serviciosMode ? 'flex' : 'none';
 
     // Limpiar solo el material (el formulario de logística permanece visible)
     const matInline = document.getElementById('materialLogisticaInline');
     if (matInline) { matInline.style.display = 'none'; matInline.innerHTML = ''; }
+    if (typeof asegurarLogisticaInlineVisible === 'function') {
+      asegurarLogisticaInlineVisible();
+    } else {
+      const logisticaSection = document.getElementById('logisticaInlineSection');
+      const notasSection = document.getElementById('logisticaInlineNotasSection');
+      if (logisticaSection) logisticaSection.style.display = 'block';
+      if (notasSection) notasSection.style.display = 'block';
+    }
 
     console.log(`✅ Menú añadido: ${item.nombre} (${pax} pax). Total: ${st.menusAdicionales.length} menús, ${paxTotal} PAX`);
   };
@@ -830,41 +841,90 @@
   }
 
   function detalleDesayunoResumen(menu) {
-    const refs = Object.values(menu.referencias_desayuno || {})
-      .filter(ref => ref && ref.cantidad > 0 && ref.tipo !== 'termo' && ref.tipo !== 'leche_especial');
+    const ordenDesayuno = {
+      healthy_bolleria: 10,
+      healthy_sandwich: 20,
+      healthy_tostada: 30,
+      healthy_fruta: 40,
+      classic_bolleria: 10,
+      classic_sandwich: 20,
+      classic_fruta: 30,
+      premium_cookie: 10,
+      premium_bolleria: 20,
+      premium_sandwich_o_pulguita: 30,
+      premium_fruta: 40,
+      premium_smoothie: 50,
+      veggie_cookie: 10,
+      veggie_sandwich_vegetal: 20,
+      veggie_sandwich_aguacate: 21,
+      veggie_fruta: 30
+    };
+    const refs = Object.entries(menu.referencias_desayuno || {})
+      .map(([key, ref], index) => ({ key, ref, index }))
+      .filter(item => item.ref && item.ref.cantidad > 0 && item.ref.tipo !== 'termo' && item.ref.tipo !== 'leche_especial')
+      .sort((a, b) => (ordenDesayuno[a.ref.id || a.key] ?? a.index + 100) - (ordenDesayuno[b.ref.id || b.key] ?? b.index + 100))
+      .map(item => ({ ...item.ref, _refKey: item.key }));
+    const distribuirCantidad = (total, opciones) => {
+      const cantidadTotal = Math.max(0, Number(total) || 0);
+      const cantidadOpciones = Math.max(1, Number(opciones) || 1);
+      const base = Math.floor(cantidadTotal / cantidadOpciones);
+      const resto = cantidadTotal % cantidadOpciones;
+      return Array.from({ length: cantidadOpciones }, (_, index) => base + (index < resto ? 1 : 0));
+    };
+
+    let tituloSandwichFijoRenderizado = false;
 
     return refs.map(ref => {
       let extra = '';
+      const refKey = ref.id || ref._refKey || '';
 
       if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
-        extra = ` (${ref.opcionesSeleccionadas.join(', ')})`;
+        const cantidades = distribuirCantidad(ref.cantidad || menu.pax, ref.opcionesSeleccionadas.length);
+        return renderFilaDetalleResumen('Bollería:', '', true) + ref.opcionesSeleccionadas
+          .map((opcion, index) => renderFilaDetalleResumen(opcion, `${cantidades[index]} ${escResumen(ref.unidad || 'uds')}`, false))
+          .join('');
       }
 
       if (ref.tipo === 'sandwich' && ref.sabor) {
-        extra = ` - ${ref.sabor}`;
+        if (refKey === 'premium_cookie' || refKey === 'premium_fruta') {
+          return (refKey === 'premium_fruta' ? '<div class="resumen-detalle-row resumen-detalle-row--spacer"></div>' : '')
+            + renderFilaDetalleResumen(ref.sabor, formatoCantidadResumen(ref, 'uds'), false);
+        }
+        const tituloSimple = /sandwich|s[aá]ndwich/i.test(`${ref.id || ''} ${ref.nombre || ''}`)
+          ? 'Sándwich:'
+          : `${ref.nombre}:`;
+        return renderFilaDetalleResumen(tituloSimple, '', true)
+          + renderFilaDetalleResumen(ref.sabor, formatoCantidadResumen(ref, 'uds'), false);
+      }
+
+      if (ref.tipo === 'sandwich_fijo') {
+        const titulo = tituloSandwichFijoRenderizado ? '' : renderFilaDetalleResumen('Sándwich:', '', true);
+        tituloSandwichFijoRenderizado = true;
+        return titulo + renderFilaDetalleResumen(ref.sabor || ref.nombre, formatoCantidadResumen(ref, 'uds'), false);
       }
 
       if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
-        const sabores = ref.sandwiches
-          .filter(s => s.sabor)
-          .map(s => `${s.sabor}${s.cantidad ? ` x${s.cantidad}` : ''}`)
-          .join(', ');
-        if (sabores) extra = `: ${sabores}`;
+        const sandwiches = ref.sandwiches.filter(s => s.sabor);
+        const cantidades = distribuirCantidad(ref.cantidad || menu.pax, sandwiches.length);
+        return renderFilaDetalleResumen('Mini sandwich:', '', true) + sandwiches
+          .map((s, index) => renderFilaDetalleResumen(s.sabor, `${cantidades[index]} ${escResumen(ref.unidad || 'uds')}`, false))
+          .join('');
       }
 
       if (ref.tipo === 'sandwich_o_pulguita') {
         if (ref.modo === 'pulguita' && ref.pulguita) {
           extra = ` - ${ref.pulguita}`;
         } else if (ref.sandwiches?.length) {
-          const sabores = ref.sandwiches
-            .filter(s => s.sabor)
-            .map(s => `${s.sabor}${s.cantidad ? ` x${s.cantidad}` : ''}`)
-            .join(', ');
-          if (sabores) extra = `: ${sabores}`;
+          const sandwiches = ref.sandwiches.filter(s => s.sabor);
+          const cantidades = distribuirCantidad(ref.cantidad || menu.pax, sandwiches.length);
+          return renderFilaDetalleResumen('Mini sandwich:', '', true) + sandwiches
+            .map((s, index) => renderFilaDetalleResumen(s.sabor, `${cantidades[index]} ${escResumen(ref.unidad || 'uds')}`, false))
+            .join('');
         }
       }
 
-      return renderFilaDetalleResumen(ref.nombre + extra, formatoCantidadResumen(ref, 'uds'), false);
+      return (['classic_fruta', 'healthy_fruta', 'veggie_fruta'].includes(refKey) ? '<div class="resumen-detalle-row resumen-detalle-row--spacer"></div>' : '')
+        + renderFilaDetalleResumen(ref.nombre + extra, formatoCantidadResumen(ref, 'uds'), false);
     }).join('');
   }
 

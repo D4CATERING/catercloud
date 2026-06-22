@@ -154,7 +154,7 @@ function limpiarCamposLogisticaInline() {
     const ids = [
         'log_inline_hora_entrega', 'log_inline_hora_evento',
         'log_inline_nombre_contacto', 'log_inline_telefono_contacto',
-        'log_inline_direccion', 'log_inline_codigo_postal', 'log_inline_notas'
+        'log_inline_calle', 'log_inline_numero', 'log_inline_codigo_postal', 'log_inline_notas'
     ];
     ids.forEach(id => {
         const el = document.getElementById(id);
@@ -162,6 +162,70 @@ function limpiarCamposLogisticaInline() {
         const err = document.getElementById(id + '_err');
         if (err) err.textContent = '';
     });
+}
+
+function minutosHoraLogistica(valor) {
+    if (!valor || !/^\d{2}:\d{2}$/.test(valor)) return null;
+    const [horas, minutos] = valor.split(':').map(Number);
+    return (horas * 60) + minutos;
+}
+
+function componerDireccionLogistica(calle, numero) {
+    return [calle, numero].map(v => (v || '').trim()).filter(Boolean).join(', ');
+}
+
+function separarDireccionLogistica(direccion) {
+    const limpia = (direccion || '').trim();
+    if (!limpia) return { calle: '', numero: '' };
+
+    const partes = limpia.split(',').map(p => p.trim()).filter(Boolean);
+    if (partes.length >= 2) {
+        return {
+            calle: partes.shift(),
+            numero: partes.join(', ')
+        };
+    }
+
+    const match = limpia.match(/^(.*?\D)\s+(\d+\s?.*)$/);
+    if (match) {
+        return {
+            calle: match[1].trim(),
+            numero: match[2].trim()
+        };
+    }
+
+    return { calle: limpia, numero: '' };
+}
+
+window.separarDireccionLogistica = separarDireccionLogistica;
+
+function validarHorariosLogistica(prefix, horaSalidaValor) {
+    const entrega = document.getElementById(`${prefix}_hora_entrega`);
+    const evento = document.getElementById(`${prefix}_hora_evento`);
+    const salidaMin = minutosHoraLogistica(horaSalidaValor);
+    const entregaMin = minutosHoraLogistica(entrega?.value || '');
+    const eventoMin = minutosHoraLogistica(evento?.value || '');
+    let valido = true;
+
+    if (entrega && salidaMin !== null && entregaMin !== null && entregaMin < salidaMin) {
+        entrega.style.borderColor = '#dc2626';
+        const err = document.getElementById(`${prefix}_hora_entrega_err`);
+        if (err) err.textContent = 'La hora de entrega no puede ser inferior a la hora de salida';
+        valido = false;
+    }
+
+    if (evento && eventoMin !== null) {
+        const menorQueSalida = salidaMin !== null && eventoMin < salidaMin;
+        const menorQueEntrega = entregaMin !== null && eventoMin < entregaMin;
+        if (menorQueSalida || menorQueEntrega) {
+            evento.style.borderColor = '#dc2626';
+            const err = document.getElementById(`${prefix}_hora_evento_err`);
+            if (err) err.textContent = 'La hora del evento no puede ser menor que salida o entrega';
+            valido = false;
+        }
+    }
+
+    return valido;
 }
 
 /**
@@ -177,7 +241,8 @@ function validarLogisticaInline() {
         { id: 'log_inline_hora_evento',        label: 'Hora del evento' },
         { id: 'log_inline_nombre_contacto',    label: 'Nombre de contacto' },
         { id: 'log_inline_telefono_contacto',  label: 'Teléfono de contacto' },
-        { id: 'log_inline_direccion',          label: 'Dirección' },
+        { id: 'log_inline_calle',              label: 'Calle' },
+        { id: 'log_inline_numero',             label: 'Número / portal' },
         { id: 'log_inline_codigo_postal',      label: 'Código postal' }
     ];
 
@@ -204,6 +269,10 @@ function validarLogisticaInline() {
         valido = false;
     }
 
+    if (!validarHorariosLogistica('log_inline', document.getElementById('hora_salida')?.value || '')) {
+        valido = false;
+    }
+
     return valido;
 }
 
@@ -213,12 +282,16 @@ function validarLogisticaInline() {
 function obtenerDatosLogisticaInline() {
     const seccion = document.getElementById('logisticaInlineSection');
     if (!seccion || seccion.style.display === 'none') return null;
+    const calle = document.getElementById('log_inline_calle')?.value.trim() || '';
+    const numero = document.getElementById('log_inline_numero')?.value.trim() || '';
     return {
         hora_entrega:      document.getElementById('log_inline_hora_entrega')?.value || '',
         hora_evento:       document.getElementById('log_inline_hora_evento')?.value || '',
         nombre_contacto:   document.getElementById('log_inline_nombre_contacto')?.value.trim() || '',
         telefono_contacto: document.getElementById('log_inline_telefono_contacto')?.value.trim() || '',
-        direccion:         document.getElementById('log_inline_direccion')?.value.trim() || '',
+        calle,
+        numero,
+        direccion:         componerDireccionLogistica(calle, numero),
         codigo_postal:     document.getElementById('log_inline_codigo_postal')?.value.trim() || '',
         notas_logistica:   document.getElementById('log_inline_notas')?.value.trim() || ''
     };
@@ -514,12 +587,16 @@ async function manejarEnvioFormulario(e) {
     const categoriaId = parseInt(document.getElementById('categoria').value);
     const menusParaValidar = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
-    const editandoConMenusGuardados = !!window.comandaEditando && menusParaValidar.length > 0;
+    const hayMenusAgregados = menusParaValidar.length > 0;
+    const editandoConMenusGuardados = !!window.comandaEditando && hayMenusAgregados;
     
     // Validaciones específicas por categoría
-    if (!editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3)) { // FOODBOX/COMIDA o SERVICIOS
-        const seleccionadasSaladas = window.referenciasSeleccionadas ? 
-            window.referenciasSeleccionadas.saladas.length : 0;
+    if (!hayMenusAgregados && !editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3) && window.menuSeleccionado) { // FOODBOX/COMIDA o SERVICIOS
+        const seleccionadasSaladas = [
+            ...(window.referenciasSeleccionadas?.saladas || []),
+            ...(window.referenciasSeleccionadas?.gris || []),
+            ...(window.referenciasSeleccionadas?.rojo || [])
+        ].length;
         
         if (seleccionadasSaladas < window.menuSeleccionado.items_salados_min) {
             mostrarMensaje(`❌ Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
@@ -529,7 +606,7 @@ async function manejarEnvioFormulario(e) {
     }
     
 // Validación para Foodbox Lunch (MEJORADA)
-if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
+if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
     // Usar la nueva función de validación mejorada
     if (typeof validarFoodboxLunchMejorado === 'function') {
         if (!validarFoodboxLunchMejorado()) {
@@ -547,6 +624,32 @@ if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
     // ── Recoger menús acumulados ──────────────────────────────────────────────
     const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
+
+    if (window.comandaEditando && window.referenciasDesayuno && _menusAcumulados.length) {
+        const _categoriaActual = Number(window.menuSeleccionado?._cat || window.menuSeleccionado?.categoriaId || document.getElementById('categoria')?.value || 0);
+        if (_categoriaActual === 1) {
+            const _menuIdActual = document.getElementById('menu_id')?.value || window.menuSeleccionado?.id || '';
+            const _idxDesayuno = _menusAcumulados.findIndex(menu =>
+                Number(menu.categoriaId || menu._cat || 0) === 1 &&
+                (!_menuIdActual || String(menu.id || '') === String(_menuIdActual))
+            );
+            const _idx = _idxDesayuno >= 0
+                ? _idxDesayuno
+                : _menusAcumulados.findIndex(menu => Number(menu.categoriaId || menu._cat || 0) === 1);
+            if (_idx >= 0) {
+                const _clone = (value) => {
+                    try { return JSON.parse(JSON.stringify(value || null)); }
+                    catch (error) { return value; }
+                };
+                _menusAcumulados[_idx] = {
+                    ..._menusAcumulados[_idx],
+                    referencias_desayuno: _clone(window.referenciasDesayuno),
+                    pax: parseInt(document.getElementById('pax')?.value) || _menusAcumulados[_idx].pax || 0,
+                    tipo_menaje: document.getElementById('tipo_menaje')?.value || _menusAcumulados[_idx].tipo_menaje || null
+                };
+            }
+        }
+    }
 
     const _menuPrincipalBase = _menusAcumulados[0] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
     const _menuPrincipal  = {
@@ -648,15 +751,17 @@ if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
         let codigo;
         
         if (window.comandaEditando) {
+            const codigoEditando = window.comandaEditando.codigo;
             comandaData.fecha_creacion = window.comandaEditando.fecha_creacion || comandaData.fecha_creacion;
             comandaData.creado_por_id = window.comandaEditando.creado_por_id || comandaData.creado_por_id;
             comandaData.creado_por_nombre = window.comandaEditando.creado_por_nombre || comandaData.creado_por_nombre;
             comandaData.creado_por_email = window.comandaEditando.creado_por_email || comandaData.creado_por_email;
             comandaData.adjuntos = window.comandaEditando.adjuntos || comandaData.adjuntos || [];
             comandaData.documentos = window.comandaEditando.documentos || comandaData.documentos || {};
+            comandaData.codigo = codigoEditando;
 
             // Actualizar comanda existente
-            const resultado = await actualizarComandaEnHistorial(window.comandaEditando.codigo, comandaData);
+            const resultado = await actualizarComandaEnHistorial(codigoEditando, comandaData);
             
             if (resultado) {
                 mostrarMensaje(`✅ Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
@@ -667,11 +772,27 @@ if (!editandoConMenusGuardados && categoriaId == 4) { // FOODBOX LUNCH
                 
                 // Volver al dashboard después de actualizar
                 setTimeout(() => {
-                    if (typeof volverAlDashboard === 'function') {
-                        volverAlDashboard();
+                    const form = document.getElementById('comandaForm');
+                    const dashboard = document.getElementById('dashboard');
+                    const detalle = document.getElementById('detalleComanda');
+                    const historial = document.getElementById('historialPage');
+                    const expediente = document.getElementById('expedientePedido');
+
+                    if (form) form.style.display = 'none';
+                    if (dashboard) dashboard.style.display = 'none';
+                    if (historial) historial.style.display = 'none';
+                    if (expediente) expediente.style.display = 'none';
+                    if (detalle) detalle.style.display = 'block';
+
+                    if (typeof _renderDetalleComanda === 'function') {
+                        _renderDetalleComanda(comandaData);
                     }
+
                     window.comandaEditando = null;
-                }, 2000);
+                    if (typeof limpiarFormularioComanda === 'function') {
+                        limpiarFormularioComanda();
+                    }
+                }, 500);
                 
             } else {
                 mostrarMensaje('❌ Error al actualizar la comanda', 'error');
@@ -821,7 +942,12 @@ window.ultimaComandaCocinaData = {
     notas: comandaData.alergias?.notas || ''
 };
 
-if (Number(_catPrincipal) === 3) {
+const requiereLogisticaSeparada = _menusAcumulados.some(menu =>
+    Number(menu.categoriaOriginalId || menu.categoriaId) === 3 ||
+    Boolean(menu.servicio_categoria)
+) || Number(categoriaId) === 3 || Number(_catPrincipal) === 3;
+
+if (requiereLogisticaSeparada) {
     // Cocteles/Celebraciones → página separada de logística
     setTimeout(() => {
         mostrarModalConfirmacionLogistica();
@@ -987,7 +1113,8 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
 
     setValue('log_nombre_contacto', document.getElementById('log_inline_nombre_contacto')?.value || '');
     setValue('log_telefono_contacto', document.getElementById('log_inline_telefono_contacto')?.value || '');
-    setValue('log_direccion', document.getElementById('log_inline_direccion')?.value || '');
+    setValue('log_calle', document.getElementById('log_inline_calle')?.value || '');
+    setValue('log_numero', document.getElementById('log_inline_numero')?.value || '');
     setValue('log_codigo_postal', document.getElementById('log_inline_codigo_postal')?.value || '');
     setValue('log_hora_entrega', document.getElementById('log_inline_hora_entrega')?.value || '');
     setValue('log_hora_evento', document.getElementById('log_inline_hora_evento')?.value || '');
@@ -1013,8 +1140,59 @@ function volverDesdeCancelLogistica() {
     }
 }
 
+function validarComandaLogisticaPage() {
+    let valido = true;
+    const requeridos = [
+        { id: 'log_nombre_contacto', label: 'Nombre de contacto' },
+        { id: 'log_telefono_contacto', label: 'Telefono de contacto' },
+        { id: 'log_hora_entrega', label: 'Hora de entrega' },
+        { id: 'log_hora_evento', label: 'Hora del evento' },
+        { id: 'log_calle', label: 'Calle' },
+        { id: 'log_numero', label: 'Número / portal' },
+        { id: 'log_codigo_postal', label: 'Codigo postal' }
+    ];
+
+    requeridos.forEach(({ id, label }) => {
+        const input = document.getElementById(id);
+        const errEl = document.getElementById(id + '_err');
+        if (!input) return;
+
+        if (!input.value.trim()) {
+            input.style.borderColor = '#dc2626';
+            if (errEl) errEl.textContent = `${label} es obligatorio`;
+            valido = false;
+        } else {
+            input.style.borderColor = '#cbd5e1';
+            if (errEl) errEl.textContent = '';
+        }
+    });
+
+    const tel = document.getElementById('log_telefono_contacto');
+    if (tel && tel.value.trim() && !/^[0-9\s\+\-]{6,20}$/.test(tel.value.trim())) {
+        tel.style.borderColor = '#dc2626';
+        const errEl = document.getElementById('log_telefono_contacto_err');
+        if (errEl) errEl.textContent = 'Formato de telefono no valido';
+        valido = false;
+    }
+
+    const salida = window._logisticaBase?.hora_salida ||
+        document.getElementById('log_hora_salida')?.textContent ||
+        document.getElementById('hora_salida')?.value ||
+        '';
+
+    if (!validarHorariosLogistica('log', salida)) {
+        valido = false;
+    }
+
+    return valido;
+}
+
 function guardarComandaLogistica() {
+    if (!validarComandaLogisticaPage()) return;
+
     const base = window._logisticaBase || {};
+    const calle = document.getElementById('log_calle')?.value.trim() || '';
+    const numero = document.getElementById('log_numero')?.value.trim() || '';
     const datosLogistica = {
         tipo_registro: 'logistica',
         codigo_original: base.codigoLogistica || window._logisticaEditando?.codigo || '',
@@ -1030,7 +1208,9 @@ function guardarComandaLogistica() {
             telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',
             hora_entrega: document.getElementById('log_hora_entrega')?.value || '',
             hora_evento: document.getElementById('log_hora_evento')?.value || '',
-            direccion: document.getElementById('log_direccion')?.value.trim() || '',
+            calle,
+            numero,
+            direccion: componerDireccionLogistica(calle, numero),
             codigo_postal: document.getElementById('log_codigo_postal')?.value.trim() || '',
             notas_logistica: document.getElementById('log_page_notas')?.value.trim() || ''
         },

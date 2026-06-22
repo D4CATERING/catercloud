@@ -8,7 +8,7 @@ function getEstadoPedidoLabel(estado) {
         negociacion: 'En negociacion',
         por_confirmar: 'Por confirmar',
         confirmado: 'Confirmado',
-        anulada: 'Anulada'
+        anulada: 'Anulado'
     };
 
     return labels[estado] || (estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : '-');
@@ -143,11 +143,19 @@ function _renderExpedientePedido(comanda) {
         : 'Sin fecha';
     const estado = comanda.estado || 'creada';
     const estadoLabel = getEstadoPedidoLabel(estado);
-    const esSolicitud = comanda.tipo_registro === 'solicitud' || ['negociacion', 'por_confirmar', 'confirmado'].includes(estado);
+    const esSolicitud = comanda.tipo_registro === 'solicitud';
     const puedeCrearComanda = estado !== 'anulada';
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
     const archivosHtml = _renderArchivosSolicitud(comanda);
     const tieneLogistica = !!comanda.documentos?.logistica || _pedidoTieneComandaLogistica(comanda.codigo);
+    const puedeConfirmarSolicitud = puedeEditar && esSolicitud && estado !== 'confirmado' && estado !== 'anulada';
+    const puedeAnularPedido = puedeEditar && estado !== 'anulada';
+    const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeAnularPedido)
+        ? `<div class="expediente-status-actions">
+                    ${puedeConfirmarSolicitud ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar</button>` : ''}
+                    ${puedeAnularPedido ? `<button class="expediente-status-btn estado-anulada" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'anulada')">Anular</button>` : ''}
+                </div>`
+        : '';
 
     cont.innerHTML = `
         <div class="expediente-header">
@@ -176,10 +184,7 @@ function _renderExpedientePedido(comanda) {
             <section class="expediente-section">
                 <h3>Operaciones</h3>
                 <p class="expediente-muted">${esSolicitud ? 'Actualiza el estado de la solicitud o crea la comanda cuando se confirme.' : 'La comanda ya esta creada y se puede consultar.'}</p>
-                ${puedeEditar ? `<div class="expediente-status-actions">
-                    <button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmado</button>
-                    <button class="expediente-status-btn estado-anulada" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'anulada')">Anulado</button>
-                </div>` : ''}
+                ${accionesEstadoHtml}
                 <div class="expediente-actions">
                     ${esSolicitud
                         ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
@@ -501,27 +506,102 @@ function _renderMenuDetalle(comanda, pax) {
         </div>`;
     }
 
+    function distribuirCantidadPorOpciones(total, opciones) {
+        const cantidadTotal = Math.max(0, Number(total) || 0);
+        const cantidadOpciones = Math.max(1, Number(opciones) || 1);
+        const base = Math.floor(cantidadTotal / cantidadOpciones);
+        const resto = cantidadTotal % cantidadOpciones;
+        return Array.from({ length: cantidadOpciones }, (_, index) => base + (index < resto ? 1 : 0));
+    }
+
     if (comanda.referencias_desayuno && Object.keys(comanda.referencias_desayuno).length) {
-        const refs = Object.values(comanda.referencias_desayuno).filter(r => r && r.cantidad > 0);
+        const ordenDesayuno = {
+            healthy_bolleria: 10,
+            healthy_sandwich: 20,
+            healthy_tostada: 30,
+            healthy_fruta: 40,
+            classic_bolleria: 10,
+            classic_sandwich: 20,
+            classic_fruta: 30,
+            premium_cookie: 10,
+            premium_bolleria: 20,
+            premium_sandwich_o_pulguita: 30,
+            premium_fruta: 40,
+            premium_smoothie: 50,
+            veggie_cookie: 10,
+            veggie_sandwich_vegetal: 20,
+            veggie_sandwich_aguacate: 21,
+            veggie_fruta: 30
+        };
+        const refs = Object.entries(comanda.referencias_desayuno)
+            .map(([key, ref], index) => ({ key, ref, index }))
+            .filter(item => item.ref && item.ref.cantidad > 0)
+            .sort((a, b) => (ordenDesayuno[a.ref.id || a.key] ?? a.index + 100) - (ordenDesayuno[b.ref.id || b.key] ?? b.index + 100))
+            .map(item => ({ ...item.ref, _refKey: item.key }));
+
+        let tituloSandwichFijoRenderizado = false;
 
         refs.filter(r => r.tipo !== 'termo' && r.tipo !== 'leche_especial').forEach(ref => {
             let extra = '';
+            const refKey = ref.id || ref._refKey || '';
 
             if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
-                extra = ' (' + ref.opcionesSeleccionadas.join(', ') + ')';
+                const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, ref.opcionesSeleccionadas.length);
+                html += fila('Bollería:', '', '', true);
+                ref.opcionesSeleccionadas.forEach((opcion, index) => {
+                    html += fila(opcion, cantidades[index], ref.unidad || 'uds', false);
+                });
+                return;
             }
 
             if (ref.tipo === 'sandwich' && ref.sabor) {
-                extra = ' — ' + ref.sabor;
+                if (refKey === 'premium_cookie' || refKey === 'premium_fruta') {
+                    if (refKey === 'premium_fruta') {
+                        html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
+                    }
+                    html += fila(ref.sabor, ref.cantidad, ref.unidad || 'uds', false);
+                    return;
+                }
+                const tituloSimple = /sandwich|s[aá]ndwich/i.test(`${ref.id || ''} ${ref.nombre || ''}`)
+                    ? 'Sándwich:'
+                    : `${ref.nombre}:`;
+                html += fila(tituloSimple, '', '', true);
+                html += fila(ref.sabor, ref.cantidad, ref.unidad || 'uds', false);
+                return;
+            }
+
+            if (ref.tipo === 'sandwich_fijo') {
+                if (!tituloSandwichFijoRenderizado) {
+                    html += fila('Sándwich:', '', '', true);
+                    tituloSandwichFijoRenderizado = true;
+                }
+                html += fila(ref.sabor || ref.nombre, ref.cantidad, ref.unidad || 'uds', false);
+                return;
             }
 
             if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
-                extra = ': ' + ref.sandwiches
-                    .filter(s => s.sabor)
-                    .map(s => `${s.sabor} ×${s.cantidad || ''}`)
-                    .join(', ');
+                const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, sandwiches.length);
+                html += fila('Mini sandwich:', '', '', true);
+                sandwiches.forEach((s, index) => {
+                    html += fila(s.sabor, cantidades[index], ref.unidad || 'uds', false);
+                });
+                return;
             }
 
+            if (ref.tipo === 'sandwich_o_pulguita' && ref.modo !== 'pulguita' && ref.sandwiches?.length) {
+                const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, sandwiches.length);
+                html += fila('Mini sandwich:', '', '', true);
+                sandwiches.forEach((s, index) => {
+                    html += fila(s.sabor, cantidades[index], ref.unidad || 'uds', false);
+                });
+                return;
+            }
+
+            if (refKey === 'classic_fruta' || refKey === 'healthy_fruta' || refKey === 'veggie_fruta') {
+                html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
+            }
             html += fila(ref.nombre + extra, ref.cantidad, ref.unidad || 'uds', false);
         });
     }
@@ -1177,6 +1257,32 @@ function _rellenarCampoEdicion(id, valor) {
     if (el) el.value = valor || '';
 }
 
+function _hidratarReferenciasDesayunoEdicion(menu) {
+    if (!menu?.referencias_desayuno || !window.referenciasDesayuno) return;
+
+    const guardadas = _clonarValorComanda(menu.referencias_desayuno) || {};
+    Object.entries(guardadas).forEach(([refId, refGuardada]) => {
+        const refActual = window.referenciasDesayuno[refId] || {};
+        window.referenciasDesayuno[refId] = {
+            ...refActual,
+            ...refGuardada,
+            opcionesDisponibles: refGuardada.opcionesDisponibles || refActual.opcionesDisponibles || [],
+            pulguitasDisponibles: refGuardada.pulguitasDisponibles || refActual.pulguitasDisponibles || []
+        };
+
+        const bubble = Array.from(document.querySelectorAll('#referenciasDesayunoGrid .dc-item-bubble'))
+            .find(node => node.dataset.id === refId);
+        const input = bubble?.querySelector('.dc-input-qty, .cantidad-input-compact');
+        if (input && window.referenciasDesayuno[refId].cantidad !== undefined) {
+            input.value = window.referenciasDesayuno[refId].cantidad;
+        }
+
+        if (typeof actualizarTextoDropdownDesayuno === 'function') {
+            actualizarTextoDropdownDesayuno(refId);
+        }
+    });
+}
+
 async function _activarPrimerMenuEdicion(menu) {
     if (!menu) return;
 
@@ -1195,7 +1301,9 @@ async function _activarPrimerMenuEdicion(menu) {
         if (nodeEncontrado) return;
         try {
             const data = JSON.parse(node.dataset.menu || '{}');
-            if (String(data.id) === String(menu.id)) nodeEncontrado = node;
+            const mismoId = menu.id && String(data.id) === String(menu.id);
+            const mismoNombre = (data.nombre || '').trim().toLowerCase() === (menu.nombre || '').trim().toLowerCase();
+            if (mismoId || mismoNombre) nodeEncontrado = node;
         } catch (error) {}
     });
 
@@ -1204,6 +1312,10 @@ async function _activarPrimerMenuEdicion(menu) {
     } else {
         window.menuSeleccionado = { ...menu, _cat: categoriaId };
         _rellenarCampoEdicion('menu_id', menu.id || '');
+    }
+
+    if (categoriaId === 1) {
+        _hidratarReferenciasDesayunoEdicion(menu);
     }
 }
 
@@ -1224,7 +1336,11 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
     _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
     _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
-    _rellenarCampoEdicion('log_inline_direccion', logistica.direccion || '');
+    const direccionInline = typeof window.separarDireccionLogistica === 'function'
+        ? window.separarDireccionLogistica(logistica.direccion || '')
+        : { calle: logistica.direccion || '', numero: '' };
+    _rellenarCampoEdicion('log_inline_calle', logistica.calle || direccionInline.calle || '');
+    _rellenarCampoEdicion('log_inline_numero', logistica.numero || direccionInline.numero || '');
     _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
     _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
 
@@ -1306,7 +1422,25 @@ async function editarComanda() {
 }
 
 function imprimirComanda() {
-    window.print();
+    const detalle = document.getElementById('detalleComanda');
+    const expediente = document.getElementById('expedientePedido');
+
+    if (detalle && detalle.style.display === 'none' && expediente && expediente.style.display !== 'none') {
+        const codigo = window.detalleDocumentoActivo?.codigo || document.querySelector('#expedientePedidoContent h2')?.textContent || '';
+        if (codigo && typeof abrirComandaDesdeExpediente === 'function') {
+            abrirComandaDesdeExpediente(codigo.trim());
+        }
+    }
+
+    setTimeout(() => {
+        try {
+            window.focus();
+            window.print();
+        } catch (error) {
+            console.error('No se pudo abrir la impresion:', error);
+            alert('No se pudo abrir la ventana de impresión. Intenta con Ctrl + P.');
+        }
+    }, 80);
 }
 
 function eliminarComanda() {
@@ -1366,7 +1500,11 @@ async function editarComandaLogistica() {
     _rellenarCampoEdicion('log_telefono_contacto', log.telefono_contacto || '');
     _rellenarCampoEdicion('log_hora_entrega', log.hora_entrega || '');
     _rellenarCampoEdicion('log_hora_evento', log.hora_evento || '');
-    _rellenarCampoEdicion('log_direccion', log.direccion || '');
+    const direccionLogistica = typeof window.separarDireccionLogistica === 'function'
+        ? window.separarDireccionLogistica(log.direccion || '')
+        : { calle: log.direccion || '', numero: '' };
+    _rellenarCampoEdicion('log_calle', log.calle || direccionLogistica.calle || '');
+    _rellenarCampoEdicion('log_numero', log.numero || direccionLogistica.numero || '');
     _rellenarCampoEdicion('log_codigo_postal', log.codigo_postal || '');
     _rellenarCampoEdicion('log_page_notas', log.notas_logistica || '');
 
@@ -1466,3 +1604,4 @@ async function verDetalleComandaPorCodigo(codigo) {
 
     _renderDetalleComanda(comanda);
 }
+

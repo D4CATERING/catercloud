@@ -8,6 +8,13 @@ if (!window.pax) window.pax = 0;
 if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
 if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
 
+function asegurarLogisticaInlineVisible() {
+    const logisticaSection = document.getElementById('logisticaInlineSection');
+    const notasSection = document.getElementById('logisticaInlineNotasSection');
+    if (logisticaSection) logisticaSection.style.display = 'block';
+    if (notasSection) notasSection.style.display = 'block';
+}
+
 // ========== NUEVO: AÑADIR VARIABLE FOODBOX ==========
 if (!window.seleccionesFoodbox) {
     window.seleccionesFoodbox = {
@@ -94,8 +101,11 @@ function actualizarCantidadesReferencias() {
  * Función placeholder para actualizar cantidades de desayuno
  */
 function actualizarCantidadesDesayuno() {
+    const esWelcomeServicio = window.serviciosMode &&
+        window.menuSeleccionado?.servicio_categoria === 'welcome';
+
     if (!window.menuSeleccionado ||
-        parseInt(document.getElementById('categoria')?.value) !== 1 ||
+        (parseInt(document.getElementById('categoria')?.value) !== 1 && !esWelcomeServicio) ||
         !window.referenciasDesayuno) {
         return;
     }
@@ -130,8 +140,11 @@ function actualizarCantidadesDesayuno() {
         if ((tipo === 'sandwich_multiple' || (tipo === 'sandwich_o_pulguita' && refData.modo !== 'pulguita')) && sandwiches.length) {
             const sandwichesConSabor = sandwiches.filter(s => s.sabor);
             if (sandwichesConSabor.length > 0) {
-                const cantidadPorSabor = Math.ceil(nuevaCantidad / sandwichesConSabor.length);
-                sandwichesConSabor.forEach(s => { s.cantidad = cantidadPorSabor; });
+                const base = Math.floor(nuevaCantidad / sandwichesConSabor.length);
+                const resto = nuevaCantidad % sandwichesConSabor.length;
+                sandwichesConSabor.forEach((s, index) => {
+                    s.cantidad = base + (index < resto ? 1 : 0);
+                });
             }
         }
     });
@@ -213,8 +226,9 @@ async function cargarMenus() {
     
     document.getElementById('multiplicadorSection').style.display = 'none';
     document.getElementById('referenciasSection').style.display = 'none';
+    if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
     window.menuSeleccionado = null;
-    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [], saladas: [] };
 
     // PAX + botón: visible si hay categoría, oculto si se deselecciona
     const btnWrap = document.getElementById('btnAnadirMenuWrap');
@@ -303,7 +317,17 @@ async function cargarMenus() {
             container.innerHTML = '';
             return;
         }
-        if (servicioTipo === 'vino') {
+        if (servicioTipo === 'welcome') {
+            menus = [
+                {
+                    id: 17,
+                    nombre: 'WELCOME COFFEE & COFFEE BREAK',
+                    descripcion: 'Termo café + leche + 2 mini cookies o pastas de té + 1 mini bollería + agua mineral',
+                    servicio_categoria: 'welcome',
+                    _cat: 1
+                }
+            ];
+        } else if (servicioTipo === 'vino') {
             menus = [
                 { id: 301, nombre: 'BRINDIS', descripcion: 'Vino Español · selección de 4 ítems', items_salados_min: 4, items_salados_max: 4, servicio_categoria: 'vino' },
                 { id: 302, nombre: 'NETWORKING', descripcion: 'Vino Español · selección de 6 ítems', items_salados_min: 6, items_salados_max: 6, servicio_categoria: 'vino' },
@@ -382,6 +406,8 @@ async function seleccionarMenu(menuId, element) {
     // Obtener categoría — para DIY usar _cat del menu si existe
     const categoriaId = window.menuSeleccionado?._cat
         || parseInt(document.getElementById('categoria').value);
+
+    asegurarLogisticaInlineVisible();
 
 
     // ===== DESAYUNOS =====
@@ -647,7 +673,7 @@ function limpiarSeccionesMenu() {
     const diyFoodboxSection = document.getElementById('diyFoodboxSection');
     if (diyFoodboxSection) diyFoodboxSection.remove();
 
-    window.referenciasSeleccionadas = { saladas: [], postres: [] };
+    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [], saladas: [] };
     window.referenciasDesayuno = {};
     if (window.BandejasState) {
         ['diy_dulces','diy_salados','diy_termos','diy_servicio',

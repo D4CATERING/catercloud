@@ -68,19 +68,122 @@ window.generarBlobsComandasDocx = async function(datos) {
         const paxFinal = menu.pax || pax || 0;
         const label = `${menu.nombre || ""} — ${paxFinal} pax`;
         paras.push(para([txt(label, { bold:true, size:19, color:NEGRO })], { spacing:{ before:60, after:30 } }));
+        const distribuirCantidad = (total, opciones) => {
+            const cantidadTotal = Math.max(0, Number(total) || 0);
+            const cantidadOpciones = Math.max(1, Number(opciones) || 1);
+            const base = Math.floor(cantidadTotal / cantidadOpciones);
+            const resto = cantidadTotal % cantidadOpciones;
+            return Array.from({ length: cantidadOpciones }, (_, index) => base + (index < resto ? 1 : 0));
+        };
 
         if (menu.referencias_desayuno) {
             // Los termos se muestran sumados en bloque separado — aquí solo el resto
-            Object.values(menu.referencias_desayuno).forEach(ref => {
+            const ordenDesayuno = {
+                healthy_bolleria: 10,
+                healthy_sandwich: 20,
+                healthy_tostada: 30,
+                healthy_fruta: 40,
+                classic_bolleria: 10,
+                classic_sandwich: 20,
+                classic_fruta: 30,
+                premium_cookie: 10,
+                premium_bolleria: 20,
+                premium_sandwich_o_pulguita: 30,
+                premium_fruta: 40,
+                premium_smoothie: 50,
+                veggie_cookie: 10,
+                veggie_sandwich_vegetal: 20,
+                veggie_sandwich_aguacate: 21,
+                veggie_fruta: 30
+            };
+            let tituloSandwichFijoRenderizado = false;
+            Object.entries(menu.referencias_desayuno)
+                .map(([key, ref], index) => ({ key, ref, index }))
+                .sort((a, b) => (ordenDesayuno[a.ref?.id || a.key] ?? a.index + 100) - (ordenDesayuno[b.ref?.id || b.key] ?? b.index + 100))
+                .map(item => ({ ...item.ref, _refKey: item.key }))
+                .forEach(ref => {
                 if (!ref || ref.tipo === 'termo' || ref.tipo === 'leche_especial') return;
                 if (!ref.cantidad || ref.cantidad === 0) return;
                 let detalle = '';
-                if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length)
-                    detalle = ' (' + ref.opcionesSeleccionadas.join(', ') + ')';
-                if (ref.tipo === 'sandwich' && ref.sabor)
-                    detalle = ' — ' + ref.sabor;
+                const refKey = ref.id || ref._refKey || '';
+                if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
+                    const cantidades = distribuirCantidad(ref.cantidad || paxFinal, ref.opcionesSeleccionadas.length);
+                    paras.push(para([txt("    Bollería:", { bold:true, size:16, color:NEGRO })], { spacing:{ before:0, after:20 } }));
+                    ref.opcionesSeleccionadas.forEach((opcion, index) => {
+                        paras.push(para([
+                            txt("    " + opcion + ": ", { bold:true, size:16, color:GRIS }),
+                            txt(String(cantidades[index]), { size:16, color:NEGRO }),
+                            txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                        ], { spacing:{ before:0, after:30 } }));
+                    });
+                    return;
+                }
+                if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
+                    const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                    const cantidades = distribuirCantidad(ref.cantidad || paxFinal, sandwiches.length);
+                    paras.push(para([txt("    Mini sandwich:", { bold:true, size:16, color:NEGRO })], { spacing:{ before:0, after:20 } }));
+                    sandwiches.forEach((s, index) => {
+                        paras.push(para([
+                            txt("    " + s.sabor + ": ", { bold:true, size:16, color:GRIS }),
+                            txt(String(cantidades[index]), { size:16, color:NEGRO }),
+                            txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                        ], { spacing:{ before:0, after:30 } }));
+                    });
+                    return;
+                }
+                if (ref.tipo === 'sandwich_o_pulguita' && ref.modo !== 'pulguita' && ref.sandwiches?.length) {
+                    const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                    const cantidades = distribuirCantidad(ref.cantidad || paxFinal, sandwiches.length);
+                    paras.push(para([txt("    Mini sandwich:", { bold:true, size:16, color:NEGRO })], { spacing:{ before:0, after:20 } }));
+                    sandwiches.forEach((s, index) => {
+                        paras.push(para([
+                            txt("    " + s.sabor + ": ", { bold:true, size:16, color:GRIS }),
+                            txt(String(cantidades[index]), { size:16, color:NEGRO }),
+                            txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                        ], { spacing:{ before:0, after:30 } }));
+                    });
+                    return;
+                }
+                if (ref.tipo === 'sandwich' && ref.sabor) {
+                    if (refKey === 'premium_cookie' || refKey === 'premium_fruta') {
+                        if (refKey === 'premium_fruta') {
+                            paras.push(para([txt("")], { spacing:{ before:40, after:0 } }));
+                        }
+                        paras.push(para([
+                            txt("    " + ref.sabor + ": ", { bold:true, size:16, color:GRIS }),
+                            txt(String(ref.cantidad), { size:16, color:NEGRO }),
+                            txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                        ], { spacing:{ before:0, after:30 } }));
+                        return;
+                    }
+                    const tituloSimple = /sandwich|s[aá]ndwich/i.test(`${ref.id || ''} ${ref.nombre || ''}`)
+                        ? 'Sándwich:'
+                        : `${ref.nombre}:`;
+                    paras.push(para([txt("    " + tituloSimple, { bold:true, size:16, color:NEGRO })], { spacing:{ before:0, after:20 } }));
+                    paras.push(para([
+                        txt("    " + ref.sabor + ": ", { bold:true, size:16, color:GRIS }),
+                        txt(String(ref.cantidad), { size:16, color:NEGRO }),
+                        txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                    ], { spacing:{ before:0, after:30 } }));
+                    return;
+                }
+                if (ref.tipo === 'sandwich_fijo') {
+                    if (!tituloSandwichFijoRenderizado) {
+                        paras.push(para([txt("    Sándwich:", { bold:true, size:16, color:NEGRO })], { spacing:{ before:0, after:20 } }));
+                        tituloSandwichFijoRenderizado = true;
+                    }
+                    paras.push(para([
+                        txt("    " + (ref.sabor || ref.nombre) + ": ", { bold:true, size:16, color:GRIS }),
+                        txt(String(ref.cantidad), { size:16, color:NEGRO }),
+                        txt(" " + (ref.unidad||""), { size:16, color:GRIS })
+                    ], { spacing:{ before:0, after:30 } }));
+                    return;
+                }
                 if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length)
                     detalle = ': ' + ref.sandwiches.filter(s=>s.sabor).map(s=>`${s.sabor} ×${s.cantidad||''}`).join(', ');
+                if (['classic_fruta', 'healthy_fruta', 'veggie_fruta'].includes(refKey)) {
+                    paras.push(para([txt("")], { spacing:{ before:40, after:0 } }));
+                }
                 paras.push(para([
                     txt("    " + ref.nombre + detalle + ": ", { bold:true, size:16, color:GRIS }),
                     txt(String(ref.cantidad), { size:16, color:NEGRO }),

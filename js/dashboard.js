@@ -38,12 +38,13 @@ function mostrarComandaCocina() {
     }
     if (detalleComanda) detalleComanda.style.display = 'none';
 
-    const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fecha_evento').value = hoy;
-    
     // Limpiar formulario si no estamos editando
     if (!window.comandaEditando) {
-        document.getElementById('comandaCocinaForm').reset();
+        if (typeof limpiarFormularioComanda === 'function') {
+            limpiarFormularioComanda();
+        } else {
+            document.getElementById('comandaCocinaForm').reset();
+        }
         if (typeof limpiarBuscadorClientes === 'function') {
             limpiarBuscadorClientes();
         }
@@ -85,6 +86,9 @@ function mostrarComandaCocina() {
             actualizarListaMenusAdicionales();
         }
     }
+
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha_evento').value = hoy;
 }
 
 /**
@@ -187,6 +191,90 @@ function guardarHistorialLogistica(historial) {
     localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
 }
 
+function getHistorialCocinaLogistica() {
+    return JSON.parse(localStorage.getItem('historialComandas') || '[]');
+}
+
+function guardarHistorialCocinaLogistica(historial) {
+    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+}
+
+function getFechaLogisticaItem(item) {
+    return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+}
+
+function materialLogisticaTieneItems(material) {
+    return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length);
+}
+
+function getEventosLogisticaActivos() {
+    const historialLogistica = getHistorialLogistica();
+    const codigosConLogistica = getCodigosLogistica(historialLogistica);
+    const eventos = historialLogistica.map((item, index) => ({
+        ...item,
+        _logisticaSource: 'logistica',
+        _logisticaIndex: index
+    }));
+
+    getHistorialCocinaLogistica().forEach((item, index) => {
+        const codigo = item.codigo || item.codigo_comanda || item.id;
+        if (!codigo || codigosConLogistica.has(codigo)) return;
+        if (!materialLogisticaTieneItems(item.material_logistica)) return;
+
+        eventos.push({
+            ...item,
+            codigo_cocina: codigo,
+            material_logistica: item.material_logistica,
+            logistics_status: item.logistics_status || item.estado_logistica || 'sin_preparar',
+            logistics_assigned_to: item.logistics_assigned_to || '',
+            logistics_prepared_items: item.logistics_prepared_items || 0,
+            _logisticaSource: 'cocina',
+            _logisticaIndex: index
+        });
+    });
+
+    return eventos.sort((a, b) => {
+        const fechaA = getFechaLogisticaItem(a);
+        const fechaB = getFechaLogisticaItem(b);
+        if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
+        return String(a.hora_salida || '').localeCompare(String(b.hora_salida || ''));
+    });
+}
+
+function guardarEventoLogisticaActivo(evento) {
+    if (!evento) return;
+
+    if (evento._logisticaSource === 'cocina') {
+        const historial = getHistorialCocinaLogistica();
+        const index = evento._logisticaIndex;
+        if (!historial[index]) return;
+        historial[index].material_logistica = evento.material_logistica;
+        historial[index].logistics_status = evento.logistics_status;
+        historial[index].estado_logistica = evento.logistics_status;
+        historial[index].logistics_assigned_to = evento.logistics_assigned_to || '';
+        historial[index].logistics_prepared_items = evento.logistics_prepared_items || 0;
+        if (evento.logistics_ready_at) historial[index].logistics_ready_at = evento.logistics_ready_at;
+        if (evento.logistics_ready_by) historial[index].logistics_ready_by = evento.logistics_ready_by;
+        guardarHistorialCocinaLogistica(historial);
+        return;
+    }
+
+    const historial = getHistorialLogistica();
+    const index = evento._logisticaIndex;
+    if (!historial[index]) return;
+    historial[index] = {
+        ...historial[index],
+        material_logistica: evento.material_logistica,
+        logistics_status: evento.logistics_status,
+        estado: evento.logistics_status,
+        logistics_assigned_to: evento.logistics_assigned_to || '',
+        logistics_prepared_items: evento.logistics_prepared_items || 0,
+        logistics_ready_at: evento.logistics_ready_at || historial[index].logistics_ready_at,
+        logistics_ready_by: evento.logistics_ready_by || historial[index].logistics_ready_by
+    };
+    guardarHistorialLogistica(historial);
+}
+
 function normalizarEstadoLogistica(estado) {
     if (estado === 'proceso') return 'en_preparacion';
     if (estado === 'completada') return 'listo';
@@ -224,6 +312,24 @@ function leerNumeroInventarioLogistica(value) {
     const normalizado = String(value ?? '0').replace(',', '.').trim();
     const numero = Number(normalizado);
     return Number.isFinite(numero) ? numero : 0;
+}
+
+function tipoInventarioDesdeDb(tipo) {
+    return tipo === 'material' ? 'extras' : tipo;
+}
+
+function tipoInventarioParaDb(tipo) {
+    return tipo === 'extras' ? 'material' : tipo;
+}
+
+function normalizarItemInventarioServicios(item) {
+    return {
+        ...item,
+        tipo: tipoInventarioDesdeDb(item.tipo),
+        unidad: item.unidad_comanda || item.unidad || 'ud',
+        unidad_stock: item.unidad_inventario || item.unidad_comanda || item.unidad || 'ud',
+        tabla_origen: 'service_logistics_materials'
+    };
 }
 
 function getMaterialLogisticaPlano(material) {
@@ -278,7 +384,9 @@ function renderizarAlertasLogistica(historial) {
     const list = document.getElementById('logisticaMissingList');
     if (!box || !title || !list) return;
 
-    const faltantes = getComandasServicioSinLogistica(historial);
+    const fechaFiltro = document.getElementById('logisticaFiltroFecha')?.value || '';
+    const faltantes = getComandasServicioSinLogistica(historial)
+        .filter(item => !fechaFiltro || getFechaLogisticaItem(item) === fechaFiltro);
     if (!faltantes.length) {
         box.style.display = 'none';
         list.innerHTML = '';
@@ -300,16 +408,28 @@ function renderizarComandasLogistica() {
     const cont = document.getElementById('logisticaComandasList');
     if (!cont) return;
 
-    const historial = getHistorialLogistica();
-    actualizarKpisLogistica(historial);
-    renderizarAlertasLogistica(historial);
+    const historialLogistica = getHistorialLogistica();
+    const eventos = getEventosLogisticaActivos();
+    const fechaFiltro = document.getElementById('logisticaFiltroFecha')?.value || '';
+    const eventosFiltrados = fechaFiltro
+        ? eventos.filter(item => getFechaLogisticaItem(item) === fechaFiltro)
+        : eventos;
 
-    if (!historial.length) {
+    window.logisticaEventosActivos = eventosFiltrados;
+    actualizarKpisLogistica(eventos);
+    renderizarAlertasLogistica(historialLogistica);
+
+    if (!eventos.length) {
         cont.innerHTML = '<div class="logistics-empty">Aún no hay eventos activos en logística.</div>';
         return;
     }
 
-    cont.innerHTML = historial.slice(0, 30).map((item, index) => {
+    if (!eventosFiltrados.length) {
+        cont.innerHTML = '<div class="logistics-empty">No hay eventos de logística para el día seleccionado.</div>';
+        return;
+    }
+
+    cont.innerHTML = eventosFiltrados.slice(0, 30).map((item, index) => {
         const fecha = item.fecha_evento || item.fecha_creacion || '';
         const material = item.material_logistica || {};
         const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
@@ -317,13 +437,14 @@ function renderizarComandasLogistica() {
         const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
         const responsable = item.logistics_assigned_to || '';
         const progreso = totalMaterial ? Math.min(100, Math.round((preparados / totalMaterial) * 100)) : 0;
+        const origen = item._logisticaSource === 'cocina' ? 'Material de menú' : 'Comanda logística';
 
         return `
             <article class="logistics-event-card" onclick="abrirPreparacionLogistica(${index})">
                 <div class="logistics-event-main">
                     <div>
                         <strong>${item.codigo_cocina || item.codigo || 'Sin código'}</strong>
-                        <span>${item.empresa || 'Sin empresa'}</span>
+                        <span>${item.empresa || 'Sin empresa'} · ${origen}</span>
                     </div>
                     <span class="logistics-status-pill logistics-status-pill--${estado}">${getLabelEstadoLogistica(estado)}</span>
                 </div>
@@ -368,6 +489,18 @@ function renderizarComandasLogistica() {
 
 }
 
+function filtrarLogisticaHoy() {
+    const input = document.getElementById('logisticaFiltroFecha');
+    if (input) input.value = new Date().toISOString().split('T')[0];
+    renderizarComandasLogistica();
+}
+
+function limpiarFiltroFechaLogistica() {
+    const input = document.getElementById('logisticaFiltroFecha');
+    if (input) input.value = '';
+    renderizarComandasLogistica();
+}
+
 function abrirModalArticuloLogistica(id = '') {
     const modal = document.getElementById('logisticaArticuloModal');
     const form = document.getElementById('logisticaArticuloForm');
@@ -404,7 +537,8 @@ async function guardarArticuloInventarioLogistica(event) {
 
     const id = document.getElementById('logisticaArticuloId')?.value || '';
     const nombre = document.getElementById('logisticaArticuloNombre')?.value.trim();
-    const tipo = document.getElementById('logisticaArticuloTipo')?.value || 'menaje';
+    const tipoUi = document.getElementById('logisticaArticuloTipo')?.value || 'menaje';
+    const tipo = tipoInventarioParaDb(tipoUi);
     const stockTotal = leerNumeroInventarioLogistica(document.getElementById('logisticaArticuloStock')?.value);
     const subcategoria = document.getElementById('logisticaArticuloSubcategoria')?.value.trim() || '';
     const unidad = document.getElementById('logisticaArticuloUnidad')?.value.trim() || 'ud';
@@ -418,32 +552,41 @@ async function guardarArticuloInventarioLogistica(event) {
     const payload = {
         nombre,
         tipo,
-        unidad,
+        unidad_comanda: unidad,
+        unidad_inventario: unidad,
+        conversion_a_stock: 1,
         subcategoria,
         stock_total: stockTotal,
-        activo: true,
-        parent_id: null
+        activo: true
     };
 
     if (!id) {
         const maxOrden = items.reduce((max, item) => Math.max(max, Number(item.orden || 0)), 0);
         payload.orden = maxOrden + 10;
+    } else {
+        const actual = items.find(item => String(item.id) === String(id));
+        if (actual) {
+            payload.contenido_por_unidad = actual.contenido_por_unidad ?? null;
+            payload.conversion_a_stock = Number(actual.conversion_a_stock || 1);
+            payload.unidad_inventario = actual.unidad_stock || actual.unidad_inventario || unidad;
+        }
     }
 
     try {
         const query = id
-            ? window.supabaseClient.from('logistics_materials').update(payload).eq('id', id).select('*').maybeSingle()
-            : window.supabaseClient.from('logistics_materials').insert(payload).select('*').maybeSingle();
+            ? window.supabaseClient.from('service_logistics_materials').update(payload).eq('id', id).select('*').maybeSingle()
+            : window.supabaseClient.from('service_logistics_materials').insert(payload).select('*').maybeSingle();
         const { data, error } = await query;
         if (error) throw error;
         if (!data) {
-            throw new Error('Supabase no devolvio el articulo actualizado. Revisa permisos de edicion para logistics_materials.');
+            throw new Error('Supabase no devolvio el articulo actualizado. Revisa permisos de edicion para service_logistics_materials.');
         }
 
+        const itemNormalizado = normalizarItemInventarioServicios(data);
         cerrarModalArticuloLogistica();
         window.logisticaInventarioItems = id
-            ? (window.logisticaInventarioItems || []).map(item => String(item.id) === String(id) ? data : item)
-            : [...(window.logisticaInventarioItems || []), data];
+            ? (window.logisticaInventarioItems || []).map(item => String(item.id) === String(id) ? itemNormalizado : item)
+            : [...(window.logisticaInventarioItems || []), itemNormalizado];
         const filtroActivo = document.querySelector('.logistics-filter-chip.active')?.dataset.filter || 'todos';
         pintarInventarioLogistica(filtroActivo);
     } catch (error) {
@@ -452,7 +595,7 @@ async function guardarArticuloInventarioLogistica(event) {
         if (/stock_total|subcategoria/i.test(msg)) {
             alert('Faltan columnas de inventario en Supabase. Ejecuta el SQL de actualizacion y vuelve a guardar.');
         } else if (/no devolvio|permisos|permission|policy|row-level|rls/i.test(msg)) {
-            alert('No se pudo actualizar el articulo. Revisa los permisos de edicion de logistics_materials en Supabase.');
+            alert('No se pudo actualizar el articulo. Revisa los permisos de edicion de service_logistics_materials en Supabase.');
         } else {
             alert('No se pudo guardar el articulo. Revisa permisos o politicas de Supabase.');
         }
@@ -471,7 +614,7 @@ async function eliminarArticuloInventarioLogistica(id) {
 
     try {
         const { error } = await window.supabaseClient
-            .from('logistics_materials')
+            .from('service_logistics_materials')
             .update({ activo: false })
             .eq('id', id);
         if (error) throw error;
@@ -483,8 +626,7 @@ async function eliminarArticuloInventarioLogistica(id) {
 }
 
 function abrirPreparacionLogistica(index) {
-    const historial = getHistorialLogistica();
-    const item = historial[index];
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     const modal = document.getElementById('logisticaPreparacionModal');
     const content = document.getElementById('logisticaPreparacionContent');
     if (!item || !modal || !content) return;
@@ -554,8 +696,7 @@ function cerrarPreparacionLogistica() {
 }
 
 function togglePreparadoLogistica(index, tipo, matIndex, checked) {
-    const historial = getHistorialLogistica();
-    const item = historial[index];
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item?.material_logistica?.[tipo]?.[matIndex]) return;
 
     item.material_logistica[tipo][matIndex].preparado = checked;
@@ -573,41 +714,41 @@ function togglePreparadoLogistica(index, tipo, matIndex, checked) {
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     }
     item.fecha_modificacion = new Date().toISOString();
-    guardarHistorialLogistica(historial);
+    guardarEventoLogisticaActivo(item);
     abrirPreparacionLogistica(index);
 }
 
 function actualizarResponsableLogistica(index, value) {
-    const historial = getHistorialLogistica();
-    if (!historial[index]) return;
-    historial[index].logistics_assigned_to = value.trim();
-    historial[index].fecha_modificacion = new Date().toISOString();
-    guardarHistorialLogistica(historial);
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    if (!item) return;
+    item.logistics_assigned_to = value.trim();
+    item.fecha_modificacion = new Date().toISOString();
+    guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
 
 function actualizarEstadoLogistica(index, value) {
-    const historial = getHistorialLogistica();
-    if (!historial[index]) return;
-    historial[index].logistics_status = value;
-    historial[index].estado = value;
-    historial[index].fecha_modificacion = new Date().toISOString();
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    if (!item) return;
+    item.logistics_status = value;
+    item.estado = value;
+    item.fecha_modificacion = new Date().toISOString();
     if (value === 'listo') {
-        historial[index].logistics_ready_at = new Date().toISOString();
-        historial[index].logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     }
-    guardarHistorialLogistica(historial);
+    guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
 
 function actualizarPreparadosLogistica(index, value) {
-    const historial = getHistorialLogistica();
-    if (!historial[index]) return;
-    const material = historial[index].material_logistica || {};
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    if (!item) return;
+    const material = item.material_logistica || {};
     const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
-    historial[index].logistics_prepared_items = Math.max(0, Math.min(Number(value) || 0, totalMaterial || 0));
-    historial[index].fecha_modificacion = new Date().toISOString();
-    guardarHistorialLogistica(historial);
+    item.logistics_prepared_items = Math.max(0, Math.min(Number(value) || 0, totalMaterial || 0));
+    item.fecha_modificacion = new Date().toISOString();
+    guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
 
@@ -624,14 +765,14 @@ async function renderizarInventarioLogistica() {
 
     try {
         const { data, error } = await window.supabaseClient
-            .from('logistics_materials')
+            .from('service_logistics_materials')
             .select('*')
             .eq('activo', true)
             .order('orden', { ascending: true });
 
         if (error) throw error;
 
-        const items = data || [];
+        const items = (data || []).map(normalizarItemInventarioServicios);
         window.logisticaInventarioItems = items;
         pintarInventarioLogistica('todos');
     } catch (error) {
@@ -663,8 +804,8 @@ function pintarInventarioLogistica(filtro = 'todos') {
                         <article class="logistics-inventory-card" data-logistica-id="${item.id}">
                             <div>
                                 <strong>${escapeLogisticaHtml(item.nombre)}</strong>
-                                <span>${escapeLogisticaHtml(item.subcategoria || item.descripcion || item.categoria || item.unidad || 'Inventario')}</span>
-                                <small><b>${Number(item.stock_total ?? item.stock ?? 0)}</b> ${escapeLogisticaHtml(item.unidad || 'ud')} en stock</small>
+                                <span>${escapeLogisticaHtml(item.presentacion || item.descripcion || item.categoria || item.unidad || 'Inventario')}</span>
+                                <small><b>${Number(item.stock_total ?? item.stock ?? 0)}</b> ${escapeLogisticaHtml(item.unidad_stock || item.unidad || 'ud')} en stock</small>
                             </div>
                             <div class="logistics-inventory-actions">
                                 <button type="button" class="inventory-action-btn inventory-action-btn--edit" title="Editar" aria-label="Editar"></button>
@@ -698,12 +839,28 @@ function pintarInventarioLogistica(filtro = 'todos') {
  * Muestra el historial de comandas
  */
 function mostrarHistorial() {
-    document.getElementById('dashboard').style.display = 'none';
+    const dashboard = document.getElementById('dashboard');
+    const comandaForm = document.getElementById('comandaForm');
+    const historialPage = document.getElementById('historialPage');
+    const detalleComanda = document.getElementById('detalleComanda');
+    const logisticaForm = document.getElementById('logisticaForm');
     const logisticaPage = document.getElementById('logisticaPage');
-    if (logisticaPage) logisticaPage.style.display = 'none';
     const expedientePedido = document.getElementById('expedientePedido');
-    if (expedientePedido) expedientePedido.style.display = 'none';
-    document.getElementById('historialPage').style.display = 'block';
+    const clientesPanel = document.getElementById('clientesPanel');
+
+    if (dashboard) dashboard.style.display = 'none';
+    if (comandaForm) comandaForm.style.display = 'none';
+    if (detalleComanda) detalleComanda.style.display = 'none';
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    if (logisticaPage) logisticaPage.style.display = 'none';
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    if (clientesPanel) clientesPanel.style.display = 'none';
+    if (historialPage) historialPage.style.display = 'block';
+
+    if (typeof setNavActive === 'function') setNavActive('nav-historial');
     
     if (typeof cargarHistorial === 'function') {
         cargarHistorial();

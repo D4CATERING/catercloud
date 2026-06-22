@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/styles.css?v=20260615a">
     <link rel="stylesheet" href="css/dashboard.css?v=20260615j">
     <link rel="stylesheet" href="css/calendar.css?v=20260615b">
-    <link rel="stylesheet" href="css/forms.css?v=20260615o">
+    <link rel="stylesheet" href="css/forms.css?v=20260622f">
 
     <!-- Fuentes corporativas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -178,6 +178,7 @@
                             <label for="serviciosCategoria">Categoría de Servicio</label>
                             <select id="serviciosCategoria" onchange="cargarMenus()">
                                 <option value="">Selecciona una categoría</option>
+                                <option value="welcome">Welcome coffee</option>
                                 <option value="vino">Vino Español</option>
                                 <option value="cocteles">Cócteles</option>
                             </select>
@@ -304,21 +305,21 @@
 
                     <div class="intolerancias-grid">
                         <label class="intolerancia-item">
-                            <input type="checkbox" id="int_gluten" data-intolerancia="Sin gluten">
+                            <input type="checkbox" id="int_gluten" data-intolerancia="Foodbox Sin gluten">
                             <span>Sin gluten</span>
                             <input type="number" id="int_gluten_pax" min="0" placeholder="0">
                             <small>pax</small>
                         </label>
 
                         <label class="intolerancia-item">
-                            <input type="checkbox" id="int_lactosa" data-intolerancia="Sin lactosa">
+                            <input type="checkbox" id="int_lactosa" data-intolerancia="Foodbox Sin lactosa">
                             <span>Sin lactosa</span>
                             <input type="number" id="int_lactosa_pax" min="0" placeholder="0">
                             <small>pax</small>
                         </label>
 
                         <label class="intolerancia-item">
-                            <input type="checkbox" id="int_frutos_secos" data-intolerancia="Sin frutos secos">
+                            <input type="checkbox" id="int_frutos_secos" data-intolerancia="Foodbox Sin frutos secos">
                             <span>Sin frutos secos</span>
                             <input type="number" id="int_frutos_secos_pax" min="0" placeholder="0">
                             <small>pax</small>
@@ -346,7 +347,7 @@
                         </label>
 
                         <label class="intolerancia-item">
-                            <input type="checkbox" id="int_vegano" data-intolerancia="Vegano">
+                            <input type="checkbox" id="int_vegano" data-intolerancia="Foodbox Vegano">
                             <span>Vegano</span>
                             <input type="number" id="int_vegano_pax" min="0" placeholder="0">
                             <small>pax</small>
@@ -408,10 +409,16 @@
                             <span class="dc-field-error" id="log_inline_hora_entrega_err"></span>
                         </div>
 
-                        <div class="dc-field dc-log-direccion">
-                            <label for="log_inline_direccion" class="dc-label required">Dirección Completa</label>
-                            <input type="text" id="log_inline_direccion" class="dc-input" placeholder="Calle, número, piso...">
-                            <span class="dc-field-error" id="log_inline_direccion_err"></span>
+                        <div class="dc-field dc-log-calle">
+                            <label for="log_inline_calle" class="dc-label required">Calle</label>
+                            <input type="text" id="log_inline_calle" class="dc-input" placeholder="Nombre de la calle">
+                            <span class="dc-field-error" id="log_inline_calle_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-numero">
+                            <label for="log_inline_numero" class="dc-label required">Número / portal</label>
+                            <input type="text" id="log_inline_numero" class="dc-input" placeholder="Nº, piso...">
+                            <span class="dc-field-error" id="log_inline_numero_err"></span>
                         </div>
 
                         <div class="dc-field dc-log-cp">
@@ -575,10 +582,11 @@
         <div class="modal-content modal-content--narrow">
             <div class="modal-header">
                 <h3 id="modalDesayunoTitle">Seleccionar opciones</h3>
-                <span class="close-modal" onclick="cerrarModalDesayunoOpciones()">×</span>
+                <span class="close-modal" onclick="cancelarModalDesayunoOpciones()">×</span>
             </div>
             <div class="modal-body" id="modalDesayunoBody"></div>
-            <div class="modal-footer" id="modalDesayunoFooter" style="display:none;">
+            <div class="modal-footer" id="modalDesayunoFooter">
+                <button type="button" class="btn-secondary" onclick="cancelarModalDesayunoOpciones()">Cancelar</button>
                 <button type="button" class="btn-primary" onclick="confirmarModalDesayunoOpciones()">Confirmar</button>
             </div>
         </div>
@@ -589,10 +597,14 @@
         <div class="modal-content modal-content--compact">
             <div class="modal-header">
                 <h3 id="modalMaterialSubitemsTitle">Seleccionar opción</h3>
-                <span class="close-modal" onclick="cerrarModalMaterialSubitems()">×</span>
+                <span class="close-modal" onclick="cancelarModalMaterialSubitems()">×</span>
             </div>
             <div class="modal-body">
                 <div id="modalMaterialSubitemsOpciones"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="cancelarModalMaterialSubitems()">Cancelar</button>
+                <button type="button" class="btn-primary" onclick="confirmarModalMaterialSubitems()">Confirmar</button>
             </div>
         </div>
     </div>
@@ -664,6 +676,15 @@
           </div>
 
           <section id="logisticaEventosPanel" class="logistics-tab-panel">
+            <div class="logistics-events-toolbar">
+              <label>
+                Filtrar por día
+                <input type="date" id="logisticaFiltroFecha" onchange="renderizarComandasLogistica()">
+              </label>
+              <button type="button" onclick="filtrarLogisticaHoy()">Hoy</button>
+              <button type="button" onclick="limpiarFiltroFechaLogistica()">Todos</button>
+            </div>
+
             <div id="logisticaMissingBox" class="logistics-missing-box" style="display:none;">
               <strong id="logisticaMissingTitle">0 comandas sin hoja de logística</strong>
               <div id="logisticaMissingList" class="logistics-missing-list"></div>
@@ -761,7 +782,7 @@
                     <option value="negociacion">En negociación</option>
                     <option value="por_confirmar">Por confirmar</option>
                     <option value="confirmado">Confirmado</option>
-                    <option value="anulada">Anulada</option>
+                    <option value="anulada">Anulado</option>
                 </select>
             </div>
 
@@ -1042,10 +1063,16 @@
                             <span class="dc-field-error" id="log_hora_entrega_err"></span>
                         </div>
 
-                        <div class="dc-field dc-log-direccion">
-                            <label for="log_direccion" class="dc-label required">Dirección Completa</label>
-                            <input type="text" id="log_direccion" class="dc-input" placeholder="Calle, número, piso...">
-                            <span class="dc-field-error" id="log_direccion_err"></span>
+                        <div class="dc-field dc-log-calle">
+                            <label for="log_calle" class="dc-label required">Calle</label>
+                            <input type="text" id="log_calle" class="dc-input" placeholder="Nombre de la calle">
+                            <span class="dc-field-error" id="log_calle_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-numero">
+                            <label for="log_numero" class="dc-label required">Número / portal</label>
+                            <input type="text" id="log_numero" class="dc-input" placeholder="Nº, piso...">
+                            <span class="dc-field-error" id="log_numero_err"></span>
                         </div>
 
                         <div class="dc-field dc-log-cp">
@@ -1121,22 +1148,22 @@
 
     <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
-    <script src="js/clients.js?v=20260612a"></script>
-    <script src="js/calendar.js?v=20260615b"></script>
-    <script src="js/dashboard.js?v=20260615h"></script>
+    <script src="js/clients.js?v=20260616a"></script>
+    <script src="js/calendar.js?v=20260622b"></script>
+    <script src="js/dashboard.js?v=20260619c"></script>
     <script src="js/dom-utils.js"></script>
-    <script src="js/desayunos.js"></script>
+    <script src="js/desayunos.js?v=20260622b"></script>
     <script src="js/referencias.js?v=20260615d"></script>
-    <script src="js/menus-adicionales.js"></script>
+    <script src="js/menus-adicionales.js?v=20260622b"></script>
     <script src="js/multiplicadores.js"></script>
     <script src="js/bandejas-preparadas.js"></script>
     <script src="js/foodbox-lunch.js"></script>
-    <script src="js/comanda-form.js?v=20260615b"></script>
-    <script src="js/historial.js?v=20260615e"></script>
-    <script src="js/main.js?v=20260615h"></script>
+    <script src="js/comanda-form.js?v=20260622b"></script>
+    <script src="js/historial.js?v=20260622e"></script>
+    <script src="js/main.js?v=20260622c"></script>
     <script src="js/preferencias.js"></script>
-    <script src="js/logistics.js?v=20260615f"></script>
-    <script src="js/generar-comandas.js?v=20260608a"></script>
+    <script src="js/logistics.js?v=20260622a"></script>
+    <script src="js/generar-comandas.js?v=20260622b"></script>
 
     <!-- Scripts: Sidebar y navegación -->
     <script>

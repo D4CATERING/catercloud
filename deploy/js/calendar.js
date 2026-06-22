@@ -129,7 +129,7 @@ function _renderEventosDia(eventosPorFecha) {
         negociacion: { cls: 'badge-negociacion', label: 'Negociacion' },
         por_confirmar: { cls: 'badge-por-confirmar', label: 'Por confirmar' },
         confirmado: { cls: 'badge-confirmado', label: 'Confirmado' },
-        anulada: { cls: 'badge-anulada', label: 'Anulada' },
+        anulada: { cls: 'badge-anulada', label: 'Anulado' },
     };
 
     const btnHtml = `
@@ -188,6 +188,30 @@ function nuevaComandaEnFecha(dateStr) {
     if (fechaInput) fechaInput.value = dateStr;
 }
 
+function getOpcionesMenuSolicitud() {
+    return [
+        { id: 'welcome', nombre: 'Welcome coffee' },
+        { id: 'healthy', nombre: 'Healthy' },
+        { id: 'classic', nombre: 'Classic' },
+        { id: 'premium', nombre: 'Premium' },
+        { id: 'veggie_desayuno', nombre: 'Veggie desayuno' },
+        { id: 'basic', nombre: 'Basic' },
+        { id: 'economico', nombre: 'Económico' },
+        { id: 'medio', nombre: 'Medio' },
+        { id: 'muytop', nombre: 'MuyTop' },
+        { id: 'veggie_foodbox', nombre: 'Veggie foodbox' },
+        { id: 'foodbox_lunch', nombre: 'Foodbox Lunch' },
+        { id: 'diy_desayunos', nombre: 'Do It Yourself Desayunos' },
+        { id: 'diy_foodbox', nombre: 'Do It Yourself Foodbox' },
+        { id: 'brindis', nombre: 'Brindis' },
+        { id: 'networking', nombre: 'Networking' },
+        { id: 'afterwork', nombre: 'Afterwork' },
+        { id: 'alucinancia', nombre: 'Alucinancia' },
+        { id: 'decuatro', nombre: 'Decuatro' },
+        { id: 'atractividad', nombre: 'Atractividad' }
+    ];
+}
+
 async function nuevaSolicitudEnFecha(dateStr) {
     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear solicitudes.')) {
         return;
@@ -195,6 +219,10 @@ async function nuevaSolicitudEnFecha(dateStr) {
 
     const cont = document.getElementById('solicitudFormCalendario');
     if (!cont) return;
+
+    const opcionesMenu = getOpcionesMenuSolicitud()
+        .map(menu => `<option value="${menu.id}">${menu.nombre}</option>`)
+        .join('');
 
     cont.style.display = 'block';
     cont.innerHTML = `
@@ -215,11 +243,8 @@ async function nuevaSolicitudEnFecha(dateStr) {
             <label>
                 <span>Menu</span>
                 <select id="solCategoriaMenu">
-                    <option value="">Selecciona categoria</option>
-                    <option value="1">Desayunos</option>
-                    <option value="2">Foodbox / Comida</option>
-                    <option value="4">Foodbox Lunch</option>
-                    <option value="5">Bandejas Preparadas</option>
+                    <option value="">Selecciona menú</option>
+                    ${opcionesMenu}
                 </select>
             </label>
             <label>

@@ -344,13 +344,13 @@
         // Autorrellenar campos de logística inline
         _setVal('log_inline_nombre_contacto', cliente.contacto);
         _setVal('log_inline_telefono_contacto', cliente.telefono);
-        _setVal('log_inline_direccion', cliente.direccion);
+        _setDireccionLogistica('log_inline', cliente.direccion);
         _setVal('log_inline_codigo_postal', cliente.codigo_postal);
 
         // También rellenar si están en el formulario de logística separado
         _setVal('log_nombre_contacto', cliente.contacto);
         _setVal('log_telefono_contacto', cliente.telefono);
-        _setVal('log_direccion', cliente.direccion);
+        _setDireccionLogistica('log', cliente.direccion);
         _setVal('log_codigo_postal', cliente.codigo_postal);
 
         // Mostrar badge de cliente vinculado
@@ -360,6 +360,15 @@
     function _setVal(id, valor) {
         const el = document.getElementById(id);
         if (el && valor) el.value = valor;
+    }
+
+    function _setDireccionLogistica(prefix, direccion) {
+        if (!direccion) return;
+        const partes = typeof window.separarDireccionLogistica === 'function'
+            ? window.separarDireccionLogistica(direccion)
+            : { calle: direccion, numero: '' };
+        _setVal(`${prefix}_calle`, partes.calle);
+        _setVal(`${prefix}_numero`, partes.numero);
     }
 
     function _mostrarBadgeCliente(cliente) {

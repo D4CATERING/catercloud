@@ -540,11 +540,12 @@
                 </div>
                 <div id="${containerId}_selectorModal" class="modal logistics-selector-modal">
                     <div class="modal-content logistics-selector-content">
-                        <button type="button" class="logistics-article-close" onclick="cerrarSelectorMaterialLogistica('${containerId}')">×</button>
+                        <button type="button" class="logistics-article-close" onclick="cancelarSelectorMaterialLogistica('${containerId}')">×</button>
                         <h2 id="${containerId}_selectorTitle">Seleccionar material</h2>
                         <div id="${containerId}_selectorBody" class="logistics-selector-body"></div>
                         <div class="logistics-selector-footer">
-                            <button type="button" class="btn-primary" onclick="cerrarSelectorMaterialLogistica('${containerId}')">Aplicar seleccion</button>
+                            <button type="button" class="btn-secondary" onclick="cancelarSelectorMaterialLogistica('${containerId}')">Cancelar</button>
+                            <button type="button" class="btn-primary" onclick="confirmarSelectorMaterialLogistica('${containerId}')">Confirmar</button>
                         </div>
                     </div>
                 </div>
@@ -592,10 +593,7 @@
 
     function renderizarOpcionMaterialServicio(item, tipo, containerId) {
         const activo = item.checked || Number(item.cantidad || 0) > 0;
-        const detalle = [
-            item.presentacion,
-            item.subcategoria
-        ].filter(Boolean).join(' - ');
+        const detalle = item.presentacion || '';
 
         return `
             <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}">
@@ -712,19 +710,50 @@
         renderizarMaterial(cId);
     };
 
+    function clonarEstadoMaterialLogistica() {
+        return JSON.parse(JSON.stringify({
+            bebidas: window.materialLogistica.bebidas || [],
+            menaje: window.materialLogistica.menaje || [],
+            extras: window.materialLogistica.extras || []
+        }));
+    }
+
+    function restaurarEstadoMaterialLogistica(snapshot) {
+        if (!snapshot) return;
+        window.materialLogistica.bebidas = snapshot.bebidas || [];
+        window.materialLogistica.menaje = snapshot.menaje || [];
+        window.materialLogistica.extras = snapshot.extras || [];
+    }
+
     window.abrirSelectorMaterialLogistica = function(tipo, containerId = 'materialLogisticaPage') {
         const modal = document.getElementById(`${containerId}_selectorModal`);
         if (!modal) return;
         modal.dataset.tipo = tipo;
+        modal._materialSnapshot = clonarEstadoMaterialLogistica();
         renderizarOpcionesSelector(tipo, containerId);
         modal.style.display = 'flex';
     };
 
-    window.cerrarSelectorMaterialLogistica = function(containerId = 'materialLogisticaPage') {
+    window.confirmarSelectorMaterialLogistica = function(containerId = 'materialLogisticaPage') {
         const modal = document.getElementById(`${containerId}_selectorModal`);
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal._materialSnapshot = null;
+            modal.style.display = 'none';
+        }
         renderizarMaterial(containerId);
     };
+
+    window.cancelarSelectorMaterialLogistica = function(containerId = 'materialLogisticaPage') {
+        const modal = document.getElementById(`${containerId}_selectorModal`);
+        if (modal) {
+            restaurarEstadoMaterialLogistica(modal._materialSnapshot);
+            modal._materialSnapshot = null;
+            modal.style.display = 'none';
+        }
+        renderizarMaterial(containerId);
+    };
+
+    window.cerrarSelectorMaterialLogistica = window.confirmarSelectorMaterialLogistica;
 
     window.toggleMaterialItemBuilder = function(tipo, itemId, checked, containerId = 'materialLogisticaPage') {
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
@@ -853,6 +882,10 @@
         const opciones = document.getElementById('modalMaterialSubitemsOpciones');
         if (!modal) return;
 
+        modal.dataset.tipo = tipo;
+        modal.dataset.itemId = itemId;
+        modal.dataset.containerId = containerId || '';
+        modal._subitemsSnapshot = JSON.parse(JSON.stringify(item));
         titulo.textContent = item.nombre;
         opciones.innerHTML = item.subitems.map(subitem => {
             const seleccionado = isSubitemSelected(item, subitem.id);
@@ -876,16 +909,42 @@
         modal.style.display = 'flex';
     };
 
-    window.cerrarModalMaterialSubitems = function() {
+    window.confirmarModalMaterialSubitems = function() {
         const modal = document.getElementById('modalMaterialSubitems');
-        if (modal) modal.style.display = 'none';
+        if (modal) {
+            modal._subitemsSnapshot = null;
+            modal.style.display = 'none';
+        }
     };
+
+    window.cancelarModalMaterialSubitems = function() {
+        const modal = document.getElementById('modalMaterialSubitems');
+        if (!modal) return;
+
+        const tipo = modal.dataset.tipo;
+        const itemId = modal.dataset.itemId;
+        const containerId = modal.dataset.containerId;
+        const snapshot = modal._subitemsSnapshot;
+        const lista = window.materialLogistica[tipo] || [];
+        const index = lista.findIndex(i => i.id === itemId);
+
+        if (snapshot && index >= 0) {
+            lista[index] = JSON.parse(JSON.stringify(snapshot));
+        }
+
+        modal._subitemsSnapshot = null;
+        modal.style.display = 'none';
+
+        if (containerId) renderizarMaterial(containerId);
+    };
+
+    window.cerrarModalMaterialSubitems = window.confirmarModalMaterialSubitems;
 
     window.renderizarMaterialLogisticaActual = renderizarMaterial;
 
     document.addEventListener('click', function(e) {
         const modal = document.getElementById('modalMaterialSubitems');
-        if (modal && e.target === modal) modal.style.display = 'none';
+        if (modal && e.target === modal) cancelarModalMaterialSubitems();
     });
 
 })();
