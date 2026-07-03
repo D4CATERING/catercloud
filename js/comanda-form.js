@@ -324,7 +324,8 @@ async function cargarMenus() {
                     nombre: 'WELCOME COFFEE & COFFEE BREAK',
                     descripcion: 'Termo café + leche + 2 mini cookies o pastas de té + 1 mini bollería + agua mineral',
                     servicio_categoria: 'welcome',
-                    _cat: 1
+                    _cat: 1,
+                    omitir_material_menu: true
                 }
             ];
         } else if (servicioTipo === 'vino') {
@@ -444,16 +445,25 @@ async function seleccionarMenu(menuId, element) {
             selectMenaje.value = 'desechable';
         }
 
-        // Mostrar solo el material (logística siempre visible)
-        const materialInline = document.getElementById('materialLogisticaInline');
-        if (materialInline) materialInline.style.display = 'block';
+        if (!window.menuSeleccionado?.omitir_material_menu) {
+            // Mostrar solo el material (logística siempre visible)
+            const materialInline = document.getElementById('materialLogisticaInline');
+            if (materialInline) materialInline.style.display = 'block';
 
-        // Inicializar logística para desayunos (crea materialLogisticaInline_bebidas)
-        if (typeof inicializarMaterialLogistica === 'function') {
-            await inicializarMaterialLogistica('materialLogisticaInline');
-            if (typeof autocompletarMaterialPorCategoria === 'function') {
-                await autocompletarMaterialPorCategoria(1, 'materialLogisticaInline');
+            // Inicializar logística para desayunos (crea materialLogisticaInline_bebidas)
+            if (typeof inicializarMaterialLogistica === 'function') {
+                await inicializarMaterialLogistica('materialLogisticaInline');
+                if (typeof autocompletarMaterialPorCategoria === 'function') {
+                    await autocompletarMaterialPorCategoria(1, 'materialLogisticaInline');
+                }
             }
+        } else {
+            const materialInline = document.getElementById('materialLogisticaInline');
+            if (materialInline) {
+                materialInline.style.display = 'none';
+                materialInline.innerHTML = '';
+            }
+            if (typeof window.limpiarMaterialLogistica === 'function') window.limpiarMaterialLogistica();
         }
 
         // Cargar referencias del desayuno (zumo/agua se inyectan en _bebidas)

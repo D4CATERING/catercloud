@@ -651,14 +651,20 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         }
     }
 
-    const _menuPrincipalBase = _menusAcumulados[0] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
+    const _menuPrincipalIndex = _menusAcumulados.findIndex(menu =>
+        !(typeof window.esMenuServicioExtraNoSumaPax === 'function' && window.esMenuServicioExtraNoSumaPax(menu))
+    );
+    const _idxPrincipal = _menuPrincipalIndex >= 0 ? _menuPrincipalIndex : 0;
+    const _menuPrincipalBase = _menusAcumulados[_idxPrincipal] || { id: document.getElementById('menu_id').value, ...window.menuSeleccionado };
     const _menuPrincipal  = {
         ..._menuPrincipalBase,
         pax: _menuPrincipalBase.pax || parseInt(document.getElementById('pax')?.value) || 0
     };
-    const _menusAdicionales = _menusAcumulados.slice(1);
+    const _menusAdicionales = _menusAcumulados.filter((_, idx) => idx !== _idxPrincipal);
     const _catPrincipal   = _menuPrincipal.categoriaId || categoriaId;
-    const _paxTotal       = _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0)
+    const _paxTotal       = (typeof window.calcularPaxTotalComanda === 'function'
+                            ? window.calcularPaxTotalComanda(_menusAcumulados)
+                            : _menusAcumulados.reduce((s, m) => s + (m.pax || 0), 0))
                             || parseInt(document.getElementById('pax').value) || 0;
 
     // ── Preparar datos de la comanda ─────────────────────────────────────────
@@ -666,6 +672,22 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         ? obtenerNombreUsuarioActual()
         : (window.currentUser?.email || '');
     const responsableFormulario = document.getElementById('responsable').value || usuarioActualNombre;
+    const materialSeleccionadoActual = typeof obtenerMaterialSeleccionado === 'function'
+        ? obtenerMaterialSeleccionado()
+        : null;
+    const materialSeleccionadoTieneItems = !!materialSeleccionadoActual && (
+        materialSeleccionadoActual.bebidas?.length ||
+        materialSeleccionadoActual.menaje?.length ||
+        materialSeleccionadoActual.extras?.length
+    );
+    const materialAcumuladoTieneItems = !!window._materialAcumulado && (
+        window._materialAcumulado.bebidas?.length ||
+        window._materialAcumulado.menaje?.length ||
+        window._materialAcumulado.extras?.length
+    );
+    const materialParaGuardar = window.comandaEditando && materialSeleccionadoTieneItems
+        ? materialSeleccionadoActual
+        : (materialAcumuladoTieneItems ? window._materialAcumulado : materialSeleccionadoActual);
 
     const comandaData = {
         empresa:      document.getElementById('empresa').value,
@@ -734,12 +756,7 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         logistica:   obtenerDatosLogisticaInline(),
 
         // Material acumulado de todos los menús
-        material_logistica: window._materialAcumulado && (
-            window._materialAcumulado.bebidas?.length ||
-            window._materialAcumulado.menaje?.length  ||
-            window._materialAcumulado.extras?.length
-        )   ? window._materialAcumulado
-            : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado() : null),
+        material_logistica: materialParaGuardar,
 
         fecha_creacion: new Date().toISOString(),
         estado: 'creada',
@@ -1193,6 +1210,10 @@ function guardarComandaLogistica() {
     const base = window._logisticaBase || {};
     const calle = document.getElementById('log_calle')?.value.trim() || '';
     const numero = document.getElementById('log_numero')?.value.trim() || '';
+    const materialSeleccionado = typeof obtenerMaterialSeleccionado === 'function'
+        ? obtenerMaterialSeleccionado()
+        : null;
+    const estadoPrevio = window._logisticaEditando || {};
     const datosLogistica = {
         tipo_registro: 'logistica',
         codigo_original: base.codigoLogistica || window._logisticaEditando?.codigo || '',
@@ -1214,14 +1235,12 @@ function guardarComandaLogistica() {
             codigo_postal: document.getElementById('log_codigo_postal')?.value.trim() || '',
             notas_logistica: document.getElementById('log_page_notas')?.value.trim() || ''
         },
-        material_logistica: typeof obtenerMaterialSeleccionado === 'function'
-            ? obtenerMaterialSeleccionado()
-            : null,
-        logistics_status: 'sin_preparar',
-        logistics_assigned_to: '',
-        logistics_prepared_items: 0,
+        material_logistica: materialSeleccionado,
+        logistics_status: estadoPrevio.logistics_status || estadoPrevio.estado || 'sin_preparar',
+        logistics_assigned_to: estadoPrevio.logistics_assigned_to || '',
+        logistics_prepared_items: estadoPrevio.logistics_prepared_items || 0,
         fecha_creacion: new Date().toISOString(),
-        estado: 'sin_preparar'
+        estado: estadoPrevio.estado || estadoPrevio.logistics_status || 'sin_preparar'
     };
 
     try {
@@ -1232,8 +1251,23 @@ function guardarComandaLogistica() {
         if (typeof cargarCalendario === 'function') {
             cargarCalendario();
         }
+        const comandaGuardada = {
+            ...estadoPrevio,
+            ...datosLogistica,
+            codigo,
+            fecha_creacion: estadoPrevio.fecha_creacion || datosLogistica.fecha_creacion,
+            fecha_modificacion: new Date().toISOString()
+        };
         window._logisticaEditando = null;
-        volverDesdeCancelLogistica();
+        if (typeof _renderDetalleComandaLogistica === 'function') {
+            const logisticaForm = document.getElementById('logisticaForm');
+            const detalle = document.getElementById('detalleComanda');
+            if (logisticaForm) logisticaForm.style.display = 'none';
+            if (detalle) detalle.style.display = 'block';
+            _renderDetalleComandaLogistica(comandaGuardada);
+        } else {
+            volverDesdeCancelLogistica();
+        }
     } catch (error) {
         if (typeof mostrarMensaje === 'function') {
             mostrarMensaje('Error al guardar logística: ' + error.message, 'error');
@@ -1520,7 +1554,7 @@ window.actualizarTipoMenajeGlobal = function() {
     // 3. Relanzar material para aplicar filtros solo_loza / solo_desechable
     const categoriaId = window.menuSeleccionado?._cat
         || parseInt(document.getElementById('categoria')?.value);
-    if (categoriaId && typeof window.autocompletarMaterialPorCategoria === 'function') {
+    if (categoriaId && !window.menuSeleccionado?.omitir_material_menu && typeof window.autocompletarMaterialPorCategoria === 'function') {
         window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
     }
 };

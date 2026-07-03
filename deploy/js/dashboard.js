@@ -13,12 +13,14 @@ function mostrarComandaCocina() {
     const subtitle = document.getElementById('comandaFormSubtitle');
     const categoriaGroup = document.getElementById('categoriaMenuGroup');
     const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
     const comandaFormEl = document.getElementById('comandaForm');
     const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
     if (title) title.textContent = 'Nueva Comanda';
     if (subtitle) subtitle.textContent = 'Completa los datos del pedido de catering';
     if (categoriaGroup) categoriaGroup.style.display = '';
     if (serviciosGroup) serviciosGroup.style.display = 'none';
+    if (tipoMenajeGroup) tipoMenajeGroup.style.display = '';
     if (comandaFormEl) comandaFormEl.classList.remove('servicios-mode');
     if (notasLogisticaInline) notasLogisticaInline.style.display = '';
 
@@ -114,12 +116,16 @@ async function mostrarServicios() {
     const materialInline = document.getElementById('materialLogisticaInline');
     const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
     const serviciosCategoria = document.getElementById('serviciosCategoria');
+    const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
+    const tipoMenaje = document.getElementById('tipo_menaje');
 
     if (title) title.textContent = 'Servicios';
     if (subtitle) subtitle.textContent = 'Selecciona el servicio y completa la comanda de cocina';
     if (categoriaGroup) categoriaGroup.style.display = 'none';
     if (serviciosGroup) serviciosGroup.style.display = '';
+    if (tipoMenajeGroup) tipoMenajeGroup.style.display = 'none';
     if (serviciosCategoria) serviciosCategoria.value = '';
+    if (tipoMenaje) tipoMenaje.value = 'loza';
     if (comandaFormEl) comandaFormEl.classList.add('servicios-mode');
     if (categoria) {
         if (!categoria.querySelector('option[value="3"]')) {
@@ -236,8 +242,8 @@ function getEventosLogisticaActivos() {
     return eventos.sort((a, b) => {
         const fechaA = getFechaLogisticaItem(a);
         const fechaB = getFechaLogisticaItem(b);
-        if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
-        return String(a.hora_salida || '').localeCompare(String(b.hora_salida || ''));
+        if (fechaA !== fechaB) return fechaB.localeCompare(fechaA);
+        return String(b.hora_salida || '').localeCompare(String(a.hora_salida || ''));
     });
 }
 

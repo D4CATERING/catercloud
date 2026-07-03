@@ -7,9 +7,9 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/styles.css?v=20260615a">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260615j">
-    <link rel="stylesheet" href="css/calendar.css?v=20260615b">
-    <link rel="stylesheet" href="css/forms.css?v=20260622f">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260629c">
+    <link rel="stylesheet" href="css/calendar.css?v=20260629a">
+    <link rel="stylesheet" href="css/forms.css?v=20260625i">
 
     <!-- Fuentes corporativas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -73,9 +73,6 @@
           <h1>Calendario Pedidos</h1>
           <p>Pedidos por fecha de evento</p>
         </div>
-        <button class="btn-nueva-comanda" onclick="mostrarComandaCocina()" data-requires-write>
-          <span class="btn-plus">+</span> Nueva Comanda
-        </button>
       </div>
       <div class="dc-page-content">
         <div class="dashboard-layout dashboard-layout--calendar">
@@ -184,7 +181,7 @@
                             </select>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group" id="tipoMenajeGroup">
                             <label for="tipo_menaje">Tipo de Menaje</label>
                             <select id="tipo_menaje" onchange="actualizarTipoMenajeGlobal()">
                                 <option value="">Selecciona tipo</option>
@@ -611,7 +608,7 @@
 
     <!-- Modal: Confirmación para crear logística -->
     <div id="modalConfirmacionLogistica" class="modal">
-        <div class="modal-content modal-content--narrow">
+        <div class="modal-content modal-logistica-confirm" style="height:auto; min-height:0; max-height:240px;">
             <div class="modal-header">
                 <h3>🚚 ¿Crear también comanda de logística?</h3>
                 <span class="close-modal" onclick="cerrarModalConfirmacion()">×</span>
@@ -1149,20 +1146,20 @@
     <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
     <script src="js/clients.js?v=20260616a"></script>
-    <script src="js/calendar.js?v=20260622b"></script>
-    <script src="js/dashboard.js?v=20260619c"></script>
+    <script src="js/calendar.js?v=20260629a"></script>
+    <script src="js/dashboard.js?v=20260625b"></script>
     <script src="js/dom-utils.js"></script>
     <script src="js/desayunos.js?v=20260622b"></script>
     <script src="js/referencias.js?v=20260615d"></script>
-    <script src="js/menus-adicionales.js?v=20260622b"></script>
+    <script src="js/menus-adicionales.js?v=20260623a"></script>
     <script src="js/multiplicadores.js"></script>
     <script src="js/bandejas-preparadas.js"></script>
     <script src="js/foodbox-lunch.js"></script>
-    <script src="js/comanda-form.js?v=20260622b"></script>
-    <script src="js/historial.js?v=20260622e"></script>
-    <script src="js/main.js?v=20260622c"></script>
+    <script src="js/comanda-form.js?v=20260625a"></script>
+    <script src="js/historial.js?v=20260625c"></script>
+    <script src="js/main.js?v=20260625a"></script>
     <script src="js/preferencias.js"></script>
-    <script src="js/logistics.js?v=20260622a"></script>
+    <script src="js/logistics.js?v=20260624b"></script>
     <script src="js/generar-comandas.js?v=20260622b"></script>
 
     <!-- Scripts: Sidebar y navegación -->

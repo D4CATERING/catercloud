@@ -64,11 +64,24 @@
             const padres = [];
 
             data.forEach(item => {
+                const unidadComanda = item.unidad_comanda || item.unidad || 'ud';
+                const unidadComandaNormalizada = String(unidadComanda).trim().toLowerCase();
+                const requiereUnidadInventarioBase = ['paq', 'paquete', 'pack', 'barca'].includes(unidadComandaNormalizada);
+
                 itemsMap.set(item.id, {
                     ...item,
+                    unidad: unidadComanda,
+                    unidad_comanda: unidadComanda,
                     source_table: 'logistics_materials',
-                    unidad_inventario: item.unidad_inventario || item.unidad || 'ud',
-                    conversion_a_stock: Number(item.conversion_a_stock || 1),
+                    unidad_inventario: item.unidad_inventario || (requiereUnidadInventarioBase ? 'ud' : unidadComanda) || 'ud',
+                    presentacion: item.presentacion || item.descripcion || '',
+                    contenido_por_unidad: item.contenido_por_unidad || null,
+                    cantidad_base: Number(item.cantidad_base || 0),
+                    cantidad_por_pax: Number(item.cantidad_por_pax || 0),
+                    redondeo_a: Number(item.redondeo_a || 1),
+                    auto_calcular: !!item.auto_calcular,
+                    stock_total: item.stock_total || 0,
+                    conversion_a_stock: Number(item.conversion_a_stock || item.contenido_por_unidad || 1),
                     subitems: []
                 });
             });
@@ -147,11 +160,12 @@
 
         const base = Number(item.cantidad_base || 0);
         const porPax = Number(item.cantidad_por_pax || 0);
-        const redondeo = Math.max(1, Number(item.redondeo_a || 1));
+        const redondeo = Math.max(0.01, Number(item.redondeo_a || 1));
         const calculado = base + (pax * porPax);
 
         if (calculado <= 0) return 0;
-        return Math.ceil(calculado / redondeo) * redondeo;
+        const redondeado = Math.ceil(calculado / redondeo) * redondeo;
+        return Math.round(redondeado * 100) / 100;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -251,13 +265,51 @@
      * Autocompleta según categoría
      */
     // IDs de ítems incluidos en el precio según tipo de menú
+    const MATERIAL_DESAYUNOS_IDS = {
+        vasosZumo: '3a6e55f0-64ab-4c74-a19f-bdb4c85a31d8',
+        kitCafeDesechable: '548b2e15-1315-4673-ad3d-e5cd8102e816',
+        kitCafeLoza: 'c4ffea2a-e6bb-4bb4-87e8-0929f73b67fc',
+        servilletas: 'a045fca2-d788-491d-a521-f731bc744e54'
+    };
+
     const INCLUIDOS_POR_MENU = {
         desayunos: [
-            '3a6e55f0-64ab-4c74-a19f-bdb4c85a31d8', // Vasos para zumo
             '548b2e15-1315-4673-ad3d-e5cd8102e816', // Kit desechable para café
             'a045fca2-d788-491d-a521-f731bc744e54', // Servilletas
         ],
     };
+
+    function normalizarTextoMaterial(valor) {
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+    }
+
+    function esKitCafeDesechable(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre);
+        return String(item?.id) === MATERIAL_DESAYUNOS_IDS.kitCafeDesechable ||
+            (nombre.includes('kit') && nombre.includes('desechable') && nombre.includes('cafe'));
+    }
+
+    function esKitCafeLoza(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre);
+        return String(item?.id) === MATERIAL_DESAYUNOS_IDS.kitCafeLoza ||
+            (nombre.includes('kit') && nombre.includes('loza') && nombre.includes('cafe'));
+    }
+
+    function obtenerIncluidosPorMenu(menuTipo, esLoza) {
+        const incluidos = [...(INCLUIDOS_POR_MENU[menuTipo] || [])];
+
+        if (menuTipo === 'desayunos') {
+            const kitDesechableIndex = incluidos.indexOf(MATERIAL_DESAYUNOS_IDS.kitCafeDesechable);
+            if (kitDesechableIndex >= 0) incluidos.splice(kitDesechableIndex, 1);
+            if (!esLoza) incluidos.push(MATERIAL_DESAYUNOS_IDS.vasosZumo);
+            incluidos.push(esLoza ? MATERIAL_DESAYUNOS_IDS.kitCafeLoza : MATERIAL_DESAYUNOS_IDS.kitCafeDesechable);
+        }
+
+        return incluidos;
+    }
 
     window.autocompletarMaterialPorCategoria = async function(categoriaId, containerId) {
         const mapeo = {
@@ -273,7 +325,6 @@
         if (!menuTipo) return;
 
         const materialMenu = await cargarMaterialPorMenu(menuTipo);
-        const incluidosIds = INCLUIDOS_POR_MENU[menuTipo] || [];
         const pax = obtenerPaxLogistica();
         const catalogoServicios = menuTipo === 'servicios'
             ? await cargarCatalogoServiciosLogistica()
@@ -283,6 +334,7 @@
         const catalogo = catalogoServicios || window.materialLogistica.catalogoCompleto || [];
         const tipoMenaje = document.getElementById('tipo_menaje')?.value || 'desechable';
         const esLoza = tipoMenaje === 'loza';
+        const incluidosIds = obtenerIncluidosPorMenu(menuTipo, esLoza);
 
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             const inyectados = (window.materialLogistica[tipo] || [])
@@ -295,6 +347,8 @@
                         if (item.tipo !== tipo) return false;
                         if (item.solo_loza && !esLoza) return false;
                         if (item.solo_desechable && esLoza) return false;
+                        if (menuTipo === 'desayunos' && esLoza && esKitCafeDesechable(item)) return false;
+                        if (menuTipo === 'desayunos' && !esLoza && esKitCafeLoza(item)) return false;
                         if (item.parent_id) return false;
                         return true;
                     })
@@ -358,7 +412,8 @@
 
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             window.materialLogistica[tipo].forEach(item => {
-                if (item.checked) {
+                const tieneSubitemsSeleccionados = item.tiene_subitems && (item.subitems_selected || []).length > 0;
+                if (item.checked || tieneSubitemsSeleccionados) {
                     if (item.tiene_subitems && item.subitems_selected.length > 0) {
                         // Agregar solo los subitems seleccionados
                         resultado[tipo].push(...item.subitems_selected);
@@ -368,11 +423,13 @@
                             id: item.id,
                             item_id: item.item_id,
                             nombre: item.nombre,
+                            descripcion: formatearDetalleDinamicoMaterial(item) ||
+                                (esBebidaServicioSinDescripcion(item) ? '' : item.descripcion || item.presentacion || ''),
                             cantidad: item.cantidad,
-                            unidad: item.unidad,
+                            unidad: obtenerUnidadPedidoMaterial(item),
                             source_table: item.source_table || 'logistics_materials',
-                            unidad_inventario: item.unidad_inventario || item.unidad || 'ud',
-                            conversion_a_stock: Number(item.conversion_a_stock || item.contenido_por_unidad || 1)
+                            unidad_inventario: obtenerUnidadStockMaterial(item),
+                            conversion_a_stock: obtenerConversionMaterial(item)
                         });
                     }
                 }
@@ -419,64 +476,76 @@
                 if (item.tiene_subitems) {
                     return renderizarItemConSubitems(item, tipo, containerId);
                 } else {
-                    return renderizarItemSimple(item, tipo);
+                    return renderizarItemSimple(item, tipo, containerId);
                 }
             }).join('');
         });
     }
 
-    function renderizarItemSimple(item, tipo) {
-        const precio = item.precio > 0
-            ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
-            : item.incluido_en?.length
-                ? `<span class="dc-material-incluido">incluido</span>`
-                : `<span class="dc-material-precio dc-material-precio--sin-precio">—</span>`;
+    function renderizarItemSimple(item, tipo, containerId) {
+        const descripcion = item.descripcion || item.presentacion || '';
+        const precio = [
+            descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
+            item.precio > 0
+                ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+                : item.incluido_en?.length
+                    ? `<span class="dc-material-incluido">incluido</span>`
+                    : descripcion
+                        ? ''
+                        : `<span class="dc-material-precio dc-material-precio--sin-precio">—</span>`
+        ].join('');
 
-        const btnClass = item.checked ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn';
-        const btnIcon  = item.checked ? 'ti-check' : 'ti-plus';
+        const cantidad = Number(item.cantidad || 0);
+        const activo = item.checked || cantidad > 0;
+        const cantidadHtml = activo
+            ? renderizarCantidadConUnidad(cantidad, item.unidad, `onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')"`)
+            : `<button type="button" class="dc-material-btn" onclick="toggleMaterialItemNew('${tipo}', '${item.id}', '${containerId}')"><i class="ti ti-plus"></i></button>`;
 
         return `
-            <div class="dc-material-item ${item.checked ? 'dc-material-item--active' : ''}">
+            <div class="dc-material-item ${activo ? 'dc-material-item--active' : ''}">
                 <div class="dc-material-item-info">
                     <span class="dc-material-nombre">${item.nombre}</span>
                     ${precio}
                 </div>
                 <div class="dc-material-item-right">
-                    ${item.checked ? `<input type="number" class="dc-material-cantidad" value="${item.cantidad || 0}" min="0" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">` : ''}
-                    <button type="button" class="${btnClass}" onclick="toggleMaterialItemNew('${tipo}', '${item.id}', '${item.containerId || ''}')">
-                        <i class="ti ${btnIcon}"></i>
-                    </button>
+                    ${cantidadHtml}
                 </div>
             </div>
         `;
     }
 
     function renderizarItemConSubitems(item, tipo, containerId) {
-        const precio = item.precio > 0
-            ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
-            : item.incluido_en?.length
-                ? `<span class="dc-material-incluido">incluido</span>`
-                : '';
+        const descripcion = item.descripcion || item.presentacion || '';
+        const precio = [
+            descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
+            item.precio > 0
+                ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+                : item.incluido_en?.length
+                    ? `<span class="dc-material-incluido">incluido</span>`
+                    : ''
+        ].join('');
 
-        const btnClass = item.checked ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn';
-        const btnIcon  = item.checked ? '✓' : '+';
-        const subitemsSeleccionados = (item.subitems_selected || []).map(s => s.nombre || s.id).join(', ');
+        const subitemsSeleccionados = item.subitems_selected || [];
+        const activo = item.checked || subitemsSeleccionados.length > 0;
+        const detalleSubitems = subitemsSeleccionados.map(formatearResumenMaterial).join(', ');
+        const cantidadTotal = subitemsSeleccionados.reduce((total, s) => total + Number(s.cantidad || 0), 0);
+        const unidadResumen = subitemsSeleccionados[0]?.unidad || item.unidad || 'uds';
+        const botonHtml = subitemsSeleccionados.length
+            ? renderizarCantidadConUnidad(cantidadTotal, unidadResumen, 'readonly title="Total seleccionado"')
+            : `<button type="button" class="dc-material-btn" onclick="event.stopPropagation(); abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">+</button>`;
 
         return `
             <div class="dc-material-item-expandable">
-                <div class="dc-material-item dc-material-item--clickable ${item.checked ? 'dc-material-item--active' : ''}"
+                <div class="dc-material-item dc-material-item--clickable ${activo ? 'dc-material-item--active' : ''}"
                      onclick="abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">
                     <div class="dc-material-item-info">
                         <span class="dc-material-nombre">${item.nombre}</span>
-                        ${subitemsSeleccionados
-                            ? `<span class="dc-material-precio">${subitemsSeleccionados}</span>`
+                        ${detalleSubitems
+                            ? `<span class="dc-material-precio">${detalleSubitems}</span>`
                             : precio}
                     </div>
                     <div class="dc-material-item-right">
-                        <button type="button" class="${btnClass}"
-                                onclick="event.stopPropagation(); toggleMaterialItemNew('${tipo}', '${item.id}', '${containerId}')">
-                            ${btnIcon}
-                        </button>
+                        ${botonHtml}
                     </div>
                 </div>
             </div>
@@ -484,12 +553,126 @@
     }
 
     function isSubitemSelected(parentItem, subitemId) {
-        return parentItem.subitems_selected.some(s => s.id === subitemId);
+        return (parentItem.subitems_selected || []).some(s => String(s.id) === String(subitemId));
     }
 
     function getSubitemCantidad(parentItem, subitemId) {
-        const selected = parentItem.subitems_selected.find(s => s.id === subitemId);
+        const selected = (parentItem.subitems_selected || []).find(s => String(s.id) === String(subitemId));
         return selected ? selected.cantidad : 0;
+    }
+
+    function formatearCantidadMaterial(cantidad) {
+        const numero = Number(cantidad || 0);
+        return Number.isInteger(numero) ? String(numero) : String(numero).replace('.', ',');
+    }
+
+    function parseCantidadMaterial(valor) {
+        const normalizado = String(valor ?? '').replace(',', '.');
+        const numero = Number(normalizado);
+        return Number.isFinite(numero) ? numero : 0;
+    }
+
+    function limpiarCapacidadDelNombreMaterial(nombre) {
+        return String(nombre || '').replace(/\s+-\s+\d+(?:[.,]\d+)?\s*(?:uds?|unidades?)\s*$/i, '');
+    }
+
+    function normalizarTextoLogistica(valor) {
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+    }
+
+    function esBebidaServicioSinDescripcion(item) {
+        const nombre = normalizarTextoLogistica(item?.nombre);
+        const tipo = normalizarTextoLogistica(item?.tipo);
+        const subcategoria = normalizarTextoLogistica(item?.subcategoria);
+        const esBebida = tipo === 'bebidas' || subcategoria === 'vinos';
+        return esBebida && [
+            'vino blanco',
+            'vino tinto',
+            'cava',
+            'tinto de verano'
+        ].includes(nombre);
+    }
+
+    function obtenerNumeroPositivo(valor) {
+        const numero = Number(valor || 0);
+        return Number.isFinite(numero) && numero > 1 ? numero : 0;
+    }
+
+    function extraerPresentacionMaterial(item) {
+        const texto = String(item?.presentacion || item?.descripcion || '').trim();
+        const match = texto.match(/^([A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)\s+(\d+(?:[.,]\d+)?)\s+(.+)$/);
+        if (!match) return null;
+        return {
+            unidadPedido: match[1].toLowerCase(),
+            conversion: Number(match[2].replace(',', '.')) || 0,
+            unidadStock: match[3].trim().toLowerCase()
+        };
+    }
+
+    function obtenerConversionMaterial(item) {
+        return obtenerNumeroPositivo(item?.conversion_a_stock) ||
+            obtenerNumeroPositivo(item?.contenido_por_unidad) ||
+            extraerPresentacionMaterial(item)?.conversion ||
+            1;
+    }
+
+    function obtenerUnidadPedidoMaterial(item) {
+        const unidadBase = String(item?.unidad || item?.unidad_comanda || '').trim();
+        if (unidadBase && !['ud', 'uds'].includes(unidadBase.toLowerCase())) return unidadBase;
+
+        const presentacion = extraerPresentacionMaterial(item);
+        if (presentacion?.unidadPedido) return presentacion.unidadPedido;
+        return unidadBase || 'ud';
+    }
+
+    function obtenerUnidadStockMaterial(item) {
+        const presentacion = extraerPresentacionMaterial(item);
+        if (presentacion?.unidadStock) return presentacion.unidadStock;
+        return item?.unidad_inventario || 'uds';
+    }
+
+    function formatearResumenMaterial(item) {
+        const cantidad = Number(item.cantidad || 0);
+        const conversion = obtenerConversionMaterial(item);
+
+        if (conversion > 1) {
+            const totalStock = cantidad * conversion;
+            const nombre = limpiarCapacidadDelNombreMaterial(item.nombre || item.id);
+            const unidadStock = obtenerUnidadStockMaterial(item);
+            return `${nombre} - ${formatearCantidadMaterial(totalStock)} ${unidadStock}`;
+        }
+
+        const unidad = item.unidad || 'uds';
+        return `${item.nombre || item.id} - ${formatearCantidadMaterial(cantidad)} ${unidad}`;
+    }
+
+    function formatearDetalleDinamicoMaterial(item, cantidadBase) {
+        if (esBebidaServicioSinDescripcion(item)) return '';
+
+        const conversion = obtenerConversionMaterial(item);
+        if (conversion > 1) {
+            const cantidad = Number(cantidadBase ?? item?.cantidad ?? 0);
+            const cantidadParaMostrar = cantidad > 0 ? cantidad : 1;
+            const totalStock = cantidadParaMostrar * conversion;
+            const unidadPedido = obtenerUnidadPedidoMaterial(item);
+            const unidadStock = obtenerUnidadStockMaterial(item);
+            return `${unidadPedido} ${formatearCantidadMaterial(totalStock)} ${unidadStock}`;
+        }
+
+        return '';
+    }
+
+    function renderizarCantidadConUnidad(cantidad, unidad, attrs = '') {
+        return `
+            <div class="dc-material-qty">
+                <input type="number" class="dc-material-cantidad" value="${cantidad || 0}" min="0" step="0.5" ${attrs}>
+                <span class="dc-material-unit">${unidad || 'uds'}</span>
+            </div>
+        `;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -592,8 +775,36 @@
     }
 
     function renderizarOpcionMaterialServicio(item, tipo, containerId) {
-        const activo = item.checked || Number(item.cantidad || 0) > 0;
-        const detalle = item.presentacion || '';
+        const tieneSubitems = !!item.tiene_subitems;
+        const subitemsSeleccionados = item.subitems_selected || [];
+        const activo = item.checked || Number(item.cantidad || 0) > 0 || subitemsSeleccionados.length > 0;
+        const unidadPedido = obtenerUnidadPedidoMaterial(item);
+        const detalle = formatearDetalleDinamicoMaterial(item);
+
+        if (tieneSubitems) {
+            return `
+                <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}">
+                    <button type="button" class="logistics-builder-pick-main logistics-builder-pick-main--button"
+                        onclick="abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">
+                        <span>${item.nombre}</span>
+                        <strong>${subitemsSeleccionados.length ? subitemsSeleccionados.length + ' seleccionados' : '+'}</strong>
+                    </button>
+                    <small>${subitemsSeleccionados.length ? 'Revisa cantidades seleccionadas' : (detalle || 'Seleccionar opciones')}</small>
+                    ${subitemsSeleccionados.length ? `
+                        <div class="logistics-builder-subselected">
+                            ${subitemsSeleccionados.map(subitem => `
+                                <div class="logistics-builder-subselected-row">
+                                    <span>${subitem.nombre}</span>
+                                    ${renderizarCantidadConUnidad(subitem.cantidad || 0, subitem.unidad, `onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`) }
+                                    <button type="button" title="Quitar"
+                                        onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">&times;</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
 
         return `
             <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}">
@@ -602,11 +813,11 @@
                         onchange="toggleMaterialItemBuilder('${tipo}', '${item.id}', this.checked, '${containerId}')">
                     <span>${item.nombre}</span>
                 </label>
-                <small>${detalle || 'Agregar a la comanda'}</small>
+                ${detalle ? `<small>${detalle}</small>` : ''}
                 <div class="logistics-builder-qty">
-                    <input type="number" min="0" value="${item.cantidad || 0}"
+                    <input type="number" min="0" step="0.5" value="${item.cantidad || 0}"
                         onchange="updateMaterialCantidadServicio('${tipo}', '${item.id}', this.value, '${containerId}')">
-                    <span>${item.unidad || 'uds'}</span>
+                    <span>${unidadPedido}</span>
                 </div>
             </div>
         `;
@@ -636,7 +847,7 @@
             return item.subitems_selected.map(subitem => `
                 <div class="logistics-builder-selected-item">
                     <span>${subitem.nombre}</span>
-                    <input type="number" min="0" value="${subitem.cantidad || 0}" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
+                    <input type="number" min="0" step="0.5" value="${subitem.cantidad || 0}" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
                     <small>${subitem.unidad || 'uds'}</small>
                     <button type="button" onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">Quitar</button>
                 </div>
@@ -646,7 +857,7 @@
         return `
             <div class="logistics-builder-selected-item">
                 <span>${item.nombre}</span>
-                <input type="number" min="0" value="${item.cantidad || 0}" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">
+                <input type="number" min="0" step="0.5" value="${item.cantidad || 0}" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">
                 <small>${item.unidad || 'uds'}</small>
                 <button type="button" onclick="toggleMaterialItemBuilder('${tipo}', '${item.id}', false, '${containerId}')">Quitar</button>
             </div>
@@ -665,7 +876,9 @@
         body.innerHTML = items.length ? items.map(item => {
             const activo = item.checked || (item.subitems_selected || []).length;
             const detalle = item.tiene_subitems && item.subitems_selected?.length
-                ? item.subitems_selected.map(s => s.nombre).join(', ')
+                ? item.subitems_selected
+                    .map(formatearResumenMaterial)
+                    .join(', ')
                 : (item.unidad || '');
             return `
                 <button type="button" class="logistics-selector-option ${activo ? 'is-selected' : ''}"
@@ -793,28 +1006,32 @@
     };
 
     window.toggleSubitem = function(tipo, parentId, subitemId, checked, containerId) {
-        const parent = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const parent = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (!parent) return;
 
-        const subitem = parent.subitems.find(s => s.id === subitemId);
+        const subitem = (parent.subitems || []).find(s => String(s.id) === String(subitemId));
         if (!subitem) return;
 
         if (checked) {
-            if (!parent.subitems_selected.some(s => s.id === subitemId)) {
+            if (!(parent.subitems_selected || []).some(s => String(s.id) === String(subitemId))) {
+                if (!parent.subitems_selected) parent.subitems_selected = [];
                 parent.subitems_selected.push({
                     id: subitem.id,
                     item_id: subitem.item_id,
                     nombre: subitem.nombre,
-                    cantidad: calcularCantidadSugerida(subitem.item_id, window.pax || 0, 1),
+                    cantidad: 1,
                     unidad: subitem.unidad,
+                    descripcion: subitem.descripcion || subitem.presentacion || '',
                     source_table: subitem.source_table || 'logistics_materials',
                     unidad_inventario: subitem.unidad_inventario || subitem.unidad || 'ud',
                     conversion_a_stock: Number(subitem.conversion_a_stock || subitem.contenido_por_unidad || 1)
                 });
             }
         } else {
-            parent.subitems_selected = parent.subitems_selected.filter(s => s.id !== subitemId);
+            parent.subitems_selected = (parent.subitems_selected || []).filter(s => String(s.id) !== String(subitemId));
         }
+
+        parent.checked = (parent.subitems_selected || []).length > 0;
 
         if (containerId === 'materialLogisticaPage') {
             renderizarSeleccionadosLogistica(containerId);
@@ -824,29 +1041,37 @@
         }
     };
 
-    window.updateMaterialCantidad = function(tipo, itemId, cantidad) {
-        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
-        if (item) item.cantidad = parseInt(cantidad) || 0;
+    window.updateMaterialCantidad = function(tipo, itemId, cantidad, containerId) {
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        item.cantidad = parseCantidadMaterial(cantidad);
+        item.checked = item.cantidad > 0;
+        if (containerId) renderizarMaterial(containerId);
     };
 
     window.updateMaterialCantidadServicio = function(tipo, itemId, cantidad, containerId = 'materialLogisticaPage') {
         const item = window.materialLogistica[tipo].find(i => i.id === itemId);
         if (!item) return;
 
-        const valor = parseFloat(cantidad) || 0;
+        const valor = parseCantidadMaterial(cantidad);
         item.cantidad = valor;
         item.checked = valor > 0;
+        item.unidad = obtenerUnidadPedidoMaterial(item);
+        item.unidad_inventario = obtenerUnidadStockMaterial(item);
+        item.conversion_a_stock = obtenerConversionMaterial(item);
+        item.descripcion = formatearDetalleDinamicoMaterial(item);
         renderizarMaterial(containerId);
     };
 
     window.updateSubitemCantidad = function(tipo, parentId, subitemId, cantidad, containerId) {
-        const parent = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const parent = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (!parent) return;
 
-        const selected = parent.subitems_selected.find(s => s.id === subitemId);
+        const selected = (parent.subitems_selected || []).find(s => String(s.id) === String(subitemId));
         if (selected) {
-            selected.cantidad = parseInt(cantidad) || 0;
+            selected.cantidad = parseCantidadMaterial(cantidad);
         }
+        parent.checked = (parent.subitems_selected || []).length > 0;
 
         if (containerId === 'materialLogisticaPage') {
             renderizarSeleccionadosLogistica(containerId);
@@ -894,12 +1119,12 @@
                 <div class="dc-material-modal-option ${seleccionado ? 'dc-material-modal-option--active' : ''}">
                     <span class="dc-material-nombre">${subitem.nombre}</span>
                     <div class="dc-material-modal-actions">
-                        ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0"
+                        ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0" step="0.5"
                             onchange="updateSubitemCantidad('${tipo}','${itemId}','${subitem.id}',this.value,'${containerId}')">` : ''}
                         <button type="button"
                                 class="${seleccionado ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn'}"
                                 onclick="toggleSubitem('${tipo}','${itemId}','${subitem.id}',${!seleccionado},'${containerId}'); setTimeout(()=>abrirModalMaterialSubitems('${tipo}','${itemId}','${containerId}'),50);">
-                            ${seleccionado ? '✓' : '+'}
+                            ${seleccionado ? '&check;' : '+'}
                         </button>
                     </div>
                 </div>
@@ -912,8 +1137,10 @@
     window.confirmarModalMaterialSubitems = function() {
         const modal = document.getElementById('modalMaterialSubitems');
         if (modal) {
+            const containerId = modal.dataset.containerId;
             modal._subitemsSnapshot = null;
             modal.style.display = 'none';
+            if (containerId) renderizarMaterial(containerId);
         }
     };
 

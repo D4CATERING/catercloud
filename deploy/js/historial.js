@@ -498,6 +498,9 @@ async function abrirDocumentoPrivado(path) {
 function _renderMenuDetalle(comanda, pax) {
 
     let html = '';
+    const esServicio = Number(comanda?.categoriaId || comanda?._cat || 0) === 3 ||
+        String(comanda?.categoria || '').toLowerCase().includes('servicio') ||
+        Boolean(comanda?.servicio_categoria);
 
     function fila(nombre, cantidad, unidad, esTitulo) {
         return `<div class="detalle-menu-row">
@@ -555,7 +558,7 @@ function _renderMenuDetalle(comanda, pax) {
             }
 
             if (ref.tipo === 'sandwich' && ref.sabor) {
-                if (refKey === 'premium_cookie' || refKey === 'premium_fruta') {
+                if (refKey === 'premium_cookie' || refKey === 'premium_fruta' || refKey === 'welcome_cookie') {
                     if (refKey === 'premium_fruta') {
                         html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
                     }
@@ -651,7 +654,7 @@ function _renderMenuDetalle(comanda, pax) {
 
         if (saladas.length) {
             const mulLabel = mul?.saladas ? ` ×${mul.saladas}` : '';
-            html += fila('Saladas' + mulLabel, '', '', true);
+            if (!esServicio) html += fila('Saladas' + mulLabel, '', '', true);
             saladas.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
 
@@ -890,10 +893,18 @@ function _renderDetalleComanda(comanda) {
         if (secNotas) secNotas.style.display = 'none';
     }
 
+    const ocultarLogisticaEnDetalleCocina = _esComandaServicios(comanda) ||
+        Boolean(comanda.documentos?.logistica) ||
+        Boolean(comanda.logistica_creada);
+
     const secEntrega = el('detalleDatosLogisticaSection');
     const contEntrega = el('detalleDatosLogisticaContent');
 
     if (secEntrega && contEntrega) {
+        if (ocultarLogisticaEnDetalleCocina) {
+            secEntrega.style.display = 'none';
+            contEntrega.innerHTML = '';
+        } else {
         const logInline = comanda.logistica_inline ||
             (comanda.logistica && !Array.isArray(comanda.logistica.bebidas) &&
             (comanda.logistica.nombre_contacto || comanda.logistica.direccion)
@@ -929,12 +940,17 @@ function _renderDetalleComanda(comanda) {
         } else {
             secEntrega.style.display = 'none';
         }
+        }
     }
 
     const secLog = el('detalleLogisticaSection');
     const contLog = el('detalleLogisticaContent');
 
     if (secLog && contLog) {
+        if (ocultarLogisticaEnDetalleCocina) {
+            secLog.style.display = 'none';
+            contLog.innerHTML = '';
+        } else {
         const log = comanda.material_logistica ||
             (comanda.logistica?.bebidas ? comanda.logistica : null);
         const logNormalizado = typeof window.normalizarMaterialLogistica === 'function'
@@ -962,16 +978,20 @@ function _renderDetalleComanda(comanda) {
 
                 filtrados.forEach(it => {
                     h += `<div class="dc-material-item">
-                        <span class="dc-material-nombre">${it.nombre}</span>
-                        <span class="dc-material-cantidad">${it.cantidad ?? 0}</span>
-                        <span class="dc-material-unidad">${it.unidad || 'uds'}</span>
+                        <span class="dc-material-nombre">
+                            ${textoSeguro(it.nombre)}
+                            ${it.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(it.descripcion)}</small>` : ''}
+                        </span>
+                        <span class="dc-material-medida">${it.cantidad ?? 0} ${it.unidad || 'uds'}</span>
                     </div>`;
 
                     (it.subitems_selected || []).forEach(sub => {
                         h += `<div class="dc-material-item" style="padding-left:10px; opacity:0.85;">
-                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">↳ ${sub.nombre}</span>
-                            <span class="dc-material-cantidad" style="font-size:0.72rem;">${sub.cantidad ?? 0}</span>
-                            <span class="dc-material-unidad" style="font-size:0.72rem;">${sub.unidad || 'uds'}</span>
+                            <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">
+                                ↳ ${textoSeguro(sub.nombre)}
+                                ${sub.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(sub.descripcion)}</small>` : ''}
+                            </span>
+                            <span class="dc-material-medida">${sub.cantidad ?? 0} ${sub.unidad || 'uds'}</span>
                         </div>`;
                     });
                 });
@@ -988,6 +1008,7 @@ function _renderDetalleComanda(comanda) {
         } else {
             secLog.style.display = 'none';
         }
+        }
     }
 
     const secNotasLogistica = el('detalleNotasLogisticaSection');
@@ -995,6 +1016,10 @@ function _renderDetalleComanda(comanda) {
     const notasLogistica = (comanda.logistica_inline || comanda.logistica || {}).notas_logistica || '';
 
     if (secNotasLogistica && divNotasLogistica) {
+        if (ocultarLogisticaEnDetalleCocina) {
+            secNotasLogistica.style.display = 'none';
+            divNotasLogistica.innerHTML = '';
+        } else
         if (notasLogistica) {
             secNotasLogistica.style.display = '';
             divNotasLogistica.innerHTML = `<div class="detalle-logistica-notas">${textoSeguro(notasLogistica)}</div>`;
@@ -1145,9 +1170,11 @@ function _renderDetalleComandaLogistica(comanda) {
                 <h5>${cat.icono} ${cat.titulo}</h5>
                 <div class="dc-material-list">
                     ${items.map(item => `<div class="dc-material-item">
-                        <span class="dc-material-nombre">${textoSeguro(item.nombre)}</span>
-                        <span class="dc-material-cantidad">${textoSeguro(item.cantidad || 0)}</span>
-                        <span class="dc-material-unidad">${textoSeguro(item.unidad || 'uds')}</span>
+                        <span class="dc-material-nombre">
+                            ${textoSeguro(item.nombre)}
+                            ${item.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(item.descripcion)}</small>` : ''}
+                        </span>
+                        <span class="dc-material-medida">${textoSeguro(item.cantidad || 0)} ${textoSeguro(item.unidad || 'uds')}</span>
                     </div>`).join('')}
                 </div>
             </div>`;
@@ -1187,11 +1214,36 @@ function _inferirCategoriaMenuEdicion(menu) {
     if (menu?.categoriaId) return Number(menu.categoriaId);
     if (menu?._cat) return Number(menu._cat);
     const texto = String(menu?.categoria || '').toLowerCase();
+    if (texto.includes('servicio')) return 3;
     if (texto.includes('desayuno')) return 1;
     if (texto.includes('foodbox lunch')) return 4;
     if (texto.includes('bandeja') || texto.includes('diy')) return 5;
     if (texto.includes('foodbox') || texto.includes('comida')) return 2;
     return Number(document.getElementById('categoria')?.value) || 0;
+}
+
+function _inferirTipoServicioEdicion(menu) {
+    if (menu?.servicio_categoria) return menu.servicio_categoria;
+    const nombre = String(menu?.nombre || '').toLowerCase();
+    if (nombre.includes('welcome') || nombre.includes('coffee')) return 'welcome';
+    if (nombre.includes('brindis') || nombre.includes('networking') || nombre.includes('afterwork')) return 'vino';
+    if (nombre.includes('alucinancia') || nombre.includes('decuatro') || nombre.includes('atractividad')) return 'cocteles';
+    return '';
+}
+
+function _esMenuServicios(menu) {
+    return Number(menu?.categoriaId || menu?._cat || 0) === 3 ||
+        String(menu?.categoria || '').toLowerCase().includes('servicio') ||
+        Boolean(menu?.servicio_categoria);
+}
+
+function _esComandaServicios(comanda) {
+    const menus = [
+        comanda?.menu_principal,
+        ...(comanda?.menus_adicionales || [])
+    ].filter(Boolean);
+
+    return menus.some(menu => _esMenuServicios(_normalizarMenuEdicion(menu, comanda, menu === comanda?.menu_principal)));
 }
 
 function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
@@ -1257,6 +1309,85 @@ function _rellenarCampoEdicion(id, valor) {
     if (el) el.value = valor || '';
 }
 
+function _normalizarClaveMaterial(valor) {
+    return String(valor ?? '').trim().toLowerCase();
+}
+
+function _materialGuardadoCoincide(guardado, item) {
+    const clavesGuardado = [
+        guardado.id,
+        guardado.item_id,
+        guardado.nombre
+    ].map(_normalizarClaveMaterial).filter(Boolean);
+
+    const clavesItem = [
+        item.id,
+        item.item_id,
+        item.nombre
+    ].map(_normalizarClaveMaterial).filter(Boolean);
+
+    return clavesGuardado.some(clave => clavesItem.includes(clave));
+}
+
+function _rehidratarMaterialLogisticaGuardado(actual, guardados) {
+    if (actual.tiene_subitems && Array.isArray(actual.subitems)) {
+        const subitemsSeleccionados = [];
+
+        actual.subitems.forEach(subitem => {
+            const guardado = guardados.find(mat => _materialGuardadoCoincide(mat, subitem));
+            if (!guardado) return;
+
+            subitemsSeleccionados.push({
+                ...subitem,
+                ...guardado,
+                id: subitem.id,
+                item_id: subitem.item_id || guardado.item_id || guardado.id,
+                nombre: guardado.nombre || subitem.nombre,
+                cantidad: Number(guardado.cantidad || 0),
+                unidad: guardado.unidad || subitem.unidad || 'uds',
+                source_table: guardado.source_table || subitem.source_table || 'logistics_materials',
+                unidad_inventario: guardado.unidad_inventario || subitem.unidad_inventario || subitem.unidad || 'ud',
+                conversion_a_stock: Number(guardado.conversion_a_stock || subitem.conversion_a_stock || subitem.contenido_por_unidad || 1)
+            });
+        });
+
+        return {
+            ...actual,
+            checked: subitemsSeleccionados.length > 0,
+            cantidad: subitemsSeleccionados.reduce((total, subitem) => total + Number(subitem.cantidad || 0), 0),
+            subitems_selected: subitemsSeleccionados
+        };
+    }
+
+    const guardado = guardados.find(mat => _materialGuardadoCoincide(mat, actual));
+    return guardado
+        ? { ...actual, ...guardado, checked: true, cantidad: Number(guardado.cantidad || 0) }
+        : { ...actual, checked: false, cantidad: 0, subitems_selected: [] };
+}
+
+function _materialEstaEnCatalogoLogistica(guardado, catalogo) {
+    return catalogo.some(item => {
+        if (_materialGuardadoCoincide(guardado, item)) return true;
+        return (item.subitems || []).some(subitem => _materialGuardadoCoincide(guardado, subitem));
+    });
+}
+
+function _rehidratarListaMaterialLogistica(actuales, guardados) {
+    const rehidratados = actuales.map(actual => _rehidratarMaterialLogisticaGuardado(actual, guardados));
+    const guardadosSinCatalogo = guardados
+        .filter(guardado => !_materialEstaEnCatalogoLogistica(guardado, actuales))
+        .map(guardado => ({
+            ...guardado,
+            checked: true,
+            cantidad: Number(guardado.cantidad || 0),
+            subitems: [],
+            subitems_selected: [],
+            tiene_subitems: false
+        }));
+
+    return [...rehidratados, ...guardadosSinCatalogo];
+}
+
 function _hidratarReferenciasDesayunoEdicion(menu) {
     if (!menu?.referencias_desayuno || !window.referenciasDesayuno) return;
 
@@ -1283,12 +1414,60 @@ function _hidratarReferenciasDesayunoEdicion(menu) {
     });
 }
 
+function _hidratarReferenciasServiciosEdicion(menu) {
+    if (Number(menu?.categoriaId || menu?._cat || 0) !== 3 || !menu?.referencias) return;
+
+    const saladas = Array.isArray(menu.referencias.saladas) ? menu.referencias.saladas : [];
+    const postres = Array.isArray(menu.referencias.postres) ? menu.referencias.postres : [];
+
+    window.referenciasSeleccionadas = window.referenciasSeleccionadas || { gris: [], rojo: [], postres: [] };
+    window.referenciasSeleccionadas.gris = saladas.map(ref => ({
+        ..._clonarValorComanda(ref),
+        id: String(ref.id),
+        nombre: ref.nombre || '',
+        cantidad: Number(ref.cantidad || 0) || 1,
+        unidad: ref.unidad || 'uds'
+    }));
+    window.referenciasSeleccionadas.rojo = [];
+    window.referenciasSeleccionadas.postres = postres.map(ref => ({
+        ..._clonarValorComanda(ref),
+        id: String(ref.id),
+        nombre: ref.nombre || '',
+        cantidad: Number(ref.cantidad || 0) || 1,
+        unidad: ref.unidad || 'uds'
+    }));
+
+    if (typeof renderReferenciasPagina === 'function') {
+        ['gris', 'rojo', 'postres'].forEach(tipo => {
+            if (window.referenciasPaginacion?.[tipo]) renderReferenciasPagina(tipo);
+        });
+    }
+    if (typeof actualizarContadoresSeleccion === 'function') actualizarContadoresSeleccion();
+}
+
 async function _activarPrimerMenuEdicion(menu) {
     if (!menu) return;
 
     const categoriaId = Number(menu.categoriaId || menu._cat || 0);
     const categoriaSelect = document.getElementById('categoria');
     if (!categoriaSelect) return;
+
+    if (categoriaId === 3) {
+        window.serviciosMode = true;
+        document.getElementById('comandaForm')?.classList.add('servicios-mode');
+        const categoriaGroup = document.getElementById('categoriaMenuGroup');
+        const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+        const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
+        const serviciosCategoria = document.getElementById('serviciosCategoria');
+        if (categoriaGroup) categoriaGroup.style.display = 'none';
+        if (serviciosGroup) serviciosGroup.style.display = '';
+        if (tipoMenajeGroup) tipoMenajeGroup.style.display = 'none';
+        if (serviciosCategoria) serviciosCategoria.value = _inferirTipoServicioEdicion(menu);
+        const title = document.getElementById('comandaFormTitle');
+        const subtitle = document.getElementById('comandaFormSubtitle');
+        if (title) title.textContent = 'Servicios';
+        if (subtitle) subtitle.textContent = 'Selecciona el servicio y completa la comanda de cocina';
+    }
 
     categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
     if (typeof cargarMenus === 'function') {
@@ -1316,6 +1495,8 @@ async function _activarPrimerMenuEdicion(menu) {
 
     if (categoriaId === 1) {
         _hidratarReferenciasDesayunoEdicion(menu);
+    } else if (categoriaId === 3) {
+        _hidratarReferenciasServiciosEdicion(menu);
     }
 }
 
@@ -1402,6 +1583,9 @@ async function editarComanda() {
         return;
     }
 
+    const comandaEsServicios = _esComandaServicios(window.comandaEditando);
+    window.serviciosMode = comandaEsServicios;
+
     document.getElementById('detalleComanda').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'block';
     document.getElementById('dashboard').style.display = 'none';
@@ -1414,6 +1598,16 @@ async function editarComanda() {
 
     if (submitBtn) {
         submitBtn.textContent = '💾 Guardar Cambios';
+    }
+
+    if (!comandaEsServicios) {
+        document.getElementById('comandaForm')?.classList.remove('servicios-mode');
+        const categoriaGroup = document.getElementById('categoriaMenuGroup');
+        const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+        const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
+        if (categoriaGroup) categoriaGroup.style.display = '';
+        if (serviciosGroup) serviciosGroup.style.display = 'none';
+        if (tipoMenajeGroup) tipoMenajeGroup.style.display = '';
     }
 
     await cargarComandaEnFormularioEdicion(window.comandaEditando);
@@ -1512,13 +1706,7 @@ async function editarComandaLogistica() {
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             const actuales = window.materialLogistica[tipo] || [];
             const guardados = item.material_logistica[tipo] || [];
-            window.materialLogistica[tipo] = actuales.map(actual => {
-                const guardado = guardados.find(mat => String(mat.id || mat.item_id || mat.nombre) === String(actual.id || actual.item_id || actual.nombre)
-                    || String(mat.nombre || '') === String(actual.nombre || ''));
-                return guardado
-                    ? { ...actual, ...guardado, checked: true, cantidad: Number(guardado.cantidad || 0) }
-                    : { ...actual, checked: false, cantidad: 0 };
-            });
+            window.materialLogistica[tipo] = _rehidratarListaMaterialLogistica(actuales, guardados);
         });
         if (typeof window.renderizarMaterialLogisticaActual === 'function') {
             window.renderizarMaterialLogisticaActual('materialLogisticaPage');
@@ -1604,4 +1792,3 @@ async function verDetalleComandaPorCodigo(codigo) {
 
     _renderDetalleComanda(comanda);
 }
-

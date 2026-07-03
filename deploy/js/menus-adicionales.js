@@ -24,6 +24,18 @@
   const hide = (id) => { const el = $(id); if (el) el.style.display = 'none'; };
   const setText = (id, v) => { const el = $(id); if (el) el.textContent = String(v); };
 
+  window.esMenuServicioExtraNoSumaPax = function(menu) {
+    return !!menu?.no_suma_pax ||
+      (menu?.servicio_categoria === 'welcome' && Number(menu?.categoriaOriginalId || menu?.categoriaId || 0) === 3);
+  };
+
+  window.calcularPaxTotalComanda = function(menus) {
+    const lista = Array.isArray(menus) ? menus : [];
+    const menusQueSuman = lista.filter(menu => !window.esMenuServicioExtraNoSumaPax(menu));
+    const base = menusQueSuman.length ? menusQueSuman : lista;
+    return base.reduce((s, m) => s + (Number(m.pax) || 0), 0);
+  };
+
   // ---------- Datos: menús por categoría (ajusta si lo tienes centralizado) ----------
   function getMenusModalPorCategoria(categoriaId) {
     // IMPORTANTE: Mantén ids/nombres consistentes con tu sistema
@@ -683,6 +695,7 @@
       categoriaOriginalId: categoriaSelectId,
       categoria:   window.serviciosMode ? 'Servicios' : (document.getElementById('categoria')?.selectedOptions[0]?.text || ''),
       servicio_categoria: window.menuSeleccionado.servicio_categoria || null,
+      no_suma_pax: window.serviciosMode && window.menuSeleccionado.servicio_categoria === 'welcome',
       pax,
       tipo_menaje: document.getElementById('tipo_menaje')?.value || null,
       material:    materialSnapshot,
@@ -735,7 +748,7 @@
     st.menusAdicionales.push(item);
 
     // Actualizar PAX total visible
-    const paxTotal = st.menusAdicionales.reduce((s, m) => s + (m.pax || 0), 0);
+    const paxTotal = window.calcularPaxTotalComanda(st.menusAdicionales);
     const paxTotalEl = document.getElementById('paxTotalValor');
     if (paxTotalEl) paxTotalEl.textContent = paxTotal;
     const paxWrap = document.getElementById('paxTotalWrap');
@@ -1052,7 +1065,7 @@
         <div class="resumen-menu-card">
           <div class="resumen-item">
             <span class="resumen-item-nombre">${escResumen(m.nombre || '-')}</span>
-            <span class="resumen-item-pax">${escResumen(m.pax)} pax</span>
+            <span class="resumen-item-pax">${escResumen(m.pax)} pax${window.esMenuServicioExtraNoSumaPax(m) ? ' · extra' : ''}</span>
             <button class="resumen-chip-x" onclick="eliminarMenuResumen(${i})" title="Eliminar">&times;</button>
           </div>
           ${renderDetalleMenuResumen(m)}
@@ -1113,7 +1126,7 @@
       actualizarResumenLateral();
     };
 
-    const paxTotal = menus.reduce((s, m) => s + (m.pax || 0), 0);
+    const paxTotal = window.calcularPaxTotalComanda(menus);
     const totalesHtml = (paxTotal > 0 || totalDIY > 0) ? `
       <div class="resumen-divider"></div>
       ${paxTotal > 0 ? `<div class="resumen-total-row"><span>Total PAX</span><span class="resumen-total-num">${paxTotal} pax</span></div>` : ''}
@@ -1159,7 +1172,7 @@
     st.menusAdicionales.splice(index, 1);
 
     // Actualizar PAX total
-    const paxTotal = st.menusAdicionales.reduce((s, m) => s + (m.pax || 0), 0);
+    const paxTotal = window.calcularPaxTotalComanda(st.menusAdicionales);
     const paxTotalEl = document.getElementById('paxTotalValor');
     if (paxTotalEl) paxTotalEl.textContent = paxTotal;
     const paxWrap = document.getElementById('paxTotalWrap');

@@ -308,12 +308,13 @@
 
 .event-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 10px;
 }
 
 .event-actions .event-new-btn,
+.event-service-btn,
 .event-secondary-btn {
   display: flex;
   align-items: center;
@@ -329,6 +330,17 @@
   font-weight: 500;
   letter-spacing: .3px;
   cursor: pointer;
+}
+
+.event-service-btn {
+  background: var(--dc-crema);
+  color: var(--dc-negro);
+  border: 1px solid var(--dc-border);
+}
+
+.event-service-btn:hover {
+  background: #efe6d8;
+  opacity: 1;
 }
 
 .event-secondary-btn {

@@ -651,8 +651,15 @@ input:focus, select:focus, textarea:focus {
 /* ===== DETALLE DE COMANDA ===== */
 #detalleComanda {
     display: none;
-    max-width: 800px;
+    width: min(960px, calc(100vw - var(--sidebar-w) - 16px));
+    max-width: none;
     margin: 0 auto;
+}
+
+#detalleComanda .dc-page-header,
+#detalleComanda .dc-page-content {
+    padding-left: 0;
+    padding-right: 0;
 }
 
 /* ══════════════════════════════════════════
@@ -664,7 +671,7 @@ input:focus, select:focus, textarea:focus {
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 24px rgba(0,0,0,0.10);
-    max-width: 860px;
+    max-width: 960px;
     margin: 0 auto;
 }
 
@@ -773,27 +780,43 @@ input:focus, select:focus, textarea:focus {
 
 /* Área de contenido dentro de sección */
 /* Detalle/comanda logistica: informacion del evento mas compacta */
+#detalleComanda .dc-section:first-of-type .detalle-grid,
 .detalle-container .dc-section:first-of-type .detalle-grid {
     grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.25fr) 70px 125px 86px;
-    padding: 5px 12px 7px;
+    padding: 5px 8px 7px;
+    align-items: start;
 }
 
+#detalleComanda .dc-section:first-of-type .detalle-field,
 .detalle-container .dc-section:first-of-type .detalle-field {
-    padding: 2px 5px;
+    min-width: 0;
+    padding: 2px 4px;
 }
 
+#detalleComanda .dc-section:first-of-type .detalle-field-label,
 .detalle-container .dc-section:first-of-type .detalle-field-label {
     margin-bottom: 1px;
+    white-space: nowrap;
 }
 
+#detalleComanda .dc-section:first-of-type .detalle-field-value,
 .detalle-container .dc-section:first-of-type .detalle-field-value {
     line-height: 1.15;
+    white-space: nowrap;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 560px) {
+    #detalleComanda .dc-section:first-of-type .detalle-grid,
     .detalle-container .dc-section:first-of-type .detalle-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         padding: 6px 10px;
+    }
+
+    #detalleComanda .dc-section:first-of-type .detalle-field-label,
+    #detalleComanda .dc-section:first-of-type .detalle-field-value,
+    .detalle-container .dc-section:first-of-type .detalle-field-label,
+    .detalle-container .dc-section:first-of-type .detalle-field-value {
+        white-space: normal;
     }
 }
 
@@ -1669,6 +1692,14 @@ textarea.dc-input {
     flex-shrink: 0;
 }
 
+.dc-material-qty {
+    display: inline-grid;
+    grid-template-columns: 42px auto;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
 .dc-material-cantidad {
     width: 42px;
     padding: 2px 4px;
@@ -1679,6 +1710,13 @@ textarea.dc-input {
     font-family: 'Roboto', sans-serif;
     background: white;
     flex-shrink: 0;
+}
+
+.dc-material-unit {
+    color: #64748b;
+    font-size: .66rem;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .dc-material-cantidad:focus {
@@ -3662,6 +3700,91 @@ h3 {
   max-width: 400px;
 }
 
+.modal-logistica-confirm {
+  width: min(380px, calc(100vw - 32px));
+  max-width: 380px;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.modal-logistica-confirm .modal-header {
+  padding: 10px 14px;
+}
+
+.modal-logistica-confirm .modal-header h3 {
+  font-size: .98rem;
+}
+
+.modal-logistica-confirm .modal-body {
+  display: block;
+  padding: 14px 16px 10px;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.modal-logistica-confirm .modal-body::before {
+  content: none;
+}
+
+.modal-logistica-confirm .modal-body p {
+  margin: 0;
+  color: #334155;
+  font-size: .78rem;
+  line-height: 1.35;
+}
+
+.modal-logistica-confirm .form-group {
+  margin: 12px 0 0;
+}
+
+.modal-logistica-confirm .form-group label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: .68rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .35px;
+}
+
+.modal-logistica-confirm .modal-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 16px 14px;
+}
+
+.modal-logistica-confirm .modal-footer button {
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: .78rem;
+}
+
+#modalConfirmacionLogistica .modal-logistica-confirm {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 240px !important;
+  display: block !important;
+}
+
+#modalConfirmacionLogistica .modal-body {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+#modalConfirmacionLogistica .modal-footer {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
 .log-readonly {
   background: #f8fafc;
   padding: 8px 12px;
@@ -3902,6 +4025,18 @@ h3 {
   margin-top: 14px;
 }
 
+#btnGuardarLogistica {
+  background: var(--dc-rojo) !important;
+  border-color: var(--dc-rojo) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(225, 52, 46, .22) !important;
+}
+
+#btnGuardarLogistica:hover {
+  background: #b91c1c !important;
+  border-color: #b91c1c !important;
+}
+
 #logisticaInlineSection + #materialLogisticaInline .dc-material-section,
 #logisticaForm .dc-material-section {
   margin-top: 8px;
@@ -3954,7 +4089,7 @@ h3 {
 
 #logisticaForm .dc-material-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 62px 28px;
+  grid-template-columns: minmax(0, 1fr) 92px;
   align-items: center;
   gap: 8px;
   min-height: 58px;
@@ -3988,20 +4123,28 @@ h3 {
 }
 
 #logisticaForm .dc-material-cantidad {
-  width: 62px;
+  width: 42px;
   min-height: 34px;
-  justify-self: center;
-  grid-column: 2;
   border-radius: 6px;
   font-size: .8rem;
   font-weight: 400;
+}
+
+#logisticaForm .dc-material-qty {
+  grid-column: 2;
+  justify-self: end;
+  grid-template-columns: 42px minmax(0, auto);
+}
+
+#logisticaForm .dc-material-unit {
+  font-size: .62rem;
 }
 
 #logisticaForm .dc-material-btn {
   width: 28px;
   height: 28px;
   justify-self: end;
-  grid-column: 3;
+  grid-column: 2;
 }
 
 #logisticaForm .dc-material-item:not(.dc-material-item--active) .dc-material-item-info {
@@ -4009,7 +4152,7 @@ h3 {
 }
 
 #logisticaForm .dc-material-item-expandable .dc-material-item {
-  grid-template-columns: minmax(0, 1fr) 28px;
+  grid-template-columns: minmax(0, 1fr) 92px;
 }
 
 #logisticaForm .dc-material-item-expandable .dc-material-btn,
@@ -4429,6 +4572,18 @@ h3 {
   line-height: 1.18 !important;
 }
 
+#detalleLogisticaContent .dc-material-descripcion,
+.detalle-container .dc-material-descripcion {
+  display: block !important;
+  margin-top: 2px !important;
+  font-family: 'Roboto', sans-serif !important;
+  font-size: .66rem !important;
+  line-height: 1.18 !important;
+  font-weight: 400 !important;
+  color: #64748b !important;
+  text-transform: none !important;
+}
+
 #detalleLogisticaContent .dc-material-cantidad {
   justify-self: end !important;
   text-align: right !important;
@@ -4619,12 +4774,36 @@ h3 {
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  font-size: 1rem;
+  font-size: 0;
 }
 
-.logistics-kpi-card--pending .logistics-kpi-icon { background: #fff7ed; color: #f59e0b; }
-.logistics-kpi-card--progress .logistics-kpi-icon { background: #eff6ff; color: #2563eb; }
-.logistics-kpi-card--ready .logistics-kpi-icon { background: #ecfdf5; color: #059669; }
+.logistics-kpi-icon::before {
+  content: "";
+  width: 19px;
+  height: 19px;
+  display: block;
+  background: currentColor;
+  -webkit-mask: var(--kpi-icon) center / contain no-repeat;
+  mask: var(--kpi-icon) center / contain no-repeat;
+}
+
+.logistics-kpi-card--pending .logistics-kpi-icon {
+  --kpi-icon: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M12 3 2.7 20h18.6L12 3Z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M12 9v5M12 17h.01' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background: #fff7ed;
+  color: #ef4444;
+}
+
+.logistics-kpi-card--progress .logistics-kpi-icon {
+  --kpi-icon: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m12 3 8 4.5-8 4.5-8-4.5L12 3Z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='m4 12 8 4.5 8-4.5M4 16.5 12 21l8-4.5' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background: #eff6ff;
+  color: #3b82f6;
+}
+
+.logistics-kpi-card--ready .logistics-kpi-icon {
+  --kpi-icon: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m21 8-9-5-9 5 9 5 9-5Z' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'/%3E%3Cpath d='M3 8v8l9 5 9-5V8M12 13v8' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background: #ecfdf5;
+  color: #10b981;
+}
 
 .logistics-kpi-card strong {
   display: block;
@@ -5428,6 +5607,7 @@ h3 {
 .logistics-selector-option small {
   color: var(--dc-muted);
   font-size: .72rem;
+  line-height: 1.25;
 }
 
 .logistics-selector-footer {
@@ -5644,6 +5824,37 @@ h3 {
   line-height: 1.12;
 }
 
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main--button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main--button span {
+  min-width: 0;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-pick-main--button strong {
+  flex: 0 0 auto;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #f5efe1;
+  color: #8a5f16;
+  font-size: .62rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 #logisticaForm #materialLogisticaPage .logistics-builder-pick small {
   padding-left: 19px;
   font-size: .58rem;
@@ -5664,6 +5875,62 @@ h3 {
 
 #logisticaForm #materialLogisticaPage .logistics-builder-qty span {
   font-size: .58rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected {
+  display: grid;
+  gap: 5px;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #eee5d6;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px 22px;
+  align-items: center;
+  gap: 5px;
+  font-size: .66rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row span {
+  min-width: 0;
+  color: #243044;
+  line-height: 1.15;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row input {
+  width: 48px;
+  min-height: 23px;
+  padding: 2px 4px;
+  text-align: center;
+  font-size: .66rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-qty {
+  grid-template-columns: 38px auto;
+  justify-self: end;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-cantidad {
+  width: 38px;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-unit {
+  font-size: .56rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row button {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: .8rem;
+  line-height: 1;
 }
 
 /* Ajuste corporativo para la seccion de Logistica */
@@ -5704,13 +5971,19 @@ h3 {
   border-top-color: var(--dc-negro);
 }
 
-.logistics-kpi-icon {
-  background: var(--dc-crema) !important;
-  color: var(--dc-negro) !important;
+.logistics-kpi-card--pending .logistics-kpi-icon {
+  background: #fff7ed !important;
+  color: var(--dc-rojo) !important;
 }
 
-.logistics-kpi-card--pending .logistics-kpi-icon {
-  color: var(--dc-rojo) !important;
+.logistics-kpi-card--progress .logistics-kpi-icon {
+  background: #eff6ff !important;
+  color: #3b82f6 !important;
+}
+
+.logistics-kpi-card--ready .logistics-kpi-icon {
+  background: #ecfdf5 !important;
+  color: #10b981 !important;
 }
 
 .logistics-kpi-card strong,
@@ -5950,6 +6223,12 @@ h3 {
     line-height: 1.18 !important;
   }
 
+  #detalleLogisticaContent .dc-material-descripcion,
+  .detalle-container .dc-material-descripcion {
+    font-size: 7.2pt !important;
+    line-height: 1.15 !important;
+  }
+
   #detalleLogisticaContent .dc-material-cantidad {
     font-size: 8.5pt !important;
     min-width: 18px !important;
@@ -5982,6 +6261,16 @@ h3 {
   min-width: 32px !important;
 }
 
+#detalleLogisticaContent .dc-material-medida {
+  display: block !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+  min-width: 64px !important;
+  flex: 0 0 64px !important;
+  font-size: .74rem !important;
+  line-height: 1.1 !important;
+}
+
 .detalle-menu-row--spacer {
   min-height: 8px;
   border-bottom: none;
@@ -6004,6 +6293,16 @@ h3 {
     align-items: center !important;
   }
 
+  #detalleLogisticaContent .dc-material-medida {
+    display: block !important;
+    flex: 0 0 64pt !important;
+    min-width: 64pt !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+    font-size: 8pt !important;
+  }
+
   #detalleLogisticaContent .dc-material-cantidad,
   #detalleLogisticaContent .dc-material-unidad {
     align-self: center !important;
@@ -6018,15 +6317,15 @@ h3 {
   }
 
   #detalleLogisticaContent .dc-material-cantidad {
-    flex: 0 0 26pt !important;
-    min-width: 26pt !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
     text-align: right !important;
   }
 
   #detalleLogisticaContent .dc-material-unidad {
-    flex: 0 0 38pt !important;
-    min-width: 38pt !important;
-    padding-left: 5pt !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    padding-left: 0 !important;
     text-align: left !important;
   }
 
@@ -6034,5 +6333,9 @@ h3 {
     flex: 1 1 auto !important;
     min-width: 0 !important;
     padding-right: 8pt !important;
+  }
+
+  #detalleLogisticaContent .dc-material-grid {
+    grid-template-columns: repeat(auto-fit, minmax(165pt, 1fr)) !important;
   }
 }

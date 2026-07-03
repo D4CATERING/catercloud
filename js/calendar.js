@@ -137,6 +137,9 @@ function _renderEventosDia(eventosPorFecha) {
             <button class="event-new-btn" onclick="nuevaComandaEnFecha('${dateStr}')">
                 + Crear comanda
             </button>
+            <button class="event-service-btn" onclick="nuevoServicioEnFecha('${dateStr}')">
+                + Crear servicio
+            </button>
             <button class="event-secondary-btn" onclick="nuevaSolicitudEnFecha('${dateStr}')">
                 + Crear solicitud
             </button>
@@ -182,6 +185,19 @@ function nuevaComandaEnFecha(dateStr) {
 
     if (typeof mostrarComandaCocina === 'function') {
         mostrarComandaCocina();
+    }
+
+    const fechaInput = document.getElementById('fecha_evento');
+    if (fechaInput) fechaInput.value = dateStr;
+}
+
+function nuevoServicioEnFecha(dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear servicios.')) {
+        return;
+    }
+
+    if (typeof mostrarServicios === 'function') {
+        mostrarServicios();
     }
 
     const fechaInput = document.getElementById('fecha_evento');
