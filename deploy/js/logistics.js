@@ -110,6 +110,9 @@
     async function cargarCatalogoServiciosLogistica() {
         if (!window.supabaseClient) return null;
 
+        const catalogoUnificado = obtenerCatalogoServiciosDesdeLogisticsMaterials();
+        if (catalogoUnificado.length) return catalogoUnificado;
+
         try {
             const { data, error } = await window.supabaseClient
                 .from('service_logistics_materials')
@@ -147,6 +150,76 @@
             console.warn('Catalogo exclusivo de servicios no disponible, usando logistica general:', err);
             return null;
         }
+    }
+
+    function normalizarTipoLogisticaUnificada(tipo) {
+        return tipo === 'material' ? 'extras' : tipo;
+    }
+
+    function recorrerCatalogoLogistica(items, resultado = []) {
+        (items || []).forEach(item => {
+            resultado.push(item);
+            if (Array.isArray(item.subitems) && item.subitems.length) {
+                recorrerCatalogoLogistica(item.subitems, resultado);
+            }
+        });
+        return resultado;
+    }
+
+    function esMaterialDeServicios(item) {
+        const contexto = normalizarTextoMaterial(item?.contexto_logistica || item?.contexto || '');
+        return item?.aplica_servicios === true ||
+            contexto === 'servicios' ||
+            contexto === 'ambos' ||
+            item?.auto_calcular_servicios === true ||
+            Number(item?.cantidad_por_pax_servicios || 0) > 0 ||
+            Number(item?.cantidad_base_servicios || 0) > 0;
+    }
+
+    function obtenerCatalogoServiciosDesdeLogisticsMaterials() {
+        const catalogo = recorrerCatalogoLogistica(window.materialLogistica?.catalogoCompleto || []);
+        return catalogo
+            .filter(item => {
+                if (!item || item.parent_id) return false;
+                if (!['bebidas', 'menaje', 'extras', 'material'].includes(String(item.tipo || ''))) return false;
+                return esMaterialDeServicios(item);
+            })
+            .map(item => {
+                const unidadServicio = item.unidad_comanda_servicio || item.unidad_comanda || item.unidad || 'ud';
+                const cantidadPorPax = item.cantidad_por_pax_servicios ?? item.cantidad_por_pax;
+                const cantidadBase = item.cantidad_base_servicios ?? item.cantidad_base;
+                const redondeo = item.redondeo_servicios ?? item.redondeo_a;
+                const autoCalcular = item.auto_calcular_servicios ?? item.auto_calcular;
+                const conversionServicio = item.conversion_servicios ||
+                    item.conversion_a_stock ||
+                    item.contenido_por_unidad ||
+                    1;
+
+                return {
+                    ...item,
+                    id: item.id,
+                    item_id: item.id,
+                    tipo: normalizarTipoLogisticaUnificada(item.tipo),
+                    unidad: unidadServicio,
+                    unidad_comanda: unidadServicio,
+                    unidad_inventario: item.unidad_inventario || unidadServicio || 'ud',
+                    presentacion: item.presentacion_servicio || item.presentacion || '',
+                    contenido_por_unidad: item.contenido_por_unidad || null,
+                    cantidad_por_pax: Number(cantidadPorPax || 0),
+                    cantidad_base: Number(cantidadBase || 0),
+                    redondeo_a: Number(redondeo || 1),
+                    auto_calcular: !!autoCalcular,
+                    stock_total: item.stock_total || 0,
+                    source_table: 'logistics_materials',
+                    conversion_a_stock: Number(conversionServicio || 1),
+                    cantidad: 0,
+                    checked: false,
+                    tiene_subitems: false,
+                    subitems: [],
+                    subitems_selected: []
+                };
+            })
+            .sort((a, b) => Number(a.orden_servicios || a.orden || 0) - Number(b.orden_servicios || b.orden || 0));
     }
 
     function obtenerPaxLogistica() {
@@ -295,7 +368,32 @@
     function esKitCafeLoza(item) {
         const nombre = normalizarTextoMaterial(item?.nombre);
         return String(item?.id) === MATERIAL_DESAYUNOS_IDS.kitCafeLoza ||
-            (nombre.includes('kit') && nombre.includes('loza') && nombre.includes('cafe'));
+            (nombre.includes('kit') && (nombre.includes('loza') || nombre.includes('vajilla')) && nombre.includes('cafe'));
+    }
+
+    function esVasoDesechableZumo(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre);
+        return String(item?.id) === MATERIAL_DESAYUNOS_IDS.vasosZumo ||
+            (nombre.includes('vaso') && nombre.includes('desechable') && nombre.includes('zumo'));
+    }
+
+    function esServilleta(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre);
+        return String(item?.id) === MATERIAL_DESAYUNOS_IDS.servilletas ||
+            nombre.includes('servilleta');
+    }
+
+    function esCopasVino(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre);
+        return nombre.includes('copa') && nombre.includes('vino');
+    }
+
+    function esMaterialIncluidoMenu(item, menuTipo, esLoza, incluidosIds) {
+        if (incluidosIds.includes(item.id)) return true;
+        if (menuTipo !== 'desayunos') return false;
+        if (esServilleta(item)) return true;
+        if (esLoza) return esKitCafeLoza(item) || esCopasVino(item);
+        return esKitCafeDesechable(item) || esVasoDesechableZumo(item);
     }
 
     function obtenerIncluidosPorMenu(menuTipo, esLoza) {
@@ -353,7 +451,7 @@
                         return true;
                     })
                     .map(item => {
-                        const incluido = incluidosIds.includes(item.id);
+                        const incluido = esMaterialIncluidoMenu(item, menuTipo, esLoza, incluidosIds);
                         const asociado = materialIds.has(item.id);
                         const cantidadServicio = catalogoServicios ? calcularCantidadServicio(item, pax) : 0;
                         const checkedServicio = catalogoServicios ? cantidadServicio > 0 : false;
@@ -896,18 +994,12 @@
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
         if (!item) return;
         item.checked = checked;
-        if (checked && tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
-            const pax = parseInt(document.getElementById('pax')?.value || 0);
-            if (pax > 0) {
-                item.cantidad = pax;
-                const label = document.querySelector(
-                    `#materialLogisticaInline_${tipo} input[onchange*="${itemId}"]`
-                )?.closest('label');
-                if (label) {
-                    const cantInput = label.querySelector('.dc-material-cantidad, input[type="number"]');
-                    if (cantInput) cantInput.value = pax;
-                }
-            }
+        if (!checked) {
+            item.cantidad = 0;
+            return;
+        }
+        if (!item.cantidad || item.cantidad === 0) {
+            item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
         }
     };
 
@@ -915,9 +1007,10 @@
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
         if (!item) return;
         item.checked = !item.checked;
-        if (item.checked && tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
-            const pax = parseInt(document.getElementById('pax')?.value || 0);
-            if (pax > 0) item.cantidad = pax;
+        if (!item.checked) {
+            item.cantidad = 0;
+        } else if (!item.cantidad || item.cantidad === 0) {
+            item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
         }
         const cId = containerId || 'materialLogisticaInline';
         renderizarMaterial(cId);
@@ -1044,7 +1137,8 @@
     window.updateMaterialCantidad = function(tipo, itemId, cantidad, containerId) {
         const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (!item) return;
-        item.cantidad = parseCantidadMaterial(cantidad);
+        const valor = parseCantidadMaterial(cantidad);
+        item.cantidad = valor > 0 ? valor : 0;
         item.checked = item.cantidad > 0;
         if (containerId) renderizarMaterial(containerId);
     };

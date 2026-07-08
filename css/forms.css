@@ -1464,9 +1464,9 @@ textarea.dc-input {
 */
 .dc-log-grid {
     display: grid;
-    grid-template-columns: 1fr 120px 110px 120px;
+    grid-template-columns: 1fr 120px 120px 120px;
     grid-template-areas:
-        "contacto   telefono   telefono   hora-entrega"
+        "contacto   telefono   montaje    hora-entrega"
         "calle      numero     cp         hora-evento";
     gap: 6px 10px;
     padding: 10px 12px 12px;
@@ -1475,6 +1475,7 @@ textarea.dc-input {
 
 .dc-log-contacto     { grid-area: contacto; }
 .dc-log-telefono     { grid-area: telefono; }
+.dc-log-montaje      { grid-area: montaje; }
 .dc-log-hora-entrega { grid-area: hora-entrega; }
 .dc-log-calle        { grid-area: calle; }
 .dc-log-numero       { grid-area: numero; }
@@ -1486,10 +1487,10 @@ textarea.dc-input {
         grid-template-columns: 1fr 1fr;
         grid-template-areas:
             "contacto    contacto"
-            "telefono    hora-entrega"
+            "telefono    montaje"
+            "hora-entrega hora-evento"
             "calle       calle"
-            "numero      cp"
-            "hora-evento hora-evento";
+            "numero      cp";
     }
 }
 
@@ -4744,7 +4745,8 @@ h3 {
   gap: 16px;
 }
 
-#logisticaPage .dc-page-content {
+#logisticaPage .dc-page-content,
+#cocinaPage .dc-page-content {
   max-width: 1180px;
   margin: 0 auto;
 }
@@ -5935,6 +5937,7 @@ h3 {
 
 /* Ajuste corporativo para la seccion de Logistica */
 #logisticaPage .dc-page-header h1,
+#cocinaPage .dc-page-header h1,
 .logistics-prep-header h2,
 .logistics-article-modal h2 {
   font-family: var(--font-title);
@@ -5943,9 +5946,81 @@ h3 {
 }
 
 #logisticaPage .dc-page-header p,
+#cocinaPage .dc-page-header p,
 .logistics-prep-header p {
   font-family: var(--font-body);
   color: var(--dc-muted);
+}
+
+#cocinaPage .logistics-dashboard {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+#cocinaPage .logistics-tab-panel {
+  gap: 12px;
+}
+
+.kitchen-event-card {
+  cursor: pointer;
+}
+
+.kitchen-event-card .logistics-event-controls {
+  grid-template-columns: minmax(180px, 1fr) 160px 130px;
+}
+
+.kitchen-prep-modal {
+  width: min(1040px, calc(100vw - 32px));
+  padding: 24px 26px;
+}
+
+.kitchen-prep-progress {
+  margin: 12px 0 16px;
+}
+
+.kitchen-prep-group {
+  padding: 14px;
+  border: 1px solid var(--dc-border);
+  border-radius: 10px;
+  background: var(--dc-surface);
+  box-shadow: var(--dc-shadow);
+}
+
+.kitchen-prep-group + .kitchen-prep-group {
+  margin-top: 12px;
+}
+
+.kitchen-prep-subgroup {
+  display: grid;
+  gap: 8px;
+}
+
+.kitchen-prep-subgroup + .kitchen-prep-subgroup {
+  margin-top: 12px;
+}
+
+.kitchen-prep-subgroup > strong {
+  font-family: var(--font-title);
+  font-size: .78rem;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+  color: var(--dc-negro);
+}
+
+.kitchen-prep-subgroup .logistics-prep-list {
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 8px;
+}
+
+.kitchen-prep-item {
+  min-height: 54px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.kitchen-prep-item .logistics-status-pill {
+  min-width: 78px;
 }
 
 .logistics-kpi-card,
@@ -6127,8 +6202,10 @@ h3 {
   .logistics-kpi-grid,
   .logistics-event-meta,
   .logistics-event-controls,
+  .kitchen-event-card .logistics-event-controls,
   .logistics-inventory-cards,
-  .logistics-prep-list {
+  .logistics-prep-list,
+  .kitchen-prep-subgroup .logistics-prep-list {
     grid-template-columns: 1fr;
   }
 

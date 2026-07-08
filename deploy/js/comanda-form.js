@@ -11,6 +11,19 @@ if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
 function asegurarLogisticaInlineVisible() {
     const logisticaSection = document.getElementById('logisticaInlineSection');
     const notasSection = document.getElementById('logisticaInlineNotasSection');
+    const materialInline = document.getElementById('materialLogisticaInline');
+    const categoriaId = Number(document.getElementById('categoria')?.value || 0);
+
+    if (categoriaId === 3 || window.serviciosMode) {
+        if (logisticaSection) logisticaSection.style.display = 'none';
+        if (notasSection) notasSection.style.display = 'none';
+        if (materialInline) {
+            materialInline.style.display = 'none';
+            materialInline.innerHTML = '';
+        }
+        return;
+    }
+
     if (logisticaSection) logisticaSection.style.display = 'block';
     if (notasSection) notasSection.style.display = 'block';
 }
@@ -223,6 +236,26 @@ async function cargarMenus() {
     const categoriaId = document.getElementById('categoria').value;
     const container = document.getElementById('menusContainer');
     container.innerHTML = '';
+    const esCategoriaServicios = String(categoriaId) === '3';
+    const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
+    const tipoMenaje = document.getElementById('tipo_menaje');
+    const comandaFormEl = document.getElementById('comandaForm');
+    const logisticaInline = document.getElementById('logisticaInlineSection');
+    const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
+    const materialInline = document.getElementById('materialLogisticaInline');
+
+    window.serviciosMode = esCategoriaServicios;
+    if (serviciosGroup) serviciosGroup.style.display = esCategoriaServicios ? '' : 'none';
+    if (tipoMenajeGroup) tipoMenajeGroup.style.display = esCategoriaServicios ? 'none' : '';
+    if (tipoMenaje && esCategoriaServicios) tipoMenaje.value = 'loza';
+    if (comandaFormEl) comandaFormEl.classList.toggle('servicios-mode', esCategoriaServicios);
+    if (logisticaInline) logisticaInline.style.display = esCategoriaServicios ? 'none' : '';
+    if (notasLogisticaInline) notasLogisticaInline.style.display = esCategoriaServicios ? 'none' : '';
+    if (materialInline && esCategoriaServicios) {
+        materialInline.style.display = 'none';
+        materialInline.innerHTML = '';
+    }
     
     document.getElementById('multiplicadorSection').style.display = 'none';
     document.getElementById('referenciasSection').style.display = 'none';
@@ -311,7 +344,7 @@ async function cargarMenus() {
         ];
     }
     
-    if (categoriaId == 3 && window.serviciosMode) {
+    if (categoriaId == 3) {
         const servicioTipo = document.getElementById('serviciosCategoria')?.value || '';
         if (!servicioTipo) {
             container.innerHTML = '';

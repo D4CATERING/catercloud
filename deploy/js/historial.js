@@ -102,11 +102,13 @@ function verDetalleComanda(codigo) {
     const historialPage = document.getElementById('historialPage');
     const detalleComanda = document.getElementById('detalleComanda');
     const expedientePedido = document.getElementById('expedientePedido');
+    const cocinaPage = document.getElementById('cocinaPage');
 
     if (dashboard) dashboard.style.display = 'none';
     if (comandaForm) comandaForm.style.display = 'none';
     if (historialPage) historialPage.style.display = 'none';
     if (expedientePedido) expedientePedido.style.display = 'none';
+    if (cocinaPage) cocinaPage.style.display = 'none';
     if (detalleComanda) detalleComanda.style.display = 'block';
 
     _renderDetalleComanda(comanda);
@@ -121,11 +123,13 @@ function verExpedientePedido(codigo) {
     const historialPage = document.getElementById('historialPage');
     const detalleComanda = document.getElementById('detalleComanda');
     const expedientePedido = document.getElementById('expedientePedido');
+    const cocinaPage = document.getElementById('cocinaPage');
 
     if (dashboard) dashboard.style.display = 'none';
     if (comandaForm) comandaForm.style.display = 'none';
     if (historialPage) historialPage.style.display = 'none';
     if (detalleComanda) detalleComanda.style.display = 'none';
+    if (cocinaPage) cocinaPage.style.display = 'none';
     if (expedientePedido) {
         expedientePedido.hidden = false;
         expedientePedido.style.display = 'block';
@@ -772,7 +776,7 @@ function _renderDetalleComanda(comanda) {
     const tipoMenaje = comanda.tipo_menaje;
 
     const labelMenaje = tipoMenaje === 'loza'
-        ? 'LOZA'
+        ? 'EMPLATADO GOURMET'
         : tipoMenaje === 'desechable'
             ? 'DESECHABLE'
             : (tipoMenaje ? String(tipoMenaje).toUpperCase() : '');
@@ -914,6 +918,7 @@ function _renderDetalleComanda(comanda) {
         const campos = [
             { label: 'Contacto', valor: logInline?.nombre_contacto },
             { label: 'Teléfono', valor: logInline?.telefono_contacto },
+            { label: 'Montaje', valor: logInline?.montaje },
             { label: 'Hora Entrega', valor: logInline?.hora_entrega },
             { label: 'Hora Evento', valor: logInline?.hora_evento },
             { label: 'Dirección', valor: logInline?.direccion },
@@ -933,6 +938,7 @@ function _renderDetalleComanda(comanda) {
                     ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Teléfono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
                     ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Dirección</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
                     ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cód. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
+                    ${li?.montaje ? `<td style="padding:1px 8px 2px; vertical-align:top; width:12%;"><div class="detalle-field-label">Montaje</div><div class="detalle-field-value">${li.montaje}</div></td>` : ''}
                     ${li?.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${li.hora_entrega}</div></td>` : ''}
                     ${li?.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${li.hora_evento}</div></td>` : ''}
                 </tr>
@@ -1134,13 +1140,14 @@ function _renderDetalleComandaLogistica(comanda) {
     const contEntrega = el('detalleDatosLogisticaContent');
     const li = comanda.logistica || {};
     if (secEntrega && contEntrega) {
-        const tieneDatos = li.nombre_contacto || li.telefono_contacto || li.direccion || li.codigo_postal || li.hora_entrega || li.hora_evento;
+        const tieneDatos = li.nombre_contacto || li.telefono_contacto || li.montaje || li.direccion || li.codigo_postal || li.hora_entrega || li.hora_evento;
         if (tieneDatos) {
             secEntrega.style.display = '';
             contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
                 <tr>
                     ${li.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value">${textoSeguro(li.nombre_contacto)}</div></td>` : ''}
                     ${li.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Telefono</div><div class="detalle-field-value">${textoSeguro(li.telefono_contacto)}</div></td>` : ''}
+                    ${li.montaje ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Montaje</div><div class="detalle-field-value">${textoSeguro(li.montaje)}</div></td>` : ''}
                     ${li.direccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Direccion</div><div class="detalle-field-value">${textoSeguro(li.direccion)}</div></td>` : ''}
                     ${li.codigo_postal ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Cod. Postal</div><div class="detalle-field-value">${textoSeguro(li.codigo_postal)}</div></td>` : ''}
                     ${li.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${textoSeguro(li.hora_entrega)}</div></td>` : ''}
@@ -1459,14 +1466,14 @@ async function _activarPrimerMenuEdicion(menu) {
         const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
         const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
         const serviciosCategoria = document.getElementById('serviciosCategoria');
-        if (categoriaGroup) categoriaGroup.style.display = 'none';
+        if (categoriaGroup) categoriaGroup.style.display = '';
         if (serviciosGroup) serviciosGroup.style.display = '';
         if (tipoMenajeGroup) tipoMenajeGroup.style.display = 'none';
         if (serviciosCategoria) serviciosCategoria.value = _inferirTipoServicioEdicion(menu);
         const title = document.getElementById('comandaFormTitle');
         const subtitle = document.getElementById('comandaFormSubtitle');
-        if (title) title.textContent = 'Servicios';
-        if (subtitle) subtitle.textContent = 'Selecciona el servicio y completa la comanda de cocina';
+        if (title) title.textContent = 'Editar Comanda';
+        if (subtitle) subtitle.textContent = 'Ajusta los datos del pedido de catering';
     }
 
     categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
@@ -1517,6 +1524,7 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
     _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
     _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
+    _rellenarCampoEdicion('log_inline_montaje', logistica.montaje || '');
     const direccionInline = typeof window.separarDireccionLogistica === 'function'
         ? window.separarDireccionLogistica(logistica.direccion || '')
         : { calle: logistica.direccion || '', numero: '' };
@@ -1692,6 +1700,7 @@ async function editarComandaLogistica() {
     const log = item.logistica || {};
     _rellenarCampoEdicion('log_nombre_contacto', log.nombre_contacto || '');
     _rellenarCampoEdicion('log_telefono_contacto', log.telefono_contacto || '');
+    _rellenarCampoEdicion('log_montaje', log.montaje || '');
     _rellenarCampoEdicion('log_hora_entrega', log.hora_entrega || '');
     _rellenarCampoEdicion('log_hora_evento', log.hora_evento || '');
     const direccionLogistica = typeof window.separarDireccionLogistica === 'function'
@@ -1701,6 +1710,9 @@ async function editarComandaLogistica() {
     _rellenarCampoEdicion('log_numero', log.numero || direccionLogistica.numero || '');
     _rellenarCampoEdicion('log_codigo_postal', log.codigo_postal || '');
     _rellenarCampoEdicion('log_page_notas', log.notas_logistica || '');
+    if (typeof window.actualizarSelectoresContactosCliente === 'function') {
+        await window.actualizarSelectoresContactosCliente(item.empresa || '');
+    }
 
     if (window.materialLogistica && item.material_logistica) {
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {

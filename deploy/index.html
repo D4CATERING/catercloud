@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="css/styles.css?v=20260615a">
     <link rel="stylesheet" href="css/dashboard.css?v=20260629c">
     <link rel="stylesheet" href="css/calendar.css?v=20260629a">
-    <link rel="stylesheet" href="css/forms.css?v=20260625i">
+    <link rel="stylesheet" href="css/forms.css?v=20260708a">
 
     <!-- Fuentes corporativas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,12 +35,19 @@
     <div class="dc-nav-item active" onclick="mostrarComandaCocina()" id="nav-comanda" data-requires-write>
       <span class="nav-icon">＋</span> Nueva Comanda
     </div>
-    <div class="dc-nav-item" onclick="mostrarServicios()" id="nav-servicios" data-requires-write>
-      <span class="nav-icon">◇</span> Servicios
-    </div>
     <div class="dc-nav-sep"></div>
     <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
       <span class="nav-icon">☰</span> Historial
+    </div>
+    <div class="dc-nav-item" onclick="mostrarCocina()" id="nav-cocina">
+      <span class="nav-icon nav-icon--kitchen" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M4 5h16"></path>
+          <path d="M6 5v11a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V5"></path>
+          <path d="M9 9h6"></path>
+          <path d="M9 13h6"></path>
+        </svg>
+      </span> Cocina
     </div>
     <div class="dc-nav-item" onclick="mostrarLogistica()" id="nav-logistica">
       <span class="nav-icon nav-icon--truck" aria-hidden="true">
@@ -165,7 +172,7 @@
                                 <option value="">Selecciona una categoría</option>
                                 <option value="1">Desayunos</option>
                                 <option value="2">Foodbox / Comida</option>
-                                <option value="3" hidden>Servicios</option>
+                                <option value="3">Servicios</option>
                                 <option value="4">Foodbox Lunch</option>
                                 <option value="5">Bandejas Preparadas</option>
                             </select>
@@ -186,7 +193,7 @@
                             <select id="tipo_menaje" onchange="actualizarTipoMenajeGlobal()">
                                 <option value="">Selecciona tipo</option>
                                 <option value="desechable">Menaje Desechable</option>
-                                <option value="loza">Menaje Loza (Emplatado Bonito)</option>
+                                <option value="loza">Emplatado Gourmet</option>
                             </select>
                         </div>
                     </div>
@@ -398,6 +405,12 @@
                             <label for="log_inline_telefono_contacto" class="dc-label required">Teléfono</label>
                             <input type="tel" id="log_inline_telefono_contacto" class="dc-input" placeholder="+34 600 000 000">
                             <span class="dc-field-error" id="log_inline_telefono_contacto_err"></span>
+                        </div>
+
+                        <div class="dc-field dc-log-montaje">
+                            <label for="log_inline_montaje" class="dc-label">Montaje</label>
+                            <input type="text" id="log_inline_montaje" class="dc-input" placeholder="Tipo de montaje">
+                            <span class="dc-field-error" id="log_inline_montaje_err"></span>
                         </div>
 
                         <div class="dc-field dc-log-hora-entrega">
@@ -632,6 +645,64 @@
     </div>
 
     <!-- Vista: Logística -->
+    <div id="cocinaPage" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">Volver</button>
+        <h1>Cocina</h1>
+        <p>Gestion de menus por comanda y estado de produccion</p>
+      </div>
+
+      <div class="dc-page-content">
+        <div class="logistics-dashboard kitchen-dashboard">
+          <div class="logistics-kpi-grid">
+            <article class="logistics-kpi-card logistics-kpi-card--pending">
+              <span class="logistics-kpi-icon">!</span>
+              <div>
+                <strong id="cocinaKpiPendientes">0</strong>
+                <span>Sin producir</span>
+              </div>
+            </article>
+
+            <article class="logistics-kpi-card logistics-kpi-card--progress">
+              <span class="logistics-kpi-icon">▤</span>
+              <div>
+                <strong id="cocinaKpiProceso">0</strong>
+                <span>En produccion</span>
+              </div>
+            </article>
+
+            <article class="logistics-kpi-card logistics-kpi-card--ready">
+              <span class="logistics-kpi-icon">□</span>
+              <div>
+                <strong id="cocinaKpiListas">0</strong>
+                <span>Listas para salida</span>
+              </div>
+            </article>
+          </div>
+
+          <section id="cocinaEventosPanel" class="logistics-tab-panel">
+            <div class="logistics-events-toolbar">
+              <label>
+                Filtrar por dia
+                <input type="date" id="cocinaFiltroFecha" onchange="renderizarComandasCocina()">
+              </label>
+              <button type="button" onclick="filtrarCocinaHoy()">Hoy</button>
+              <button type="button" onclick="limpiarFiltroFechaCocina()">Todos</button>
+            </div>
+
+            <div id="cocinaComandasList" class="logistics-events-list"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div id="cocinaProduccionModal" class="modal">
+      <div class="modal-content logistics-prep-modal kitchen-prep-modal">
+        <button type="button" class="logistics-prep-close" onclick="cerrarProduccionCocina()">×</button>
+        <div id="cocinaProduccionContent"></div>
+      </div>
+    </div>
+
     <div id="logisticaPage" style="display: none;">
       <div class="dc-page-header">
         <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
@@ -1054,6 +1125,12 @@
                             <span class="dc-field-error" id="log_telefono_contacto_err"></span>
                         </div>
 
+                        <div class="dc-field dc-log-montaje">
+                            <label for="log_montaje" class="dc-label">Montaje</label>
+                            <input type="text" id="log_montaje" class="dc-input" placeholder="Tipo de montaje">
+                            <span class="dc-field-error" id="log_montaje_err"></span>
+                        </div>
+
                         <div class="dc-field dc-log-hora-entrega">
                             <label for="log_hora_entrega" class="dc-label required">Hora de Entrega</label>
                             <input type="time" id="log_hora_entrega" class="dc-input">
@@ -1145,9 +1222,9 @@
 
     <!-- Scripts: Aplicación -->
     <script src="js/storage.js"></script>
-    <script src="js/clients.js?v=20260616a"></script>
+    <script src="js/clients.js?v=20260708b"></script>
     <script src="js/calendar.js?v=20260629a"></script>
-    <script src="js/dashboard.js?v=20260625b"></script>
+    <script src="js/dashboard.js?v=20260707c"></script>
     <script src="js/dom-utils.js"></script>
     <script src="js/desayunos.js?v=20260622b"></script>
     <script src="js/referencias.js?v=20260615d"></script>
@@ -1155,11 +1232,11 @@
     <script src="js/multiplicadores.js"></script>
     <script src="js/bandejas-preparadas.js"></script>
     <script src="js/foodbox-lunch.js"></script>
-    <script src="js/comanda-form.js?v=20260625a"></script>
-    <script src="js/historial.js?v=20260625c"></script>
-    <script src="js/main.js?v=20260625a"></script>
+    <script src="js/comanda-form.js?v=20260703a"></script>
+    <script src="js/historial.js?v=20260708a"></script>
+    <script src="js/main.js?v=20260708a"></script>
     <script src="js/preferencias.js"></script>
-    <script src="js/logistics.js?v=20260624b"></script>
+    <script src="js/logistics.js?v=20260707b"></script>
     <script src="js/generar-comandas.js?v=20260622b"></script>
 
     <!-- Scripts: Sidebar y navegación -->
@@ -1200,6 +1277,8 @@
         if (logisticaForm) logisticaForm.style.display = 'none';
         const logisticaPage = document.getElementById('logisticaPage');
         if (logisticaPage) logisticaPage.style.display = 'none';
+        const cocinaPage = document.getElementById('cocinaPage');
+        if (cocinaPage) cocinaPage.style.display = 'none';
         document.getElementById('historialPage').style.display = 'none';
         document.getElementById('expedientePedido').style.display = 'none';
         document.getElementById('detalleComanda').style.display = 'none';

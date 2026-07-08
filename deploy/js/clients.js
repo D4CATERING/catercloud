@@ -8,6 +8,99 @@
 
     // ID del cliente seleccionado actualmente
     window._clienteSeleccionadoId = null;
+    window._clienteContactosEmpresa = [];
+
+    function _getEmpresaActualCliente() {
+        return (document.getElementById('empresa')?.value || document.getElementById('log_empresa')?.textContent || '').trim();
+    }
+
+    function _crearSelectorContactos(prefix) {
+        const input = document.getElementById(`${prefix}_nombre_contacto`);
+        if (!input || document.getElementById(`${prefix}_contacto_selector`)) return;
+
+        const selector = document.createElement('select');
+        selector.id = `${prefix}_contacto_selector`;
+        selector.className = 'dc-input cliente-contacto-selector';
+        selector.innerHTML = '<option value="">Selecciona un contacto</option>';
+        selector.addEventListener('change', () => {
+            const contacto = (window._clienteContactosEmpresa || [])
+                .find(c => String(c.id) === String(selector.value));
+            if (contacto) {
+                _aplicarContactoLogistica(prefix, contacto);
+            } else {
+                _setVal(`${prefix}_nombre_contacto`, '');
+                _setVal(`${prefix}_telefono_contacto`, '');
+            }
+        });
+
+        input.style.display = 'none';
+        input.parentElement?.insertBefore(selector, input);
+    }
+
+    function _crearSelectoresContactos() {
+        _crearSelectorContactos('log_inline');
+        _crearSelectorContactos('log');
+    }
+
+    function _aplicarContactoLogistica(prefix, contacto) {
+        if (!contacto) return;
+        window._clienteSeleccionadoId = contacto.id || window._clienteSeleccionadoId;
+        _setVal(`${prefix}_nombre_contacto`, contacto.contacto);
+        _setVal(`${prefix}_telefono_contacto`, contacto.telefono);
+        _setDireccionLogistica(prefix, contacto.direccion);
+        _setVal(`${prefix}_codigo_postal`, contacto.codigo_postal);
+
+        const selector = document.getElementById(`${prefix}_contacto_selector`);
+        if (selector && contacto.id) selector.value = contacto.id;
+    }
+
+    function _pintarSelectorContactos(prefix, contactos, selectedId = null) {
+        const selector = document.getElementById(`${prefix}_contacto_selector`);
+        const input = document.getElementById(`${prefix}_nombre_contacto`);
+        if (!selector) return;
+
+        selector.innerHTML = '<option value="">Selecciona un contacto</option>';
+        (contactos || []).forEach(contacto => {
+            const option = document.createElement('option');
+            option.value = contacto.id;
+            option.textContent = contacto.contacto || 'Sin nombre';
+            selector.appendChild(option);
+        });
+        selector.value = selectedId && contactos.some(c => String(c.id) === String(selectedId)) ? selectedId : '';
+        selector.disabled = !contactos.length;
+        selector.style.display = contactos.length ? '' : 'none';
+        if (input) input.style.display = 'none';
+    }
+
+    window.actualizarSelectoresContactosCliente = async function (empresa = '', selectedId = null) {
+        if (!window.supabaseClient) return;
+
+        _crearSelectoresContactos();
+        const empresaBase = (empresa || _getEmpresaActualCliente()).trim();
+        if (!empresaBase) {
+            window._clienteContactosEmpresa = [];
+            _pintarSelectorContactos('log_inline', [], null);
+            _pintarSelectorContactos('log', [], null);
+            return;
+        }
+
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('clients')
+                .select('id, empresa, contacto, telefono, direccion, codigo_postal')
+                .ilike('empresa', empresaBase)
+                .eq('activo', true)
+                .order('contacto');
+            if (error) throw error;
+
+            window._clienteContactosEmpresa = data || [];
+            const idSeleccionado = selectedId || window._clienteSeleccionadoId;
+            _pintarSelectorContactos('log_inline', window._clienteContactosEmpresa, idSeleccionado);
+            _pintarSelectorContactos('log', window._clienteContactosEmpresa, idSeleccionado);
+        } catch (err) {
+            console.error('Error cargando contactos de la empresa:', err);
+        }
+    };
 
     // ── BUSCADOR DE CONTACTO ──────────────────────────────────
     window.inicializarBuscadorContacto = function () {
@@ -228,6 +321,7 @@
                 document.getElementById('log_inline_nombre_contacto').value = nombre;
                 if (telefono) document.getElementById('log_inline_telefono_contacto').value = telefono;
                 window._clienteSeleccionadoId = nuevoCliente.id;
+                window.actualizarSelectoresContactosCliente(nuevoCliente.empresa, nuevoCliente.id);
 
                 modal.remove();
             } catch (err) {
@@ -352,6 +446,7 @@
         _setVal('log_telefono_contacto', cliente.telefono);
         _setDireccionLogistica('log', cliente.direccion);
         _setVal('log_codigo_postal', cliente.codigo_postal);
+        window.actualizarSelectoresContactosCliente(cliente.empresa, cliente.id);
 
         // Mostrar badge de cliente vinculado
         _mostrarBadgeCliente(cliente);
@@ -359,11 +454,15 @@
 
     function _setVal(id, valor) {
         const el = document.getElementById(id);
-        if (el && valor) el.value = valor;
+        if (el) el.value = valor || '';
     }
 
     function _setDireccionLogistica(prefix, direccion) {
-        if (!direccion) return;
+        if (!direccion) {
+            _setVal(`${prefix}_calle`, '');
+            _setVal(`${prefix}_numero`, '');
+            return;
+        }
         const partes = typeof window.separarDireccionLogistica === 'function'
             ? window.separarDireccionLogistica(direccion)
             : { calle: direccion, numero: '' };
@@ -592,6 +691,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         inicializarBuscadorClientes();
         inicializarBuscadorContacto();
+        _crearSelectoresContactos();
     });
 
 })();

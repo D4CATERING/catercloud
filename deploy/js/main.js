@@ -154,6 +154,7 @@ function limpiarCamposLogisticaInline() {
     const ids = [
         'log_inline_hora_entrega', 'log_inline_hora_evento',
         'log_inline_nombre_contacto', 'log_inline_telefono_contacto',
+        'log_inline_montaje',
         'log_inline_calle', 'log_inline_numero', 'log_inline_codigo_postal', 'log_inline_notas'
     ];
     ids.forEach(id => {
@@ -289,6 +290,7 @@ function obtenerDatosLogisticaInline() {
         hora_evento:       document.getElementById('log_inline_hora_evento')?.value || '',
         nombre_contacto:   document.getElementById('log_inline_nombre_contacto')?.value.trim() || '',
         telefono_contacto: document.getElementById('log_inline_telefono_contacto')?.value.trim() || '',
+        montaje:           document.getElementById('log_inline_montaje')?.value.trim() || '',
         calle,
         numero,
         direccion:         componerDireccionLogistica(calle, numero),
@@ -1118,7 +1120,7 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
     };
     const setValue = (id, value) => {
         const el = document.getElementById(id);
-        if (el && value) el.value = value;
+        if (el) el.value = value || '';
     };
 
     setText('log_codigo_cocina', codigoCocina);
@@ -1130,12 +1132,16 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
 
     setValue('log_nombre_contacto', document.getElementById('log_inline_nombre_contacto')?.value || '');
     setValue('log_telefono_contacto', document.getElementById('log_inline_telefono_contacto')?.value || '');
+    setValue('log_montaje', document.getElementById('log_inline_montaje')?.value || '');
     setValue('log_calle', document.getElementById('log_inline_calle')?.value || '');
     setValue('log_numero', document.getElementById('log_inline_numero')?.value || '');
     setValue('log_codigo_postal', document.getElementById('log_inline_codigo_postal')?.value || '');
     setValue('log_hora_entrega', document.getElementById('log_inline_hora_entrega')?.value || '');
     setValue('log_hora_evento', document.getElementById('log_inline_hora_evento')?.value || '');
     setValue('log_page_notas', document.getElementById('log_inline_notas')?.value || '');
+    if (typeof window.actualizarSelectoresContactosCliente === 'function') {
+        await window.actualizarSelectoresContactosCliente(datosBase.empresa || document.getElementById('empresa')?.value || '');
+    }
 
     const materialPage = document.getElementById('materialLogisticaPage');
     if (materialPage) materialPage.style.display = 'block';
@@ -1146,7 +1152,7 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
         }
     }
 
-    if (typeof setNavActive === 'function') setNavActive('nav-servicios');
+    if (typeof setNavActive === 'function') setNavActive('nav-comanda');
 }
 
 function volverDesdeCancelLogistica() {
@@ -1227,6 +1233,7 @@ function guardarComandaLogistica() {
         logistica: {
             nombre_contacto: document.getElementById('log_nombre_contacto')?.value.trim() || '',
             telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',
+            montaje: document.getElementById('log_montaje')?.value.trim() || '',
             hora_entrega: document.getElementById('log_hora_entrega')?.value || '',
             hora_evento: document.getElementById('log_hora_evento')?.value || '',
             calle,

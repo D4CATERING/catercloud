@@ -1,5 +1,18 @@
 // ========== NAVEGACIÓN PRINCIPAL ==========
 
+function getFechaLocalHoyDashboard() {
+    const hoy = new Date();
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dd = String(hoy.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function aplicarFiltroHoySiExiste(inputId) {
+    const input = document.getElementById(inputId);
+    if (input) input.value = getFechaLocalHoyDashboard();
+}
+
 /**
  * Muestra el formulario de comanda de cocina
  */
@@ -28,6 +41,8 @@ function mostrarComandaCocina() {
     if (logisticaForm) logisticaForm.style.display = 'none';
     const logisticaPage = document.getElementById('logisticaPage');
     if (logisticaPage) logisticaPage.style.display = 'none';
+    const cocinaPage = document.getElementById('cocinaPage');
+    if (cocinaPage) cocinaPage.style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'block';
     const historialPage = document.getElementById('historialPage');
@@ -94,8 +109,7 @@ function mostrarComandaCocina() {
 }
 
 /**
- * Muestra el apartado independiente de Servicios.
- * Reutiliza el formulario de cocina, pero carga directamente los menus de servicios.
+ * Abre el formulario principal con la categoria Servicios seleccionada.
  */
 async function mostrarServicios() {
     if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear servicios.')) {
@@ -119,9 +133,9 @@ async function mostrarServicios() {
     const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
     const tipoMenaje = document.getElementById('tipo_menaje');
 
-    if (title) title.textContent = 'Servicios';
-    if (subtitle) subtitle.textContent = 'Selecciona el servicio y completa la comanda de cocina';
-    if (categoriaGroup) categoriaGroup.style.display = 'none';
+    if (title) title.textContent = 'Nueva Comanda';
+    if (subtitle) subtitle.textContent = 'Completa los datos del pedido de catering';
+    if (categoriaGroup) categoriaGroup.style.display = '';
     if (serviciosGroup) serviciosGroup.style.display = '';
     if (tipoMenajeGroup) tipoMenajeGroup.style.display = 'none';
     if (serviciosCategoria) serviciosCategoria.value = '';
@@ -147,7 +161,7 @@ async function mostrarServicios() {
     if (typeof cargarMenus === 'function') {
         await cargarMenus();
     }
-    if (typeof setNavActive === 'function') setNavActive('nav-servicios');
+    if (typeof setNavActive === 'function') setNavActive('nav-comanda');
 }
 
 /**
@@ -167,14 +181,597 @@ function mostrarLogistica() {
 
     const logisticaPage = document.getElementById('logisticaPage');
     if (logisticaPage) logisticaPage.style.display = 'block';
+    const cocinaPage = document.getElementById('cocinaPage');
+    if (cocinaPage) cocinaPage.style.display = 'none';
 
     if (typeof setNavActive === 'function') setNavActive('nav-logistica');
+    aplicarFiltroHoySiExiste('logisticaFiltroFecha');
     cargarModuloLogistica();
 }
 
 async function cargarModuloLogistica() {
     renderizarComandasLogistica();
     await renderizarInventarioLogistica();
+}
+
+function mostrarCocina() {
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('comandaForm').style.display = 'none';
+    const logisticaForm = document.getElementById('logisticaForm');
+    if (logisticaForm) logisticaForm.style.display = 'none';
+    const logisticaPage = document.getElementById('logisticaPage');
+    if (logisticaPage) logisticaPage.style.display = 'none';
+    document.getElementById('historialPage').style.display = 'none';
+    const expedientePedido = document.getElementById('expedientePedido');
+    if (expedientePedido) expedientePedido.style.display = 'none';
+    document.getElementById('detalleComanda').style.display = 'none';
+    const clientesPanel = document.getElementById('clientesPanel');
+    if (clientesPanel) clientesPanel.style.display = 'none';
+
+    const cocinaPage = document.getElementById('cocinaPage');
+    if (cocinaPage) cocinaPage.style.display = 'block';
+
+    if (typeof setNavActive === 'function') setNavActive('nav-cocina');
+    aplicarFiltroHoySiExiste('cocinaFiltroFecha');
+    renderizarComandasCocina();
+}
+
+function getHistorialCocinaModulo() {
+    return JSON.parse(localStorage.getItem('historialComandas') || '[]');
+}
+
+function guardarHistorialCocinaModulo(historial) {
+    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+}
+
+function getFechaCocinaItem(item) {
+    return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+}
+
+function normalizarEstadoCocina(estado) {
+    if (estado === 'proceso') return 'en_produccion';
+    if (estado === 'completada' || estado === 'listo') return 'listo';
+    if (estado === 'creada' || estado === 'sin_preparar') return 'sin_producir';
+    return estado || 'sin_producir';
+}
+
+function getLabelEstadoCocina(estado) {
+    const labels = {
+        sin_producir: 'Sin producir',
+        en_produccion: 'En produccion',
+        listo: 'Listo para salida'
+    };
+    return labels[normalizarEstadoCocina(estado)] || 'Sin producir';
+}
+
+function getClaseEstadoCocina(estado) {
+    const normalizado = normalizarEstadoCocina(estado);
+    if (normalizado === 'en_produccion') return 'en_preparacion';
+    if (normalizado === 'listo') return 'listo';
+    return 'sin_preparar';
+}
+
+function getMenusCocinaComanda(item) {
+    const menus = [];
+    const principal = item.menu_principal || item.menu || null;
+    if (principal && typeof principal === 'object') {
+        menus.push({
+            nombre: principal.nombre || item.menu_nombre || 'Menu',
+            pax: principal.pax || item.pax || 0
+        });
+    } else if (principal || item.menu_nombre || item.menu_categoria_nombre) {
+        menus.push({
+            nombre: principal || item.menu_nombre || item.menu_categoria_nombre || 'Menu',
+            pax: item.pax || 0
+        });
+    }
+
+    (item.menus_adicionales || []).forEach(menu => {
+        menus.push({
+            nombre: menu.nombre || menu.menu_principal?.nombre || 'Menu adicional',
+            pax: menu.pax || menu.menu_principal?.pax || 0
+        });
+    });
+
+    return menus.filter(menu => menu.nombre);
+}
+
+function distribuirCantidadCocina(total, partes) {
+    const cantidadTotal = Math.max(0, Number(total) || 0);
+    const cantidadPartes = Math.max(1, Number(partes) || 1);
+    const base = Math.floor(cantidadTotal / cantidadPartes);
+    const resto = cantidadTotal % cantidadPartes;
+    return Array.from({ length: cantidadPartes }, (_, index) => base + (index < resto ? 1 : 0));
+}
+
+function normalizarMenuProduccion(menu, comanda, esPrincipal) {
+    const item = menu && typeof menu === 'object' ? { ...menu } : {};
+    item.nombre = item.nombre || item.menu_principal?.nombre || (esPrincipal ? comanda.menu_nombre : '') || comanda.menu_categoria_nombre || 'Menu';
+    item.pax = Number(item.pax || item.menu_principal?.pax || (esPrincipal ? comanda.pax : 0) || 0);
+    item.categoriaId = item.categoriaId || item.categoria_id || item._cat || (esPrincipal ? (comanda.categoria_id || comanda.categoriaId || comanda.categoria) : null);
+    item.referencias_desayuno = item.referencias_desayuno || (esPrincipal ? comanda.referencias_desayuno : null);
+    item.referencias = item.referencias || (esPrincipal ? comanda.referencias : null);
+    item.foodbox_lunch = item.foodbox_lunch || (esPrincipal ? comanda.foodbox_lunch : null);
+    item.bandejas = item.bandejas || (esPrincipal ? comanda.bandejas : null);
+    item.multiplicadores = item.multiplicadores || (esPrincipal ? comanda.multiplicadores : null);
+    return item;
+}
+
+function getMenusProduccionCocina(comanda) {
+    const menus = [];
+    if (comanda.menu_principal) {
+        menus.push(normalizarMenuProduccion(comanda.menu_principal, comanda, true));
+    } else if (comanda.menu || comanda.menu_nombre || comanda.menu_categoria_nombre) {
+        menus.push(normalizarMenuProduccion({}, comanda, true));
+    }
+
+    (comanda.menus_adicionales || []).forEach(menu => {
+        menus.push(normalizarMenuProduccion(menu, comanda, false));
+    });
+
+    return menus.filter(menu => menu.nombre);
+}
+
+function crearItemProduccion(menuIndex, grupo, nombre, cantidad, unidad, orden) {
+    const limpio = String(nombre || '').trim();
+    if (!limpio) return null;
+    const qty = Number(cantidad || 0);
+    const baseKey = `${menuIndex}:${grupo}:${orden}:${limpio}`.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+    return {
+        key: baseKey || `${menuIndex}-${grupo}-${orden}`,
+        grupo,
+        nombre: limpio,
+        cantidad: qty,
+        unidad: unidad || 'uds'
+    };
+}
+
+function agregarItemProduccion(lista, menuIndex, grupo, nombre, cantidad, unidad) {
+    const item = crearItemProduccion(menuIndex, grupo, nombre, cantidad, unidad, lista.length + 1);
+    if (item && (item.cantidad > 0 || cantidad === '' || cantidad === null || cantidad === undefined)) {
+        lista.push(item);
+    }
+}
+
+function getItemsProduccionMenu(menu, menuIndex) {
+    const items = [];
+    const pax = Number(menu.pax || 0);
+
+    if (menu.referencias_desayuno && Object.keys(menu.referencias_desayuno).length) {
+        const refs = Object.entries(menu.referencias_desayuno)
+            .map(([key, ref], index) => ({ key, ref, index }))
+            .filter(item => item.ref && item.ref.cantidad > 0)
+            .map(item => ({ ...item.ref, _refKey: item.key }));
+
+        refs.filter(ref => ref.tipo !== 'termo' && ref.tipo !== 'leche_especial').forEach(ref => {
+            const refKey = ref.id || ref._refKey || '';
+
+            if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
+                const cantidades = distribuirCantidadCocina(ref.cantidad || pax, ref.opcionesSeleccionadas.length);
+                ref.opcionesSeleccionadas.forEach((opcion, index) => {
+                    agregarItemProduccion(items, menuIndex, 'Bolleria', opcion, cantidades[index], ref.unidad || 'uds');
+                });
+                return;
+            }
+
+            if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
+                const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                const cantidades = distribuirCantidadCocina(ref.cantidad || pax, sandwiches.length);
+                sandwiches.forEach((s, index) => {
+                    agregarItemProduccion(items, menuIndex, 'Mini sandwich', s.sabor, cantidades[index], ref.unidad || 'uds');
+                });
+                return;
+            }
+
+            if (ref.tipo === 'sandwich_o_pulguita' && ref.modo !== 'pulguita' && ref.sandwiches?.length) {
+                const sandwiches = ref.sandwiches.filter(s => s.sabor);
+                const cantidades = distribuirCantidadCocina(ref.cantidad || pax, sandwiches.length);
+                sandwiches.forEach((s, index) => {
+                    agregarItemProduccion(items, menuIndex, 'Mini sandwich', s.sabor, cantidades[index], ref.unidad || 'uds');
+                });
+                return;
+            }
+
+            if (ref.tipo === 'sandwich' && ref.sabor) {
+                agregarItemProduccion(items, menuIndex, 'Sandwich', ref.sabor, ref.cantidad, ref.unidad || 'uds');
+                return;
+            }
+
+            if (ref.tipo === 'sandwich_fijo') {
+                agregarItemProduccion(items, menuIndex, 'Sandwich', ref.sabor || ref.nombre, ref.cantidad, ref.unidad || 'uds');
+                return;
+            }
+
+            agregarItemProduccion(items, menuIndex, 'Menu', ref.sabor || ref.nombre, ref.cantidad, ref.unidad || 'uds');
+        });
+    }
+
+    if (menu.foodbox_lunch) {
+        const fl = menu.foodbox_lunch;
+        (fl.ensaladas || fl.selecciones?.ensaladas || []).forEach(e => agregarItemProduccion(items, menuIndex, 'Ensaladas', e.nombre || e.id, e.cantidad || 1, 'uds'));
+        (fl.sandwiches || fl.selecciones?.sandwiches || []).forEach(s => agregarItemProduccion(items, menuIndex, 'Sandwiches', s.nombre || s.id, s.cantidad || 1, 'uds'));
+        (fl.postres || fl.selecciones?.postres || []).forEach(p => agregarItemProduccion(items, menuIndex, 'Postres', p.nombre || p.id, p.cantidad || 1, 'uds'));
+    }
+
+    if (menu.referencias) {
+        (menu.referencias.saladas || []).forEach(ref => agregarItemProduccion(items, menuIndex, 'Saladas', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
+        (menu.referencias.postres || []).forEach(ref => agregarItemProduccion(items, menuIndex, 'Postres', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
+    }
+
+    if (menu.bandejas) {
+        const grupos = [
+            { label: 'Termos y bebidas', items: menu.bandejas.termos || [] },
+            { label: 'Servicio', items: menu.bandejas.servicio || [] },
+            { label: 'Dulces y bolleria', items: menu.bandejas.dulces || [] },
+            { label: 'Salados y bebidas', items: menu.bandejas.salados || [] },
+            { label: 'Saladas', items: menu.bandejas.saladas || [] },
+            { label: 'Sandwiches', items: menu.bandejas.sandwiches || [] },
+            { label: 'Postres', items: menu.bandejas.postres || [] }
+        ];
+
+        grupos.forEach(grupo => {
+            grupo.items.forEach(it => {
+                const variantes = it.variantes?.length
+                    ? ` (${it.variantes.map(v => v.nombre || v).join(', ')})`
+                    : '';
+                agregarItemProduccion(items, menuIndex, grupo.label, `${it.nombre || ''}${variantes}`, it.cantidad || 1, it.unidad || 'uds');
+            });
+        });
+    }
+
+    return items;
+}
+
+function getProduccionCocinaDetalle(comanda) {
+    return getMenusProduccionCocina(comanda).map((menu, index) => ({
+        menu,
+        menuIndex: index,
+        items: getItemsProduccionMenu(menu, index)
+    })).filter(grupo => grupo.items.length);
+}
+
+function getTotalItemsProduccionCocina(comanda) {
+    return getProduccionCocinaDetalle(comanda)
+        .reduce((total, grupo) => total + grupo.items.length, 0);
+}
+
+function getProducidosCocina(comanda) {
+    const state = comanda.kitchen_items_state || {};
+    return getProduccionCocinaDetalle(comanda)
+        .reduce((total, grupo) => total + grupo.items.filter(item => state[item.key]).length, 0);
+}
+
+function getEventosCocinaActivos() {
+    return getHistorialCocinaModulo()
+        .map((item, index) => ({
+            ...item,
+            _cocinaIndex: index,
+            kitchen_status: normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado),
+            kitchen_assigned_to: item.kitchen_assigned_to || '',
+            kitchen_items_state: item.kitchen_items_state || {},
+            kitchen_produced_items: Number(item.kitchen_produced_items || 0)
+        }))
+        .filter(item => {
+            if (item.tipo_registro === 'logistica') return false;
+            if (item.estado === 'anulada' || item.estado_pedido === 'anulada') return false;
+            return getMenusCocinaComanda(item).length > 0;
+        })
+        .sort((a, b) => {
+            const fechaA = getFechaCocinaItem(a);
+            const fechaB = getFechaCocinaItem(b);
+            if (fechaA !== fechaB) return fechaB.localeCompare(fechaA);
+            return String(b.hora_salida || '').localeCompare(String(a.hora_salida || ''));
+        });
+}
+
+function guardarEventoCocinaActivo(evento) {
+    if (!evento) return;
+    const historial = getHistorialCocinaModulo();
+    const index = evento._cocinaIndex;
+    if (!historial[index]) return;
+
+    historial[index] = {
+        ...historial[index],
+        kitchen_status: normalizarEstadoCocina(evento.kitchen_status),
+        estado_cocina: normalizarEstadoCocina(evento.kitchen_status),
+        kitchen_assigned_to: evento.kitchen_assigned_to || '',
+        kitchen_items_state: evento.kitchen_items_state || {},
+        kitchen_produced_items: getProducidosCocina(evento)
+    };
+
+    if (evento.kitchen_ready_at) historial[index].kitchen_ready_at = evento.kitchen_ready_at;
+    if (evento.kitchen_ready_by) historial[index].kitchen_ready_by = evento.kitchen_ready_by;
+    guardarHistorialCocinaModulo(historial);
+}
+
+function actualizarKpisCocina(eventos) {
+    const counts = { sin_producir: 0, en_produccion: 0, listo: 0 };
+    (eventos || []).forEach(item => {
+        const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+        if (counts[estado] !== undefined) counts[estado]++;
+    });
+
+    const setText = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    };
+
+    setText('cocinaKpiPendientes', counts.sin_producir);
+    setText('cocinaKpiProceso', counts.en_produccion);
+    setText('cocinaKpiListas', counts.listo);
+}
+
+function renderizarComandasCocina() {
+    const cont = document.getElementById('cocinaComandasList');
+    if (!cont) return;
+
+    const eventos = getEventosCocinaActivos();
+    const fechaFiltro = document.getElementById('cocinaFiltroFecha')?.value || '';
+    const eventosFiltrados = fechaFiltro
+        ? eventos.filter(item => getFechaCocinaItem(item) === fechaFiltro)
+        : eventos;
+
+    window.cocinaEventosActivos = eventosFiltrados;
+    actualizarKpisCocina(eventos);
+
+    if (!eventos.length) {
+        cont.innerHTML = '<div class="logistics-empty">Aun no hay comandas activas en cocina.</div>';
+        return;
+    }
+
+    if (!eventosFiltrados.length) {
+        cont.innerHTML = '<div class="logistics-empty">No hay comandas de cocina para el dia seleccionado.</div>';
+        return;
+    }
+
+    cont.innerHTML = eventosFiltrados.slice(0, 40).map((item, index) => {
+        const menus = getMenusCocinaComanda(item);
+        const totalItems = getTotalItemsProduccionCocina(item);
+        const producidos = Math.min(getProducidosCocina(item), totalItems);
+        const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+        const estadoClase = getClaseEstadoCocina(estado);
+        const progreso = totalItems ? Math.min(100, Math.round((producidos / totalItems) * 100)) : 0;
+        const responsable = item.kitchen_assigned_to || '';
+        const fecha = item.fecha_evento || item.fecha_creacion || '';
+        const menuResumen = menus.map(menu => `${escapeLogisticaHtml(menu.nombre)} (${menu.pax || 0} pax)`).join(', ');
+
+        return `
+            <article class="logistics-event-card kitchen-event-card" onclick="abrirProduccionCocina(${index})">
+                <div class="logistics-event-main">
+                    <div>
+                        <strong>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || 'Sin codigo')}</strong>
+                        <span>${escapeLogisticaHtml(item.empresa || item.company_name || 'Sin empresa')} · ${menuResumen}</span>
+                    </div>
+                    <span class="logistics-status-pill logistics-status-pill--${estadoClase}">${getLabelEstadoCocina(estado)}</span>
+                </div>
+
+                <div class="logistics-event-meta">
+                    <span>${escapeLogisticaHtml(fecha || 'Sin fecha')}</span>
+                    <span>${item.hora_salida || ''}</span>
+                    <span>${item.pax || 0} pax</span>
+                    <span>${totalItems} items</span>
+                </div>
+
+                <div class="logistics-progress-row">
+                    <span>${producidos} producidos</span>
+                    <div class="logistics-progress-bar"><span style="width:${progreso}%"></span></div>
+                    <span>${progreso}%</span>
+                </div>
+
+                <div class="logistics-event-controls">
+                    <label>
+                        Responsable
+                        <input type="text" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
+                            onclick="event.stopPropagation()"
+                            onchange="actualizarResponsableCocina(${index}, this.value)">
+                    </label>
+                    <label>
+                        Estado
+                        <select onclick="event.stopPropagation()" onchange="actualizarEstadoCocina(${index}, this.value)">
+                            <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
+                            <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
+                            <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
+                        </select>
+                    </label>
+                    <button type="button" class="btn-secondary" onclick="event.stopPropagation(); abrirProduccionCocina(${index})">Produccion</button>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function abrirProduccionCocina(index) {
+    const item = (window.cocinaEventosActivos || getEventosCocinaActivos())[index];
+    const modal = document.getElementById('cocinaProduccionModal');
+    const content = document.getElementById('cocinaProduccionContent');
+    if (!item || !modal || !content) return;
+
+    const grupos = getProduccionCocinaDetalle(item);
+    const totalItems = getTotalItemsProduccionCocina(item);
+    const producidos = getProducidosCocina(item);
+    const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+
+    content.innerHTML = `
+        <div class="logistics-prep-header">
+            <div>
+                <h2>${escapeLogisticaHtml(item.empresa || item.codigo || 'Cocina')}</h2>
+                <p>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || '')} · ${item.pax || 0} pax · ${escapeLogisticaHtml(item.fecha_evento || 'Sin fecha')}</p>
+            </div>
+        </div>
+
+        <div class="logistics-prep-state">
+            <label>Estado general:</label>
+            <select onchange="actualizarEstadoCocina(${index}, this.value); abrirProduccionCocina(${index});">
+                <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
+                <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
+                <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
+            </select>
+        </div>
+
+        <div class="logistics-progress-row kitchen-prep-progress">
+            <span>${producidos} producidos</span>
+            <div class="logistics-progress-bar"><span style="width:${totalItems ? Math.round((producidos / totalItems) * 100) : 0}%"></span></div>
+            <span>${totalItems} items</span>
+        </div>
+
+        ${grupos.map(grupo => renderizarGrupoProduccionCocina(index, grupo, item.kitchen_items_state || {})).join('') || '<div class="logistics-empty">Esta comanda no tiene items de cocina para producir.</div>'}
+
+        <div class="logistics-prep-actions">
+            <button type="button" class="btn-secondary" onclick="cerrarProduccionCocina()">Cerrar</button>
+            <button type="button" class="btn-primary" onclick="marcarProduccionCocinaLista(${index})">Marcar todo listo</button>
+        </div>
+    `;
+
+    modal.style.display = 'block';
+}
+
+function renderizarGrupoProduccionCocina(index, grupo, state) {
+    const gruposPorTipo = grupo.items.reduce((acc, item) => {
+        if (!acc[item.grupo]) acc[item.grupo] = [];
+        acc[item.grupo].push(item);
+        return acc;
+    }, {});
+
+    return `
+        <section class="logistics-prep-group kitchen-prep-group">
+            <h3>${escapeLogisticaHtml(grupo.menu.nombre || 'Menu')} · ${grupo.menu.pax || 0} pax</h3>
+            ${Object.entries(gruposPorTipo).map(([titulo, items]) => `
+                <div class="kitchen-prep-subgroup">
+                    <strong>${escapeLogisticaHtml(titulo)}</strong>
+                    <div class="logistics-prep-list">
+                        ${items.map(item => renderizarItemProduccionCocina(index, item, !!state[item.key])).join('')}
+                    </div>
+                </div>
+            `).join('')}
+        </section>
+    `;
+}
+
+function renderizarItemProduccionCocina(index, item, producido) {
+    return `
+        <label class="logistics-prep-item kitchen-prep-item">
+            <input type="checkbox" ${producido ? 'checked' : ''}
+                onchange="toggleItemProduccionCocina(${index}, '${escapeLogisticaHtml(item.key)}', this.checked)">
+            <span class="logistics-prep-check">${producido ? '✓' : ''}</span>
+            <span class="logistics-prep-name">
+                <strong>${escapeLogisticaHtml(item.nombre)}</strong>
+                <small>${item.cantidad || 0} ${escapeLogisticaHtml(item.unidad || 'uds')}</small>
+            </span>
+            <span class="logistics-status-pill logistics-status-pill--${producido ? 'listo' : 'sin_preparar'}">${producido ? 'Producido' : 'Pendiente'}</span>
+        </label>
+    `;
+}
+
+function cerrarProduccionCocina() {
+    const modal = document.getElementById('cocinaProduccionModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function toggleItemProduccionCocina(index, key, checked) {
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+
+    item.kitchen_items_state = item.kitchen_items_state || {};
+    item.kitchen_items_state[key] = !!checked;
+
+    const total = getTotalItemsProduccionCocina(item);
+    const producidos = getProducidosCocina(item);
+    item.kitchen_produced_items = producidos;
+    if (total > 0 && producidos >= total) item.kitchen_status = 'listo';
+    else if (producidos > 0) item.kitchen_status = 'en_produccion';
+    else item.kitchen_status = 'sin_producir';
+
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+    abrirProduccionCocina(index);
+}
+
+function marcarProduccionCocinaLista(index) {
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+    item.kitchen_items_state = item.kitchen_items_state || {};
+    getProduccionCocinaDetalle(item).forEach(grupo => {
+        grupo.items.forEach(produccionItem => {
+            item.kitchen_items_state[produccionItem.key] = true;
+        });
+    });
+    item.kitchen_status = 'listo';
+    item.kitchen_produced_items = getTotalItemsProduccionCocina(item);
+    item.kitchen_ready_at = new Date().toISOString();
+    item.kitchen_ready_by = item.kitchen_assigned_to || '';
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+    abrirProduccionCocina(index);
+}
+
+function filtrarCocinaHoy() {
+    const input = document.getElementById('cocinaFiltroFecha');
+    if (input) input.value = getFechaLocalHoyDashboard();
+    renderizarComandasCocina();
+}
+
+function limpiarFiltroFechaCocina() {
+    const input = document.getElementById('cocinaFiltroFecha');
+    if (input) input.value = '';
+    renderizarComandasCocina();
+}
+
+function actualizarResponsableCocina(index, value) {
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+    item.kitchen_assigned_to = value || '';
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+}
+
+function actualizarEstadoCocina(index, value) {
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+    item.kitchen_status = normalizarEstadoCocina(value);
+    item.kitchen_items_state = item.kitchen_items_state || {};
+
+    if (item.kitchen_status === 'listo') {
+        getProduccionCocinaDetalle(item).forEach(grupo => {
+            grupo.items.forEach(produccionItem => {
+                item.kitchen_items_state[produccionItem.key] = true;
+            });
+        });
+        item.kitchen_produced_items = getTotalItemsProduccionCocina(item);
+        item.kitchen_ready_at = new Date().toISOString();
+        item.kitchen_ready_by = item.kitchen_assigned_to || '';
+    } else if (item.kitchen_status === 'sin_producir') {
+        item.kitchen_items_state = {};
+        item.kitchen_produced_items = 0;
+    } else {
+        item.kitchen_produced_items = getProducidosCocina(item);
+    }
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+}
+
+function actualizarProducidosCocina(index, value) {
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+    const total = getTotalItemsProduccionCocina(item);
+    const producidos = Math.max(0, Math.min(Number(value) || 0, total));
+    item.kitchen_items_state = {};
+    let contador = 0;
+    getProduccionCocinaDetalle(item).forEach(grupo => {
+        grupo.items.forEach(produccionItem => {
+            if (contador < producidos) item.kitchen_items_state[produccionItem.key] = true;
+            contador += 1;
+        });
+    });
+    item.kitchen_produced_items = getProducidosCocina(item);
+    if (total > 0 && producidos >= total) item.kitchen_status = 'listo';
+    else if (producidos > 0) item.kitchen_status = 'en_produccion';
+    else item.kitchen_status = 'sin_producir';
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
 }
 
 function cambiarTabLogistica(tab) {
@@ -325,7 +922,7 @@ function tipoInventarioDesdeDb(tipo) {
 }
 
 function tipoInventarioParaDb(tipo) {
-    return tipo === 'extras' ? 'material' : tipo;
+    return tipo;
 }
 
 function normalizarItemInventarioServicios(item) {
@@ -334,7 +931,7 @@ function normalizarItemInventarioServicios(item) {
         tipo: tipoInventarioDesdeDb(item.tipo),
         unidad: item.unidad_comanda || item.unidad || 'ud',
         unidad_stock: item.unidad_inventario || item.unidad_comanda || item.unidad || 'ud',
-        tabla_origen: 'service_logistics_materials'
+        tabla_origen: 'logistics_materials'
     };
 }
 
@@ -497,7 +1094,7 @@ function renderizarComandasLogistica() {
 
 function filtrarLogisticaHoy() {
     const input = document.getElementById('logisticaFiltroFecha');
-    if (input) input.value = new Date().toISOString().split('T')[0];
+    if (input) input.value = getFechaLocalHoyDashboard();
     renderizarComandasLogistica();
 }
 
@@ -558,11 +1155,15 @@ async function guardarArticuloInventarioLogistica(event) {
     const payload = {
         nombre,
         tipo,
+        unidad,
         unidad_comanda: unidad,
         unidad_inventario: unidad,
         conversion_a_stock: 1,
         subcategoria,
         stock_total: stockTotal,
+        contexto_logistica: 'ambos',
+        aplica_menus: true,
+        aplica_servicios: true,
         activo: true
     };
 
@@ -580,12 +1181,12 @@ async function guardarArticuloInventarioLogistica(event) {
 
     try {
         const query = id
-            ? window.supabaseClient.from('service_logistics_materials').update(payload).eq('id', id).select('*').maybeSingle()
-            : window.supabaseClient.from('service_logistics_materials').insert(payload).select('*').maybeSingle();
+            ? window.supabaseClient.from('logistics_materials').update(payload).eq('id', id).select('*').maybeSingle()
+            : window.supabaseClient.from('logistics_materials').insert(payload).select('*').maybeSingle();
         const { data, error } = await query;
         if (error) throw error;
         if (!data) {
-            throw new Error('Supabase no devolvio el articulo actualizado. Revisa permisos de edicion para service_logistics_materials.');
+            throw new Error('Supabase no devolvio el articulo actualizado. Revisa permisos de edicion para logistics_materials.');
         }
 
         const itemNormalizado = normalizarItemInventarioServicios(data);
@@ -601,7 +1202,7 @@ async function guardarArticuloInventarioLogistica(event) {
         if (/stock_total|subcategoria/i.test(msg)) {
             alert('Faltan columnas de inventario en Supabase. Ejecuta el SQL de actualizacion y vuelve a guardar.');
         } else if (/no devolvio|permisos|permission|policy|row-level|rls/i.test(msg)) {
-            alert('No se pudo actualizar el articulo. Revisa los permisos de edicion de service_logistics_materials en Supabase.');
+            alert('No se pudo actualizar el articulo. Revisa los permisos de edicion de logistics_materials en Supabase.');
         } else {
             alert('No se pudo guardar el articulo. Revisa permisos o politicas de Supabase.');
         }
@@ -620,7 +1221,7 @@ async function eliminarArticuloInventarioLogistica(id) {
 
     try {
         const { error } = await window.supabaseClient
-            .from('service_logistics_materials')
+            .from('logistics_materials')
             .update({ activo: false })
             .eq('id', id);
         if (error) throw error;
@@ -771,7 +1372,7 @@ async function renderizarInventarioLogistica() {
 
     try {
         const { data, error } = await window.supabaseClient
-            .from('service_logistics_materials')
+            .from('logistics_materials')
             .select('*')
             .eq('activo', true)
             .order('orden', { ascending: true });
@@ -851,6 +1452,7 @@ function mostrarHistorial() {
     const detalleComanda = document.getElementById('detalleComanda');
     const logisticaForm = document.getElementById('logisticaForm');
     const logisticaPage = document.getElementById('logisticaPage');
+    const cocinaPage = document.getElementById('cocinaPage');
     const expedientePedido = document.getElementById('expedientePedido');
     const clientesPanel = document.getElementById('clientesPanel');
 
@@ -859,6 +1461,7 @@ function mostrarHistorial() {
     if (detalleComanda) detalleComanda.style.display = 'none';
     if (logisticaForm) logisticaForm.style.display = 'none';
     if (logisticaPage) logisticaPage.style.display = 'none';
+    if (cocinaPage) cocinaPage.style.display = 'none';
     if (expedientePedido) {
         expedientePedido.hidden = true;
         expedientePedido.style.display = 'none';
@@ -895,6 +1498,8 @@ function volverAlDashboard() {
     if (logisticaForm) logisticaForm.style.display = 'none';
     const logisticaPage = document.getElementById('logisticaPage');
     if (logisticaPage) logisticaPage.style.display = 'none';
+    const cocinaPage = document.getElementById('cocinaPage');
+    if (cocinaPage) cocinaPage.style.display = 'none';
     document.getElementById('historialPage').style.display = 'none';
     const expedientePedido = document.getElementById('expedientePedido');
     if (expedientePedido) expedientePedido.style.display = 'none';
