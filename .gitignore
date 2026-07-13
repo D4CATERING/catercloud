@@ -1,12 +1,27 @@
-# Crear archivo .gitignore con contenido básico
-echo "# Archivos de Python" > .gitignore
-echo "__pycache__/" >> .gitignore
-echo "*.pyc" >> .gitignore
-echo "" >> .gitignore
-echo "# Entornos virtuales" >> .gitignore
-echo ".venv/" >> .gitignore
-echo "venv/" >> .gitignore
-echo "" >> .gitignore
-echo "# Sistema" >> .gitignore
-echo ".DS_Store" >> .gitignore
-echo "Thumbs.db" >> .gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+
+# Local databases and runtime files
+*.db
+*.sqlite
+*.sqlite3
+
+# Operating system files
+.DS_Store
+Thumbs.db
+~$*
+
+# Local/generated working artifacts
+backups/
+outputs/
+Data/
+static/
+
+# Logs
+*.log

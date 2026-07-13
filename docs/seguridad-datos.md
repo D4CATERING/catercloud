@@ -39,11 +39,13 @@ outputs/seguridad/seguridad_roles_equipo.sql
 
 ## Importante sobre equipos
 
-El SQL de roles crea tres permisos:
+El SQL de roles crea cinco permisos:
 
 - `admin`: ve todo, crea, edita, elimina y gestiona roles.
 - `editor`: ve todo, crea y edita.
 - `viewer`: ve dashboard, historial, comandas y archivos, pero no crea ni edita.
+- `cocina`: ve dashboard, historial y comandas; solo puede editar cocina.
+- `logistica`: ve dashboard, historial y comandas; solo puede editar logistica e inventario.
 
 Antes de activar los roles, hay que insertar al menos un usuario `admin` en `app_user_roles`.
 

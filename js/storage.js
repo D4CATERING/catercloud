@@ -22,6 +22,18 @@ function logActividadApp(action, codigo, details = {}, area = null) {
     }
 }
 
+function permitirGuardadoSoloLocal() {
+  return window.CATER_ALLOW_LOCAL_ONLY === true;
+}
+
+function crearErrorGuardadoRemoto(mensaje, codigo, causa) {
+  const error = new Error(mensaje);
+  error.codigoComanda = codigo;
+  error.copiaLocalGuardada = true;
+  if (causa) error.cause = causa;
+  return error;
+}
+
 /**
  * Guarda una comanda en Supabase (multiusuario)
  * @param {Object} comandaData - Datos de la comanda
@@ -54,6 +66,12 @@ async function guardarComandaEnHistorial(comandaData) {
       empresa: payload.empresa || payload.company_name || '',
       motivo: 'sin_supabase_o_sin_login'
     });
+    if (!permitirGuardadoSoloLocal()) {
+      throw crearErrorGuardadoRemoto(
+        'No se pudo guardar en Supabase. Se dejo una copia local de emergencia, pero no esta disponible para el equipo.',
+        codigo
+      );
+    }
     return codigo;
   }
 
@@ -119,6 +137,13 @@ async function guardarComandaEnHistorial(comandaData) {
       empresa: payload.empresa || payload.company_name || '',
       motivo: 'fallo_supabase'
     });
+    if (!permitirGuardadoSoloLocal()) {
+      throw crearErrorGuardadoRemoto(
+        'No se pudo guardar en Supabase. Se dejo una copia local de emergencia, pero debes revisar la conexion o permisos antes de continuar.',
+        codigo,
+        error
+      );
+    }
     return codigo;
   }
 }
@@ -248,7 +273,19 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
                 if (error) throw error;
             } catch (error) {
                 console.warn('No se pudo sincronizar la edición con Supabase:', error);
+                if (!permitirGuardadoSoloLocal()) {
+                    throw crearErrorGuardadoRemoto(
+                        'No se pudo sincronizar la edicion con Supabase. Se dejo una copia local de emergencia, pero el equipo no vera este cambio hasta resolverlo.',
+                        codigo,
+                        error
+                    );
+                }
             }
+        } else if (!permitirGuardadoSoloLocal()) {
+            throw crearErrorGuardadoRemoto(
+                'No se pudo sincronizar la edicion porque no hay sesion activa de Supabase.',
+                codigo
+            );
         }
 
         return true;

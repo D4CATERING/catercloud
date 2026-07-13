@@ -23,13 +23,17 @@ outputs/seguridad/asignar_usuarios_roles.sql
 - `admin`: ve todo, crea, edita, elimina y gestiona roles.
 - `editor`: ve todo, crea y edita.
 - `viewer`: ve dashboard, historial, comandas y archivos, pero no crea ni edita.
+- `cocina`: ve dashboard, historial y comandas; solo puede editar el modulo de cocina.
+- `logistica`: ve dashboard, historial y comandas; solo puede editar logistica e inventario.
 
 ## Recomendacion inicial
 
 Crear primero:
 
 - 1 usuario `admin`
-- usuarios operativos como `editor`
+- 3 usuarios operativos como `editor`
+- 1 usuario de cocina como `cocina`
+- 1 usuario de logistica como `logistica`
 - usuarios de consulta como `viewer`
 
 ## Importante

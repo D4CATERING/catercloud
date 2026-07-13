@@ -5,16 +5,28 @@
 -- - admin: ve todo, crea, edita, elimina y gestiona roles.
 -- - editor: ve todo, crea y edita. No elimina roles ni usuarios.
 -- - viewer: ve dashboard, historial, comandas y archivos. No crea ni edita.
+-- - cocina: ve la app y solo edita el modulo de cocina.
+-- - logistica: ve la app y solo edita el modulo de logistica e inventario.
 
 -- 1) Tabla de roles de la aplicacion
 
 create table if not exists public.app_user_roles (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  role text not null check (role in ('admin', 'editor', 'viewer')),
+  role text not null check (role in ('admin', 'editor', 'viewer', 'cocina', 'logistica')),
   active boolean not null default true,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now()
 );
+
+do $$
+begin
+  alter table public.app_user_roles
+    drop constraint if exists app_user_roles_role_check;
+
+  alter table public.app_user_roles
+    add constraint app_user_roles_role_check
+    check (role in ('admin', 'editor', 'viewer', 'cocina', 'logistica'));
+end $$;
 
 alter table public.app_user_roles enable row level security;
 
@@ -43,7 +55,7 @@ security definer
 set search_path = public
 stable
 as $$
-  select public.app_current_role() in ('admin', 'editor', 'viewer')
+  select public.app_current_role() in ('admin', 'editor', 'viewer', 'cocina', 'logistica')
 $$;
 
 create or replace function public.app_can_write()
@@ -54,6 +66,26 @@ set search_path = public
 stable
 as $$
   select public.app_current_role() in ('admin', 'editor')
+$$;
+
+create or replace function public.app_can_edit_kitchen()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.app_current_role() in ('admin', 'cocina')
+$$;
+
+create or replace function public.app_can_edit_logistics()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.app_current_role() in ('admin', 'logistica')
 $$;
 
 create or replace function public.app_is_admin()
@@ -69,6 +101,8 @@ $$;
 grant execute on function public.app_current_role() to authenticated;
 grant execute on function public.app_can_read() to authenticated;
 grant execute on function public.app_can_write() to authenticated;
+grant execute on function public.app_can_edit_kitchen() to authenticated;
+grant execute on function public.app_can_edit_logistics() to authenticated;
 grant execute on function public.app_is_admin() to authenticated;
 
 -- 3) IMPORTANTE: crear al menos un admin
@@ -154,8 +188,16 @@ create policy "orders_update_team"
 on public.orders
 for update
 to authenticated
-using (public.app_can_write())
-with check (public.app_can_write());
+using (
+  public.app_can_write()
+  or public.app_can_edit_kitchen()
+  or public.app_can_edit_logistics()
+)
+with check (
+  public.app_can_write()
+  or public.app_can_edit_kitchen()
+  or public.app_can_edit_logistics()
+);
 
 create policy "orders_delete_admin"
 on public.orders

@@ -52,8 +52,8 @@ create policy "inventory movements admin write"
   on public.logistics_inventory_movements
   for all
   to authenticated
-  using (public.is_admin(auth.uid()))
-  with check (public.is_admin(auth.uid()));
+  using (public.app_is_admin() or public.app_can_edit_logistics())
+  with check (public.app_is_admin() or public.app_can_edit_logistics());
 
 create or replace function public.register_logistics_inventory_movement(
   p_order_code text,

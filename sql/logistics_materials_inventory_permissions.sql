@@ -19,14 +19,14 @@ create policy "logistics_materials_insert_team"
 on public.logistics_materials
 for insert
 to authenticated
-with check (public.app_can_write());
+with check (public.app_can_write() or public.app_can_edit_logistics());
 
 create policy "logistics_materials_update_team"
 on public.logistics_materials
 for update
 to authenticated
-using (public.app_can_write())
-with check (public.app_can_write());
+using (public.app_can_write() or public.app_can_edit_logistics())
+with check (public.app_can_write() or public.app_can_edit_logistics());
 
 create policy "logistics_materials_delete_admin"
 on public.logistics_materials

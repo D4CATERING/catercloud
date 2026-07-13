@@ -619,6 +619,53 @@ function registrarAccionOperativa(item, area, accion, detalle = '') {
     }
 }
 
+function getCodigoPedidoLogistica(item) {
+    return item?.codigo_cocina || item?.codigo_original || item?.codigo_comanda || item?.codigo || null;
+}
+
+function getCodigoComandaLogistica(item) {
+    if (!item || item._logisticaSource === 'cocina') return null;
+    return item.codigo || item.codigo_original || null;
+}
+
+async function descontarInventarioLogisticaSiHaceFalta(item) {
+    if (!item || item.inventory_deducted_at) return true;
+    if (!window.supabaseClient || !window.currentUser?.id) {
+        throw new Error('No hay conexion activa con Supabase para descontar inventario.');
+    }
+
+    const materiales = getMaterialLogisticaPlano(item.material_logistica || {})
+        .filter(mat => Number(mat.cantidad || 0) > 0)
+        .filter(mat => mat.item_id || mat.material_id || mat.id);
+
+    if (!materiales.length) return true;
+
+    const orderCode = getCodigoPedidoLogistica(item);
+    const logisticsCode = getCodigoComandaLogistica(item);
+
+    for (const mat of materiales) {
+        const materialId = mat.item_id || mat.material_id || mat.id;
+        const { error } = await window.supabaseClient.rpc('register_logistics_inventory_movement', {
+            p_order_code: orderCode,
+            p_logistics_code: logisticsCode,
+            p_source_table: mat.source_table || 'logistics_materials',
+            p_material_id: materialId,
+            p_material_name: mat.nombre || 'Material',
+            p_movement_type: 'salida',
+            p_quantity_order: Number(mat.cantidad || 0),
+            p_unit_order: mat.unidad || mat.unidad_comanda || 'ud',
+            p_conversion_to_stock: Number(mat.conversion_a_stock || mat.conversion_to_stock || mat.contenido_por_unidad || 1),
+            p_unit_stock: mat.unidad_inventario || mat.unidad_stock || mat.unidad || 'ud',
+            p_reason: 'Comanda logistica completada'
+        });
+        if (error) throw error;
+    }
+
+    item.inventory_deducted_at = new Date().toISOString();
+    item.inventory_deducted_by = getOperativeActorName();
+    return true;
+}
+
 function renderActividadOperativaHtml(item, area) {
     const key = area === 'logistica' ? 'logistics_action_log' : 'kitchen_action_log';
     const registros = item?.[key] || [];
@@ -1226,6 +1273,8 @@ function guardarEventoLogisticaActivo(evento) {
         historial[index].logistics_action_log = evento.logistics_action_log || [];
         historial[index].logistics_completed_confirmed_at = evento.logistics_completed_confirmed_at || null;
         historial[index].logistics_completed_confirmed_by = evento.logistics_completed_confirmed_by || '';
+        historial[index].inventory_deducted_at = evento.inventory_deducted_at || historial[index].inventory_deducted_at || null;
+        historial[index].inventory_deducted_by = evento.inventory_deducted_by || historial[index].inventory_deducted_by || '';
         if (evento.logistics_ready_at) historial[index].logistics_ready_at = evento.logistics_ready_at;
         if (evento.logistics_ready_by) historial[index].logistics_ready_by = evento.logistics_ready_by;
         guardarHistorialCocinaLogistica(historial);
@@ -1238,6 +1287,8 @@ function guardarEventoLogisticaActivo(evento) {
             logistics_action_log: historial[index].logistics_action_log || [],
             logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
             logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
+            inventory_deducted_at: historial[index].inventory_deducted_at || null,
+            inventory_deducted_by: historial[index].inventory_deducted_by || '',
             logistics_ready_at: historial[index].logistics_ready_at || null,
             logistics_ready_by: historial[index].logistics_ready_by || ''
         });
@@ -1257,6 +1308,8 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_action_log: evento.logistics_action_log || [],
         logistics_completed_confirmed_at: evento.logistics_completed_confirmed_at || null,
         logistics_completed_confirmed_by: evento.logistics_completed_confirmed_by || '',
+        inventory_deducted_at: evento.inventory_deducted_at || historial[index].inventory_deducted_at || null,
+        inventory_deducted_by: evento.inventory_deducted_by || historial[index].inventory_deducted_by || '',
         logistics_ready_at: evento.logistics_ready_at || historial[index].logistics_ready_at,
         logistics_ready_by: evento.logistics_ready_by || historial[index].logistics_ready_by
     };
@@ -1269,6 +1322,8 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_action_log: historial[index].logistics_action_log || [],
         logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
         logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
+        inventory_deducted_at: historial[index].inventory_deducted_at || null,
+        inventory_deducted_by: historial[index].inventory_deducted_by || '',
         logistics_ready_at: historial[index].logistics_ready_at || null,
         logistics_ready_by: historial[index].logistics_ready_by || ''
     });
@@ -1742,7 +1797,7 @@ function cerrarPreparacionLogistica() {
     renderizarComandasLogistica();
 }
 
-function confirmarCompletadoLogistica(index) {
+async function confirmarCompletadoLogistica(index) {
     if (!requireEditarLogistica()) return;
     const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item) return;
@@ -1751,6 +1806,14 @@ function confirmarCompletadoLogistica(index) {
     const preparados = getMaterialLogisticaPlano(item.material_logistica || {}).filter(mat => mat.preparado).length;
     if (!total || preparados < total) {
         alert('Para confirmar, todo el material debe estar preparado.');
+        return;
+    }
+
+    try {
+        await descontarInventarioLogisticaSiHaceFalta(item);
+    } catch (error) {
+        console.error('No se pudo descontar inventario:', error);
+        alert('No se pudo descontar inventario en Supabase. Revisa permisos o conexion antes de confirmar.');
         return;
     }
 
