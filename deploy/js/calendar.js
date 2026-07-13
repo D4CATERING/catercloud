@@ -22,6 +22,7 @@ function getEventosPorFecha() {
     const map = {};
 
     historial.forEach(c => {
+        if (c.estado === 'anulada' || c.estado_pedido === 'anulada') return;
         const fecha = (c.fecha_evento || '').split('T')[0];
         if (!fecha) return;
         if (!map[fecha]) map[fecha] = [];
@@ -162,7 +163,26 @@ function _renderEventosDia(eventosPorFecha) {
         <div class="event-item" onclick="verExpedientePedido('${ev.codigo}')">
             <div class="event-header">
                 ${ev.hora ? `<span class="event-time">${ev.hora}</span>` : ''}
-                <span class="event-badge ${badge.cls}">${badge.label}</span>
+                <div class="event-header-actions">
+                    <span class="event-badge ${badge.cls}">${badge.label}</span>
+                    <button type="button" class="event-icon-btn event-icon-btn--edit" title="Editar carpeta" aria-label="Editar carpeta" data-requires-write
+                        onclick="event.stopPropagation(); editarCarpetaPedido('${ev.codigo}', '${dateStr}')">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="event-icon-btn event-icon-btn--delete" title="Eliminar carpeta" aria-label="Eliminar carpeta" data-requires-write
+                        onclick="event.stopPropagation(); eliminarCarpetaPedido('${ev.codigo}')">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 6h18"></path>
+                            <path d="M8 6V4h8v2"></path>
+                            <path d="M6 6l1 15h10l1-15"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
             <div class="event-empresa">${ev.empresa}</div>
             <div class="event-meta">
@@ -176,6 +196,141 @@ function _renderEventosDia(eventosPorFecha) {
 
     eventList.innerHTML = itemsHtml + btnHtml;
     if (window.AppPermissions) AppPermissions.applyUI();
+}
+
+async function editarCarpetaPedido(codigo, dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar carpetas.')) {
+        return;
+    }
+
+    const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    if (!pedido) {
+        alert('No se encontro la carpeta.');
+        return;
+    }
+
+    const cont = document.getElementById('solicitudFormCalendario');
+    if (!cont) return;
+
+    const opcionesMenu = getOpcionesMenuSolicitud()
+        .map(menu => {
+            const selected = String(menu.id) === String(pedido.menu_categoria || pedido.menu_principal?.id || '') ? 'selected' : '';
+            return `<option value="${menu.id}" ${selected}>${menu.nombre}</option>`;
+        })
+        .join('');
+
+    cont.style.display = 'block';
+    cont.innerHTML = `
+        <div class="calendar-request-title">Editar carpeta</div>
+        <div class="calendar-request-grid">
+            <label>
+                <span>Hora de salida</span>
+                <input type="time" id="solHoraSalida" value="${pedido.hora_salida || ''}">
+            </label>
+            <label>
+                <span>Empresa</span>
+                <div class="calendar-client-search">
+                    <input type="text" id="solEmpresa" value="${pedido.empresa || ''}" placeholder="Buscar empresa" autocomplete="off" oninput="buscarClientesSolicitud(this.value)">
+                    <input type="hidden" id="solClienteId" value="${pedido.cliente_id || ''}">
+                    <div id="solClientesSugerencias" class="calendar-client-results"></div>
+                </div>
+            </label>
+            <label>
+                <span>Menu</span>
+                <select id="solCategoriaMenu">
+                    <option value="">Selecciona menu</option>
+                    ${opcionesMenu}
+                </select>
+            </label>
+            <label>
+                <span>PAX</span>
+                <input type="number" id="solPax" min="0" value="${pedido.pax || pedido.pax_total || 0}">
+            </label>
+        </div>
+        <div class="calendar-request-actions">
+            <button type="button" class="event-secondary-btn" onclick="guardarEdicionCarpetaPedido('${codigo}', '${dateStr}')">Guardar cambios</button>
+            <button type="button" class="calendar-request-cancel" onclick="cerrarSolicitudCalendario()">Cancelar</button>
+        </div>`;
+}
+
+async function guardarEdicionCarpetaPedido(codigo, dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar carpetas.')) {
+        return;
+    }
+
+    const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+    const clienteId = document.getElementById('solClienteId')?.value || '';
+    const horaSalida = document.getElementById('solHoraSalida')?.value || '';
+    const categoriaInput = document.getElementById('solCategoriaMenu');
+    const categoriaId = categoriaInput?.value || '';
+    const categoriaNombre = categoriaInput?.selectedOptions?.[0]?.textContent || 'Pendiente';
+    const pax = Number(document.getElementById('solPax')?.value || 0) || 0;
+
+    if (!empresa) {
+        alert('Indica la empresa de la carpeta.');
+        document.getElementById('solEmpresa')?.focus();
+        return;
+    }
+
+    const ok = await actualizarComandaEnHistorial(codigo, {
+        empresa,
+        cliente_id: clienteId,
+        pax,
+        pax_total: pax,
+        hora_salida: horaSalida,
+        fecha_evento: dateStr,
+        menu_categoria: categoriaId,
+        menu_categoria_nombre: categoriaNombre,
+        menu_principal: categoriaId ? { id: categoriaId, nombre: categoriaNombre } : null
+    });
+
+    if (!ok) {
+        alert('No se pudo actualizar la carpeta.');
+        return;
+    }
+
+    cerrarSolicitudCalendario();
+    cargarCalendario();
+}
+
+async function eliminarCarpetaPedido(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede eliminar carpetas.')) {
+        return;
+    }
+
+    const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    if (!pedido) {
+        alert('No se encontro la carpeta.');
+        return;
+    }
+
+    if (!confirm(`Eliminar la carpeta ${codigo}? Esta accion no se puede deshacer.`)) return;
+
+    if (typeof eliminarComandaDelHistorial === 'function') {
+        eliminarComandaDelHistorial(codigo);
+    }
+
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const filtradoLogistica = historialLogistica.filter(item =>
+        (item.codigo_cocina || item.codigo_original || item.codigo) !== codigo
+    );
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(filtradoLogistica));
+
+    if (window.supabaseClient) {
+        try {
+            const { error } = await window.supabaseClient
+                .from('orders')
+                .delete()
+                .eq('codigo', codigo);
+            if (error) throw error;
+        } catch (error) {
+            console.warn('No se pudo eliminar la carpeta en Supabase:', error);
+            alert('La carpeta se elimino localmente, pero no se pudo sincronizar la eliminacion con Supabase. Revisa permisos.');
+        }
+    }
+
+    cerrarSolicitudCalendario();
+    cargarCalendario();
 }
 
 function nuevaComandaEnFecha(dateStr) {

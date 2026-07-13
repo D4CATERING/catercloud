@@ -553,6 +553,86 @@
   font-size: .82rem;
 }
 
+.expediente-header-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.expediente-folder-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.expediente-icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  transition: background .15s, color .15s, transform .12s;
+}
+
+.expediente-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.expediente-icon-btn svg path {
+  fill: none !important;
+  stroke-width: 2.45 !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.expediente-icon-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.expediente-icon-btn--edit {
+  background: #e8eef7;
+  color: #31415a;
+}
+
+.expediente-icon-btn--delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.expediente-icon-btn:hover {
+  background: #dbe5f2;
+  color: var(--dc-negro);
+  transform: translateY(-1px);
+}
+
+.expediente-icon-btn--delete:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
 .expediente-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -605,6 +685,93 @@
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 12px;
+}
+
+.expediente-folder-editor {
+  margin-bottom: 12px;
+}
+
+.expediente-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.expediente-editor-grid label {
+  display: grid;
+  gap: 4px;
+}
+
+.expediente-editor-grid span {
+  color: var(--dc-muted);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.expediente-editor-grid input,
+.expediente-editor-grid select {
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--dc-border);
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: .82rem;
+  color: var(--dc-text);
+  background: #fff;
+}
+
+.expediente-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.expediente-notes-input {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--dc-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--dc-text);
+  background: #fff;
+  font-family: var(--font-body);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.expediente-notes-input:focus {
+  outline: none;
+  border-color: var(--dc-rojo);
+  box-shadow: 0 0 0 3px rgba(235, 47, 47, .08);
+}
+
+.expediente-notes-input[readonly] {
+  background: #f8fafc;
+  color: var(--dc-muted);
+}
+
+.expediente-notes-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.expediente-notes-actions button {
+  border: 0;
+  border-radius: 8px;
+  background: var(--dc-negro);
+  color: #fff;
+  padding: 8px 14px;
+  font-size: .78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.expediente-notes-actions button:hover {
+  background: #25313d;
 }
 
 .expediente-files {
@@ -736,6 +903,7 @@
   .dashboard-layout { grid-template-columns: 1fr; }
   .expediente-grid,
   .expediente-fields,
+  .expediente-editor-grid,
   .calendar-request-grid,
   .event-actions,
   .expediente-link-upload { grid-template-columns: 1fr; }

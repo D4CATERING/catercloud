@@ -14,6 +14,16 @@ function getEstadoPedidoLabel(estado) {
     return labels[estado] || (estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : '-');
 }
 
+function textoSeguro(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
 function cargarHistorial() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
     const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
@@ -152,8 +162,24 @@ function _renderExpedientePedido(comanda) {
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
     const archivosHtml = _renderArchivosSolicitud(comanda);
     const tieneLogistica = !!comanda.documentos?.logistica || _pedidoTieneComandaLogistica(comanda.codigo);
+    const esComandaServicios = typeof _esComandaServicios === 'function' && _esComandaServicios(comanda);
+    const puedeCrearLogistica = (!window.AppPermissions || AppPermissions.canEditLogistics()) &&
+        !tieneLogistica &&
+        esComandaServicios &&
+        !esSolicitud &&
+        estado !== 'anulada';
     const puedeConfirmarSolicitud = puedeEditar && esSolicitud && estado !== 'confirmado' && estado !== 'anulada';
     const puedeAnularPedido = puedeEditar && estado !== 'anulada';
+    const notasPedido = comanda.notas_pedido || comanda.anotaciones_pedido || '';
+    const accionesCarpetaHtml = puedeEditar ? `<div class="expediente-folder-actions">
+                <button type="button" class="expediente-icon-btn expediente-icon-btn--edit" title="Editar carpeta" aria-label="Editar carpeta" onclick="mostrarEditorCarpetaExpediente('${comanda.codigo}')">
+                    <span class="expediente-icon-symbol" aria-hidden="true">✎</span>
+                </button>
+                <button type="button" class="expediente-icon-btn expediente-icon-btn--delete" title="Eliminar carpeta" aria-label="Eliminar carpeta" onclick="eliminarCarpetaDesdeExpediente('${comanda.codigo}')">
+                    <span class="expediente-icon-symbol" aria-hidden="true">×</span>
+                </button>
+            </div>` : '';
+    const editorCarpetaHtml = puedeEditar ? _renderEditorCarpetaExpediente(comanda) : '';
     const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeAnularPedido)
         ? `<div class="expediente-status-actions">
                     ${puedeConfirmarSolicitud ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar</button>` : ''}
@@ -168,8 +194,13 @@ function _renderExpedientePedido(comanda) {
                 <h2>${comanda.codigo || 'Sin codigo'}</h2>
                 <p>${comanda.empresa || 'Empresa pendiente'} - ${fechaEvento}</p>
             </div>
-            <div class="comanda-estado estado-${estado}">${estadoLabel}</div>
+            <div class="expediente-header-side">
+                ${accionesCarpetaHtml}
+                <div class="comanda-estado estado-${estado}">${estadoLabel}</div>
+            </div>
         </div>
+
+        ${editorCarpetaHtml}
 
         <div class="expediente-grid">
             <section class="expediente-section">
@@ -193,8 +224,19 @@ function _renderExpedientePedido(comanda) {
                     ${esSolicitud
                         ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
                         : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>
-                           ${tieneLogistica ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}`}
+                           ${tieneLogistica ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}
+                           ${puedeCrearLogistica ? `<button class="btn-submit" onclick="crearComandaLogisticaDesdeExpediente('${comanda.codigo}')">Crear comanda Logistica</button>` : ''}`}
                 </div>
+            </section>
+
+            <section class="expediente-section expediente-section-wide">
+                <h3>Anotaciones del pedido</h3>
+                <textarea id="expedienteNotasPedido" class="expediente-notes-input"
+                    ${puedeEditar ? '' : 'readonly'}
+                    placeholder="Escribe aqui observaciones internas, seguimiento de cambios, llamadas o acuerdos con el cliente...">${textoSeguro(notasPedido)}</textarea>
+                ${puedeEditar ? `<div class="expediente-notes-actions">
+                    <button type="button" onclick="guardarAnotacionesPedido('${comanda.codigo}')">Guardar anotaciones</button>
+                </div>` : ''}
             </section>
 
             <section class="expediente-section expediente-section-wide">
@@ -202,6 +244,163 @@ function _renderExpedientePedido(comanda) {
                 ${archivosHtml}
             </section>
         </div>`;
+}
+
+function _renderEditorCarpetaExpediente(comanda) {
+    const opcionesMenu = typeof getOpcionesMenuSolicitud === 'function'
+        ? getOpcionesMenuSolicitud()
+        : [];
+    const menuActual = String(comanda.menu_categoria || comanda.menu_principal?.id || '');
+    const opcionesHtml = opcionesMenu.map(menu => {
+        const selected = String(menu.id) === menuActual ? 'selected' : '';
+        return `<option value="${textoSeguro(menu.id)}" ${selected}>${textoSeguro(menu.nombre)}</option>`;
+    }).join('');
+    const fecha = (comanda.fecha_evento || '').split('T')[0];
+
+    return `
+        <section id="expedienteEditorCarpeta" class="expediente-section expediente-section-wide expediente-folder-editor" style="display:none;">
+            <h3>Editar carpeta</h3>
+            <div class="expediente-editor-grid">
+                <label>
+                    <span>Empresa</span>
+                    <input type="text" id="expEditEmpresa" value="${textoSeguro(comanda.empresa || '')}">
+                </label>
+                <label>
+                    <span>Fecha evento</span>
+                    <input type="date" id="expEditFecha" value="${textoSeguro(fecha)}">
+                </label>
+                <label>
+                    <span>Hora salida</span>
+                    <input type="time" id="expEditHoraSalida" value="${textoSeguro(comanda.hora_salida || '')}">
+                </label>
+                <label>
+                    <span>Menu</span>
+                    <select id="expEditMenu">
+                        <option value="">Selecciona menu</option>
+                        ${opcionesHtml}
+                    </select>
+                </label>
+                <label>
+                    <span>PAX</span>
+                    <input type="number" id="expEditPax" min="0" value="${Number(comanda.pax || comanda.pax_total || 0)}">
+                </label>
+            </div>
+            <div class="expediente-editor-actions">
+                <button type="button" class="btn-secondary" onclick="ocultarEditorCarpetaExpediente()">Cancelar</button>
+                <button type="button" class="btn-submit" onclick="guardarEditorCarpetaExpediente('${comanda.codigo}')">Guardar cambios</button>
+            </div>
+        </section>`;
+}
+
+function mostrarEditorCarpetaExpediente(codigo) {
+    const editor = document.getElementById('expedienteEditorCarpeta');
+    if (!editor) return;
+    editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+    if (editor.style.display !== 'none') {
+        document.getElementById('expEditEmpresa')?.focus();
+    }
+}
+
+function ocultarEditorCarpetaExpediente() {
+    const editor = document.getElementById('expedienteEditorCarpeta');
+    if (editor) editor.style.display = 'none';
+}
+
+async function guardarEditorCarpetaExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar carpetas.')) {
+        return;
+    }
+
+    const empresa = (document.getElementById('expEditEmpresa')?.value || '').trim();
+    const fechaEvento = document.getElementById('expEditFecha')?.value || '';
+    const horaSalida = document.getElementById('expEditHoraSalida')?.value || '';
+    const menuSelect = document.getElementById('expEditMenu');
+    const menuId = menuSelect?.value || '';
+    const menuNombre = menuSelect?.selectedOptions?.[0]?.textContent || '';
+    const pax = Number(document.getElementById('expEditPax')?.value || 0) || 0;
+
+    if (!empresa) {
+        alert('Indica la empresa de la carpeta.');
+        document.getElementById('expEditEmpresa')?.focus();
+        return;
+    }
+
+    const ok = await actualizarComandaEnHistorial(codigo, {
+        empresa,
+        fecha_evento: fechaEvento,
+        hora_salida: horaSalida,
+        pax,
+        pax_total: pax,
+        menu_categoria: menuId,
+        menu_categoria_nombre: menuNombre || 'Pendiente',
+        menu_principal: menuId ? { id: menuId, nombre: menuNombre } : null
+    });
+
+    if (!ok) {
+        alert('No se pudo actualizar la carpeta.');
+        return;
+    }
+
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    verExpedientePedido(codigo);
+}
+
+async function eliminarCarpetaDesdeExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede eliminar carpetas.')) {
+        return;
+    }
+
+    if (!confirm(`Eliminar la carpeta ${codigo}? Esta accion no se puede deshacer.`)) return;
+
+    if (typeof eliminarComandaDelHistorial === 'function') {
+        eliminarComandaDelHistorial(codigo);
+    }
+
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const filtradoLogistica = historialLogistica.filter(item =>
+        (item.codigo_cocina || item.codigo_original || item.codigo) !== codigo
+    );
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(filtradoLogistica));
+
+    if (window.supabaseClient) {
+        try {
+            const { error } = await window.supabaseClient
+                .from('orders')
+                .delete()
+                .eq('codigo', codigo);
+            if (error) throw error;
+        } catch (error) {
+            console.warn('No se pudo eliminar la carpeta en Supabase:', error);
+            alert('La carpeta se elimino localmente, pero no se pudo sincronizar la eliminacion con Supabase. Revisa permisos.');
+        }
+    }
+
+    const expedientePedido = document.getElementById('expedientePedido');
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    if (typeof volverAlDashboard === 'function') volverAlDashboard();
+}
+
+async function guardarAnotacionesPedido(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar anotaciones.')) {
+        return;
+    }
+
+    const notas = document.getElementById('expedienteNotasPedido')?.value || '';
+    const ok = await actualizarComandaEnHistorial(codigo, {
+        notas_pedido: notas,
+        anotaciones_pedido: notas
+    });
+
+    if (!ok) {
+        alert('No se pudieron guardar las anotaciones.');
+        return;
+    }
+
+    verExpedientePedido(codigo);
 }
 
 function _pedidoTieneComandaLogistica(codigo) {
@@ -285,6 +484,57 @@ function abrirComandaLogisticaDesdeExpediente(codigo) {
     }
 
     verDetalleComandaLogistica(resultado.item);
+}
+
+async function crearComandaLogisticaDesdeExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para crear comandas de logistica.')) {
+        return;
+    }
+
+    const comanda = obtenerComandaDelHistorial(codigo);
+    if (!comanda) {
+        alert('Comanda no encontrada.');
+        return;
+    }
+
+    const expedientePedido = document.getElementById('expedientePedido');
+    const expedienteContent = document.getElementById('expedientePedidoContent');
+    const historialPage = document.getElementById('historialPage');
+    const detalleComanda = document.getElementById('detalleComanda');
+
+    if (expedientePedido) {
+        expedientePedido.hidden = true;
+        expedientePedido.style.display = 'none';
+    }
+    if (expedienteContent) expedienteContent.innerHTML = '';
+    if (historialPage) historialPage.style.display = 'none';
+    if (detalleComanda) detalleComanda.style.display = 'none';
+
+    const codigoCocina = comanda.codigo || comanda.codigo_comanda || codigo;
+    const datosBase = {
+        empresa: comanda.empresa || comanda.company_name || '',
+        responsable: comanda.responsable || comanda.responsable_name || '',
+        pax: Number(comanda.pax || comanda.pax_total || comanda.menu_principal?.pax || 0),
+        hora_salida: comanda.hora_salida || '',
+        fecha_evento: comanda.fecha_evento || '',
+        notas: comanda.notas || '',
+        menu_principal: comanda.menu_principal || null,
+        menus_adicionales: comanda.menus_adicionales || [],
+        menu_nombre: comanda.menu_principal?.nombre || comanda.menu_nombre || comanda.menu_categoria_nombre || '',
+        logistica_inline: comanda.logistica_inline || comanda.logistica || null
+    };
+
+    window.ultimoCodigoCocina = codigoCocina;
+    window.ultimoOrdenId = comanda.orden_id || null;
+    window.ultimaComandaCocinaData = comanda;
+    window._logisticaEditando = null;
+
+    if (typeof abrirFormularioLogistica !== 'function') {
+        alert('No se pudo abrir el formulario de logistica.');
+        return;
+    }
+
+    await abrirFormularioLogistica(codigoCocina, window.ultimoOrdenId, datosBase);
 }
 
 function convertirSolicitudEnComanda(codigo) {
@@ -741,6 +991,10 @@ function _renderTotalTermosDetalle(comanda) {
 
 function _renderDetalleComanda(comanda) {
     window.detalleDocumentoActivo = { tipo: 'cocina', codigo: comanda.codigo };
+    const editButton = document.querySelector('.comanda-actions button[title="Editar"]');
+    if (editButton && window.AppPermissions) {
+        editButton.style.display = AppPermissions.canEditOrders() ? '' : 'none';
+    }
     const el = (id) => document.getElementById(id);
     const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
         '&': '&amp;',
@@ -1093,6 +1347,10 @@ function _renderDetalleComandaLogistica(comanda) {
         codigo: comanda.codigo,
         codigoCocina: comanda.codigo_cocina || comanda.codigo
     };
+    const editButton = document.querySelector('.comanda-actions button[title="Editar"]');
+    if (editButton && window.AppPermissions) {
+        editButton.style.display = AppPermissions.canEditLogistics() ? '' : 'none';
+    }
 
     const el = (id) => document.getElementById(id);
     const textoSeguro = (valor) => String(valor ?? '').replace(/[&<>"']/g, (char) => ({
@@ -1232,7 +1490,6 @@ function _inferirCategoriaMenuEdicion(menu) {
 function _inferirTipoServicioEdicion(menu) {
     if (menu?.servicio_categoria) return menu.servicio_categoria;
     const nombre = String(menu?.nombre || '').toLowerCase();
-    if (nombre.includes('welcome') || nombre.includes('coffee')) return 'welcome';
     if (nombre.includes('brindis') || nombre.includes('networking') || nombre.includes('afterwork')) return 'vino';
     if (nombre.includes('alucinancia') || nombre.includes('decuatro') || nombre.includes('atractividad')) return 'cocteles';
     return '';
@@ -1618,7 +1875,12 @@ async function editarComanda() {
         if (tipoMenajeGroup) tipoMenajeGroup.style.display = '';
     }
 
-    await cargarComandaEnFormularioEdicion(window.comandaEditando);
+    window._cargandoComandaEnFormulario = true;
+    try {
+        await cargarComandaEnFormularioEdicion(window.comandaEditando);
+    } finally {
+        window._cargandoComandaEnFormulario = false;
+    }
 
     console.log('Comanda cargada para edición:', window.comandaEditando.codigo);
 }
@@ -1669,7 +1931,7 @@ function eliminarComanda() {
 }
 
 async function editarComandaLogistica() {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede editar comandas.')) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar comandas de logistica.')) {
         return;
     }
 

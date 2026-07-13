@@ -1071,7 +1071,10 @@ function crearComandaLogistica() {
         pax:          Number(comandaBase.pax || document.getElementById('pax')?.value || 0),
         hora_salida:  comandaBase.hora_salida || document.getElementById('hora_salida')?.value || '',
         fecha_evento: comandaBase.fecha_evento || document.getElementById('fecha_evento')?.value || '',
-        notas:        comandaBase.notas || document.getElementById('alergias_notas')?.value || ''
+        notas:        comandaBase.notas || document.getElementById('alergias_notas')?.value || '',
+        menu_principal: comandaBase.menu_principal || null,
+        menus_adicionales: comandaBase.menus_adicionales || [],
+        menu_nombre: comandaBase.menu_nombre || ''
     };
 
     // El código de cocina está guardado en window.ultimoCodigoCocina
@@ -1122,6 +1125,10 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
         const el = document.getElementById(id);
         if (el) el.value = value || '';
     };
+    const logisticaGuardada = datosBase.logistica_inline || datosBase.logistica || {};
+    const direccionGuardada = (!logisticaGuardada.calle && logisticaGuardada.direccion && typeof separarDireccionLogistica === 'function')
+        ? separarDireccionLogistica(logisticaGuardada.direccion)
+        : { calle: '', numero: '' };
 
     setText('log_codigo_cocina', codigoCocina);
     setText('log_empresa', datosBase.empresa);
@@ -1130,15 +1137,15 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
     setText('log_fecha_evento', datosBase.fecha_evento);
     setText('log_hora_salida', datosBase.hora_salida);
 
-    setValue('log_nombre_contacto', document.getElementById('log_inline_nombre_contacto')?.value || '');
-    setValue('log_telefono_contacto', document.getElementById('log_inline_telefono_contacto')?.value || '');
-    setValue('log_montaje', document.getElementById('log_inline_montaje')?.value || '');
-    setValue('log_calle', document.getElementById('log_inline_calle')?.value || '');
-    setValue('log_numero', document.getElementById('log_inline_numero')?.value || '');
-    setValue('log_codigo_postal', document.getElementById('log_inline_codigo_postal')?.value || '');
-    setValue('log_hora_entrega', document.getElementById('log_inline_hora_entrega')?.value || '');
-    setValue('log_hora_evento', document.getElementById('log_inline_hora_evento')?.value || '');
-    setValue('log_page_notas', document.getElementById('log_inline_notas')?.value || '');
+    setValue('log_nombre_contacto', logisticaGuardada.nombre_contacto || document.getElementById('log_inline_nombre_contacto')?.value || '');
+    setValue('log_telefono_contacto', logisticaGuardada.telefono_contacto || document.getElementById('log_inline_telefono_contacto')?.value || '');
+    setValue('log_montaje', logisticaGuardada.montaje || document.getElementById('log_inline_montaje')?.value || '');
+    setValue('log_calle', logisticaGuardada.calle || direccionGuardada.calle || document.getElementById('log_inline_calle')?.value || '');
+    setValue('log_numero', logisticaGuardada.numero || direccionGuardada.numero || document.getElementById('log_inline_numero')?.value || '');
+    setValue('log_codigo_postal', logisticaGuardada.codigo_postal || document.getElementById('log_inline_codigo_postal')?.value || '');
+    setValue('log_hora_entrega', logisticaGuardada.hora_entrega || document.getElementById('log_inline_hora_entrega')?.value || '');
+    setValue('log_hora_evento', logisticaGuardada.hora_evento || document.getElementById('log_inline_hora_evento')?.value || '');
+    setValue('log_page_notas', logisticaGuardada.notas_logistica || document.getElementById('log_inline_notas')?.value || '');
     if (typeof window.actualizarSelectoresContactosCliente === 'function') {
         await window.actualizarSelectoresContactosCliente(datosBase.empresa || document.getElementById('empresa')?.value || '');
     }
@@ -1211,6 +1218,10 @@ function validarComandaLogisticaPage() {
 }
 
 function guardarComandaLogistica() {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para guardar comandas de logistica.')) {
+        return;
+    }
+
     if (!validarComandaLogisticaPage()) return;
 
     const base = window._logisticaBase || {};
@@ -1230,6 +1241,9 @@ function guardarComandaLogistica() {
         pax: base.pax || 0,
         fecha_evento: base.fecha_evento || '',
         hora_salida: base.hora_salida || '',
+        menu_principal: base.menu_principal || null,
+        menus_adicionales: base.menus_adicionales || [],
+        menu_nombre: base.menu_nombre || '',
         logistica: {
             nombre_contacto: document.getElementById('log_nombre_contacto')?.value.trim() || '',
             telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',

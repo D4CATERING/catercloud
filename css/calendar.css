@@ -196,6 +196,68 @@
   gap: 6px;
 }
 
+.event-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.event-icon-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #334155;
+  cursor: pointer;
+  padding: 0;
+  transition: background .15s, color .15s, transform .12s;
+}
+
+.event-icon-btn--edit {
+  background: #e8eef7;
+  color: #31415a;
+}
+
+.event-icon-btn--delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.event-icon-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.event-icon-btn svg path {
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 2.35 !important;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.event-icon-btn:hover {
+  background: #edf2f7;
+  color: var(--dc-negro);
+  transform: translateY(-1px);
+}
+
+.event-icon-btn--delete:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
 .event-time {
   font-size: .68rem;
   font-weight: 600;

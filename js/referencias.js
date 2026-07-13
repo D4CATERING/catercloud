@@ -259,14 +259,14 @@ async function cargarCatalogoServiciosDesdeSupabase(servicioTipo) {
     }));
 
     return {
-        saladas: aplicarReglasCantidadServicios(items.filter(item => item.grupo !== 'postre'), servicioTipo),
+        saladas: items.filter(item => item.grupo !== 'postre'),
         postres: items
             .filter(item => item.grupo === 'postre')
             .map(item => ({
                 ...item,
-                tipo: 'postre',
-                cantidad: 1,
-                unidad: 'ud'
+                tipo: item.tipo || 'postre',
+                cantidad: Number(item.cantidad ?? 1),
+                unidad: item.unidad || 'ud'
             }))
     };
 }
@@ -281,10 +281,12 @@ async function cargarReferencias() {
         : CATALOGO_GRIS;
     let catalogoRojo = esServicios ? [] : CATALOGO_ROJO;
     let catalogoPostres = CATALOGO_POSTRES;
+    let serviciosDesdeSupabase = false;
 
     if (esServicios) {
         try {
             const catalogosServicios = await cargarCatalogoServiciosDesdeSupabase(servicioTipo);
+            serviciosDesdeSupabase = true;
             catalogoGris = catalogosServicios.saladas;
             catalogoPostres = catalogosServicios.postres.length
                 ? catalogosServicios.postres
@@ -296,7 +298,7 @@ async function cargarReferencias() {
     if (esServicios) {
         aplicarReferenciasObligatoriasServicios(catalogoGris);
     }
-    if (esServicios) {
+    if (esServicios && !serviciosDesdeSupabase) {
         catalogoGris = aplicarReglasCantidadServicios(catalogoGris, servicioTipo);
     }
 

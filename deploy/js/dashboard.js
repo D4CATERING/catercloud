@@ -8,9 +8,72 @@ function getFechaLocalHoyDashboard() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+window.cocinaFiltroPeriodo = window.cocinaFiltroPeriodo || 'hoy';
+window.logisticaFiltroPeriodo = window.logisticaFiltroPeriodo || 'hoy';
+
 function aplicarFiltroHoySiExiste(inputId) {
     const input = document.getElementById(inputId);
     if (input) input.value = getFechaLocalHoyDashboard();
+    if (inputId === 'cocinaFiltroFecha') window.cocinaFiltroPeriodo = 'hoy';
+    if (inputId === 'logisticaFiltroFecha') window.logisticaFiltroPeriodo = 'hoy';
+}
+
+function getSemanaLocalDashboard() {
+    const hoy = new Date();
+    const dia = hoy.getDay() || 7;
+    const inicio = new Date(hoy);
+    inicio.setDate(hoy.getDate() - dia + 1);
+    const fin = new Date(inicio);
+    fin.setDate(inicio.getDate() + 6);
+    const toIso = fecha => {
+        const yyyy = fecha.getFullYear();
+        const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dd = String(fecha.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
+    return { inicio: toIso(inicio), fin: toIso(fin) };
+}
+
+function filtrarEventosPorPeriodoDashboard(eventos, getFechaItem, inputId, periodo) {
+    const fechaFiltro = document.getElementById(inputId)?.value || '';
+    if (fechaFiltro) {
+        return (eventos || []).filter(item => getFechaItem(item) === fechaFiltro);
+    }
+    if (periodo === 'semana') {
+        const { inicio, fin } = getSemanaLocalDashboard();
+        return (eventos || []).filter(item => {
+            const fecha = getFechaItem(item);
+            return fecha >= inicio && fecha <= fin;
+        });
+    }
+    if (periodo === 'todo') {
+        return eventos || [];
+    }
+    const hoy = getFechaLocalHoyDashboard();
+    return (eventos || []).filter(item => getFechaItem(item) === hoy);
+}
+
+function actualizarBotonesPeriodoDashboard(prefix, periodo) {
+    ['Hoy', 'Semana', 'Todo'].forEach(nombre => {
+        const btn = document.getElementById(`${prefix}Filtro${nombre}Btn`);
+        if (btn) btn.classList.toggle('active', nombre.toLowerCase() === periodo);
+    });
+}
+
+function puedeEditarCocina() {
+    return !window.AppPermissions || AppPermissions.canEditKitchen();
+}
+
+function puedeEditarLogistica() {
+    return !window.AppPermissions || AppPermissions.canEditLogistics();
+}
+
+function requireEditarCocina() {
+    return !window.AppPermissions || AppPermissions.requireKitchen();
+}
+
+function requireEditarLogistica() {
+    return !window.AppPermissions || AppPermissions.requireLogistics();
 }
 
 /**
@@ -216,6 +279,23 @@ function mostrarCocina() {
     renderizarComandasCocina();
 }
 
+function refrescarAlertasOperativas() {
+    const cocinaPage = document.getElementById('cocinaPage');
+    const logisticaPage = document.getElementById('logisticaPage');
+
+    if (cocinaPage && cocinaPage.style.display !== 'none') {
+        renderizarComandasCocina();
+    }
+
+    if (logisticaPage && logisticaPage.style.display !== 'none') {
+        renderizarComandasLogistica();
+    }
+}
+
+if (!window._alertasOperativasTimer) {
+    window._alertasOperativasTimer = setInterval(refrescarAlertasOperativas, 60000);
+}
+
 function getHistorialCocinaModulo() {
     return JSON.parse(localStorage.getItem('historialComandas') || '[]');
 }
@@ -224,8 +304,52 @@ function guardarHistorialCocinaModulo(historial) {
     localStorage.setItem('historialComandas', JSON.stringify(historial || []));
 }
 
+async function sincronizarAccionesOperativasSupabase(codigo, patch) {
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return;
+
+    try {
+        const { data, error: selectError } = await window.supabaseClient
+            .from('orders')
+            .select('payload')
+            .eq('codigo', codigo)
+            .maybeSingle();
+
+        if (selectError || !data) return;
+
+        const payloadActual = data.payload || {};
+        const payload = {
+            ...payloadActual,
+            ...patch,
+            fecha_modificacion: new Date().toISOString(),
+            editado_por_id: window.currentUser.id,
+            editado_por_nombre: getOperativeActorName(),
+            editado_por_email: window.currentUser.email || ''
+        };
+
+        const { error: updateError } = await window.supabaseClient
+            .from('orders')
+            .update({
+                payload,
+                updated_by: window.currentUser.id,
+                updated_at: new Date().toISOString()
+            })
+            .eq('codigo', codigo);
+
+        if (updateError) throw updateError;
+    } catch (error) {
+        console.warn('No se pudo sincronizar la actividad operativa con Supabase:', error);
+    }
+}
+
 function getFechaCocinaItem(item) {
     return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+}
+
+function getHoraEntregaItem(item) {
+    return item?.logistica_inline?.hora_entrega ||
+        item?.logistica?.hora_entrega ||
+        item?.hora_entrega ||
+        '';
 }
 
 function normalizarEstadoCocina(estado) {
@@ -274,6 +398,12 @@ function getMenusCocinaComanda(item) {
     });
 
     return menus.filter(menu => menu.nombre);
+}
+
+function getResumenMenusConPax(item) {
+    return getMenusCocinaComanda(item)
+        .map(menu => `${escapeLogisticaHtml(menu.nombre)} (${menu.pax || 0} pax)`)
+        .join(', ');
 }
 
 function distribuirCantidadCocina(total, partes) {
@@ -445,6 +575,95 @@ function getProducidosCocina(comanda) {
         .reduce((total, grupo) => total + grupo.items.filter(item => state[item.key]).length, 0);
 }
 
+function getOperativeActorName() {
+    return window.currentUser?.user_metadata?.full_name
+        || window.currentUser?.email
+        || 'Usuario local';
+}
+
+function formatearFechaHoraOperativa(value) {
+    if (!value) return '';
+    const fecha = new Date(value);
+    if (Number.isNaN(fecha.getTime())) return '';
+    return fecha.toLocaleString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function registrarAccionOperativa(item, area, accion, detalle = '') {
+    if (!item) return;
+    const key = area === 'logistica' ? 'logistics_action_log' : 'kitchen_action_log';
+    const registro = {
+        at: new Date().toISOString(),
+        by: getOperativeActorName(),
+        action: accion,
+        detail: detalle
+    };
+    item[key] = [registro, ...(item[key] || [])].slice(0, 80);
+    if (typeof window.registrarActividadApp === 'function') {
+        window.registrarActividadApp('accion_operativa', {
+            entityType: 'pedido',
+            entityCode: item.codigo_cocina || item.codigo_original || item.codigo || item.codigo_comanda || null,
+            area,
+            details: {
+                accion,
+                detalle,
+                fecha_evento: item.fecha_evento || null,
+                empresa: item.empresa || item.company_name || ''
+            }
+        });
+    }
+}
+
+function renderActividadOperativaHtml(item, area) {
+    const key = area === 'logistica' ? 'logistics_action_log' : 'kitchen_action_log';
+    const registros = item?.[key] || [];
+    if (!registros.length) return '';
+
+    return `
+        <section class="operative-log">
+            <h3>Actividad reciente</h3>
+            <div class="operative-log-list">
+                ${registros.slice(0, 6).map(reg => `
+                    <div class="operative-log-item">
+                        <strong>${escapeLogisticaHtml(reg.action || 'Accion')}</strong>
+                        <span>${escapeLogisticaHtml(reg.detail || '')}</span>
+                        <small>${escapeLogisticaHtml(reg.by || 'Usuario')} · ${escapeLogisticaHtml(formatearFechaHoraOperativa(reg.at))}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function getConfirmacionCompletadoHtml(area, index, confirmadoAt, total, completos) {
+    if (!total || completos < total) return '';
+    const label = area === 'logistica' ? 'Logistica completada' : 'Cocina completada';
+    const onclick = area === 'logistica'
+        ? `confirmarCompletadoLogistica(${index})`
+        : `confirmarCompletadoCocina(${index})`;
+
+    if (confirmadoAt) {
+        return `
+            <div class="operative-confirmation operative-confirmation--done">
+                <strong>${label}</strong>
+                <span>Confirmado el ${escapeLogisticaHtml(formatearFechaHoraOperativa(confirmadoAt))}</span>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="operative-confirmation">
+            <span>Progreso al 100%. Confirma el cierre operativo.</span>
+            <button type="button" onclick="${onclick}">Confirmar completado</button>
+        </div>
+    `;
+}
+
 function getEventosCocinaActivos() {
     return getHistorialCocinaModulo()
         .map((item, index) => ({
@@ -480,12 +699,27 @@ function guardarEventoCocinaActivo(evento) {
         estado_cocina: normalizarEstadoCocina(evento.kitchen_status),
         kitchen_assigned_to: evento.kitchen_assigned_to || '',
         kitchen_items_state: evento.kitchen_items_state || {},
-        kitchen_produced_items: getProducidosCocina(evento)
+        kitchen_produced_items: getProducidosCocina(evento),
+        kitchen_action_log: evento.kitchen_action_log || [],
+        kitchen_completed_confirmed_at: evento.kitchen_completed_confirmed_at || null,
+        kitchen_completed_confirmed_by: evento.kitchen_completed_confirmed_by || ''
     };
 
     if (evento.kitchen_ready_at) historial[index].kitchen_ready_at = evento.kitchen_ready_at;
     if (evento.kitchen_ready_by) historial[index].kitchen_ready_by = evento.kitchen_ready_by;
     guardarHistorialCocinaModulo(historial);
+    sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
+        kitchen_status: historial[index].kitchen_status,
+        estado_cocina: historial[index].estado_cocina,
+        kitchen_assigned_to: historial[index].kitchen_assigned_to || '',
+        kitchen_items_state: historial[index].kitchen_items_state || {},
+        kitchen_produced_items: historial[index].kitchen_produced_items || 0,
+        kitchen_action_log: historial[index].kitchen_action_log || [],
+        kitchen_completed_confirmed_at: historial[index].kitchen_completed_confirmed_at || null,
+        kitchen_completed_confirmed_by: historial[index].kitchen_completed_confirmed_by || '',
+        kitchen_ready_at: historial[index].kitchen_ready_at || null,
+        kitchen_ready_by: historial[index].kitchen_ready_by || ''
+    });
 }
 
 function actualizarKpisCocina(eventos) {
@@ -508,15 +742,16 @@ function actualizarKpisCocina(eventos) {
 function renderizarComandasCocina() {
     const cont = document.getElementById('cocinaComandasList');
     if (!cont) return;
+    const canEdit = puedeEditarCocina();
 
     const eventos = getEventosCocinaActivos();
     const fechaFiltro = document.getElementById('cocinaFiltroFecha')?.value || '';
-    const eventosFiltrados = fechaFiltro
-        ? eventos.filter(item => getFechaCocinaItem(item) === fechaFiltro)
-        : eventos;
+    const periodo = fechaFiltro ? 'dia' : (window.cocinaFiltroPeriodo || 'hoy');
+    const eventosFiltrados = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', periodo);
 
     window.cocinaEventosActivos = eventosFiltrados;
-    actualizarKpisCocina(eventos);
+    actualizarKpisCocina(eventosFiltrados);
+    actualizarBotonesPeriodoDashboard('cocina', periodo);
 
     if (!eventos.length) {
         cont.innerHTML = '<div class="logistics-empty">Aun no hay comandas activas en cocina.</div>';
@@ -537,10 +772,12 @@ function renderizarComandasCocina() {
         const progreso = totalItems ? Math.min(100, Math.round((producidos / totalItems) * 100)) : 0;
         const responsable = item.kitchen_assigned_to || '';
         const fecha = item.fecha_evento || item.fecha_creacion || '';
-        const menuResumen = menus.map(menu => `${escapeLogisticaHtml(menu.nombre)} (${menu.pax || 0} pax)`).join(', ');
+        const horaSalida = item.hora_salida || '';
+        const menuResumen = getResumenMenusConPax(item);
+        const alertaSalida = getAlertaSalidaHtml(item, estado);
 
         return `
-            <article class="logistics-event-card kitchen-event-card" onclick="abrirProduccionCocina(${index})">
+            <article class="logistics-event-card kitchen-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirProduccionCocina(${index})">
                 <div class="logistics-event-main">
                     <div>
                         <strong>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || 'Sin codigo')}</strong>
@@ -549,16 +786,17 @@ function renderizarComandasCocina() {
                     <span class="logistics-status-pill logistics-status-pill--${estadoClase}">${getLabelEstadoCocina(estado)}</span>
                 </div>
 
+                ${alertaSalida}
+
                 <div class="logistics-event-meta">
                     <span>${escapeLogisticaHtml(fecha || 'Sin fecha')}</span>
-                    <span>${item.hora_salida || ''}</span>
-                    <span>${item.pax || 0} pax</span>
+                    <span>Salida ${escapeLogisticaHtml(horaSalida || '-')}</span>
                     <span>${totalItems} items</span>
                 </div>
 
                 <div class="logistics-progress-row">
                     <span>${producidos} producidos</span>
-                    <div class="logistics-progress-bar"><span style="width:${progreso}%"></span></div>
+                    <div class="logistics-progress-bar ${progreso >= 100 ? 'is-complete' : ''}"><span style="width:${progreso}%"></span></div>
                     <span>${progreso}%</span>
                 </div>
 
@@ -566,12 +804,13 @@ function renderizarComandasCocina() {
                     <label>
                         Responsable
                         <input type="text" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
+                            ${canEdit ? '' : 'disabled'}
                             onclick="event.stopPropagation()"
                             onchange="actualizarResponsableCocina(${index}, this.value)">
                     </label>
                     <label>
                         Estado
-                        <select onclick="event.stopPropagation()" onchange="actualizarEstadoCocina(${index}, this.value)">
+                        <select ${canEdit ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoCocina(${index}, this.value)">
                             <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
                             <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
                             <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
@@ -589,23 +828,31 @@ function abrirProduccionCocina(index) {
     const modal = document.getElementById('cocinaProduccionModal');
     const content = document.getElementById('cocinaProduccionContent');
     if (!item || !modal || !content) return;
+    const canEdit = puedeEditarCocina();
 
     const grupos = getProduccionCocinaDetalle(item);
     const totalItems = getTotalItemsProduccionCocina(item);
     const producidos = getProducidosCocina(item);
     const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+    const confirmacionHtml = getConfirmacionCompletadoHtml(
+        'cocina',
+        index,
+        item.kitchen_completed_confirmed_at,
+        totalItems,
+        producidos
+    );
 
     content.innerHTML = `
         <div class="logistics-prep-header">
             <div>
                 <h2>${escapeLogisticaHtml(item.empresa || item.codigo || 'Cocina')}</h2>
-                <p>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || '')} · ${item.pax || 0} pax · ${escapeLogisticaHtml(item.fecha_evento || 'Sin fecha')}</p>
+                <p>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || '')} · ${item.pax || 0} pax · ${escapeLogisticaHtml(item.fecha_evento || 'Sin fecha')} · Salida ${escapeLogisticaHtml(item.hora_salida || '-')}</p>
             </div>
         </div>
 
         <div class="logistics-prep-state">
             <label>Estado general:</label>
-            <select onchange="actualizarEstadoCocina(${index}, this.value); abrirProduccionCocina(${index});">
+            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoCocina(${index}, this.value); abrirProduccionCocina(${index});">
                 <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
                 <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
                 <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
@@ -614,22 +861,26 @@ function abrirProduccionCocina(index) {
 
         <div class="logistics-progress-row kitchen-prep-progress">
             <span>${producidos} producidos</span>
-            <div class="logistics-progress-bar"><span style="width:${totalItems ? Math.round((producidos / totalItems) * 100) : 0}%"></span></div>
+            <div class="logistics-progress-bar ${totalItems && producidos >= totalItems ? 'is-complete' : ''}"><span style="width:${totalItems ? Math.round((producidos / totalItems) * 100) : 0}%"></span></div>
             <span>${totalItems} items</span>
         </div>
 
-        ${grupos.map(grupo => renderizarGrupoProduccionCocina(index, grupo, item.kitchen_items_state || {})).join('') || '<div class="logistics-empty">Esta comanda no tiene items de cocina para producir.</div>'}
+        ${canEdit ? confirmacionHtml : ''}
+
+        ${grupos.map(grupo => renderizarGrupoProduccionCocina(index, grupo, item.kitchen_items_state || {}, canEdit)).join('') || '<div class="logistics-empty">Esta comanda no tiene items de cocina para producir.</div>'}
+
+        ${renderActividadOperativaHtml(item, 'cocina')}
 
         <div class="logistics-prep-actions">
             <button type="button" class="btn-secondary" onclick="cerrarProduccionCocina()">Cerrar</button>
-            <button type="button" class="btn-primary" onclick="marcarProduccionCocinaLista(${index})">Marcar todo listo</button>
+            ${canEdit ? `<button type="button" class="btn-primary" onclick="guardarCambiosProduccionCocina(${index})">Guardar cambios</button>` : ''}
         </div>
     `;
 
     modal.style.display = 'block';
 }
 
-function renderizarGrupoProduccionCocina(index, grupo, state) {
+function renderizarGrupoProduccionCocina(index, grupo, state, canEdit = true) {
     const gruposPorTipo = grupo.items.reduce((acc, item) => {
         if (!acc[item.grupo]) acc[item.grupo] = [];
         acc[item.grupo].push(item);
@@ -643,7 +894,7 @@ function renderizarGrupoProduccionCocina(index, grupo, state) {
                 <div class="kitchen-prep-subgroup">
                     <strong>${escapeLogisticaHtml(titulo)}</strong>
                     <div class="logistics-prep-list">
-                        ${items.map(item => renderizarItemProduccionCocina(index, item, !!state[item.key])).join('')}
+                        ${items.map(item => renderizarItemProduccionCocina(index, item, !!state[item.key], canEdit)).join('')}
                     </div>
                 </div>
             `).join('')}
@@ -651,10 +902,11 @@ function renderizarGrupoProduccionCocina(index, grupo, state) {
     `;
 }
 
-function renderizarItemProduccionCocina(index, item, producido) {
+function renderizarItemProduccionCocina(index, item, producido, canEdit = true) {
     return `
         <label class="logistics-prep-item kitchen-prep-item">
             <input type="checkbox" ${producido ? 'checked' : ''}
+                ${canEdit ? '' : 'disabled'}
                 onchange="toggleItemProduccionCocina(${index}, '${escapeLogisticaHtml(item.key)}', this.checked)">
             <span class="logistics-prep-check">${producido ? '✓' : ''}</span>
             <span class="logistics-prep-name">
@@ -672,11 +924,21 @@ function cerrarProduccionCocina() {
 }
 
 function toggleItemProduccionCocina(index, key, checked) {
+    if (!requireEditarCocina()) return;
     const item = (window.cocinaEventosActivos || [])[index];
     if (!item) return;
 
     item.kitchen_items_state = item.kitchen_items_state || {};
     item.kitchen_items_state[key] = !!checked;
+    const produccionItem = getProduccionCocinaDetalle(item)
+        .flatMap(grupo => grupo.items)
+        .find(detalle => detalle.key === key);
+    registrarAccionOperativa(
+        item,
+        'cocina',
+        checked ? 'Item producido' : 'Item desmarcado',
+        produccionItem?.nombre || key
+    );
 
     const total = getTotalItemsProduccionCocina(item);
     const producidos = getProducidosCocina(item);
@@ -684,43 +946,90 @@ function toggleItemProduccionCocina(index, key, checked) {
     if (total > 0 && producidos >= total) item.kitchen_status = 'listo';
     else if (producidos > 0) item.kitchen_status = 'en_produccion';
     else item.kitchen_status = 'sin_producir';
+    if (!checked || producidos < total) {
+        item.kitchen_completed_confirmed_at = null;
+        item.kitchen_completed_confirmed_by = '';
+    }
 
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
     abrirProduccionCocina(index);
 }
 
-function marcarProduccionCocinaLista(index) {
+function guardarCambiosProduccionCocina(index) {
+    if (!requireEditarCocina()) return;
     const item = (window.cocinaEventosActivos || [])[index];
     if (!item) return;
     item.kitchen_items_state = item.kitchen_items_state || {};
-    getProduccionCocinaDetalle(item).forEach(grupo => {
-        grupo.items.forEach(produccionItem => {
-            item.kitchen_items_state[produccionItem.key] = true;
-        });
-    });
+
+    const total = getTotalItemsProduccionCocina(item);
+    const producidos = getProducidosCocina(item);
+    item.kitchen_produced_items = producidos;
+
+    if (total > 0 && producidos >= total) {
+        item.kitchen_status = 'listo';
+        item.kitchen_ready_at = new Date().toISOString();
+        item.kitchen_ready_by = item.kitchen_assigned_to || '';
+    } else if (producidos > 0) {
+        item.kitchen_status = 'en_produccion';
+    } else {
+        item.kitchen_status = 'sin_producir';
+    }
+
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+    cerrarProduccionCocina();
+}
+
+function confirmarCompletadoCocina(index) {
+    if (!requireEditarCocina()) return;
+    const item = (window.cocinaEventosActivos || [])[index];
+    if (!item) return;
+
+    const total = getTotalItemsProduccionCocina(item);
+    const producidos = getProducidosCocina(item);
+    if (!total || producidos < total) {
+        alert('Para confirmar, todos los items deben estar producidos.');
+        return;
+    }
+
+    const ahora = new Date().toISOString();
     item.kitchen_status = 'listo';
-    item.kitchen_produced_items = getTotalItemsProduccionCocina(item);
-    item.kitchen_ready_at = new Date().toISOString();
-    item.kitchen_ready_by = item.kitchen_assigned_to || '';
+    item.estado_cocina = 'listo';
+    item.kitchen_produced_items = producidos;
+    item.kitchen_completed_confirmed_at = ahora;
+    item.kitchen_completed_confirmed_by = getOperativeActorName();
+    item.kitchen_ready_at = ahora;
+    item.kitchen_ready_by = getOperativeActorName();
+    registrarAccionOperativa(item, 'cocina', 'Completado confirmado', `${producidos}/${total} items`);
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
     abrirProduccionCocina(index);
 }
 
 function filtrarCocinaHoy() {
+    window.cocinaFiltroPeriodo = 'hoy';
     const input = document.getElementById('cocinaFiltroFecha');
     if (input) input.value = getFechaLocalHoyDashboard();
     renderizarComandasCocina();
 }
 
+function filtrarCocinaSemana() {
+    window.cocinaFiltroPeriodo = 'semana';
+    const input = document.getElementById('cocinaFiltroFecha');
+    if (input) input.value = '';
+    renderizarComandasCocina();
+}
+
 function limpiarFiltroFechaCocina() {
+    window.cocinaFiltroPeriodo = 'todo';
     const input = document.getElementById('cocinaFiltroFecha');
     if (input) input.value = '';
     renderizarComandasCocina();
 }
 
 function actualizarResponsableCocina(index, value) {
+    if (!requireEditarCocina()) return;
     const item = (window.cocinaEventosActivos || [])[index];
     if (!item) return;
     item.kitchen_assigned_to = value || '';
@@ -729,10 +1038,12 @@ function actualizarResponsableCocina(index, value) {
 }
 
 function actualizarEstadoCocina(index, value) {
+    if (!requireEditarCocina()) return;
     const item = (window.cocinaEventosActivos || [])[index];
     if (!item) return;
     item.kitchen_status = normalizarEstadoCocina(value);
     item.kitchen_items_state = item.kitchen_items_state || {};
+    registrarAccionOperativa(item, 'cocina', 'Estado actualizado', getLabelEstadoCocina(item.kitchen_status));
 
     if (item.kitchen_status === 'listo') {
         getProduccionCocinaDetalle(item).forEach(grupo => {
@@ -746,14 +1057,19 @@ function actualizarEstadoCocina(index, value) {
     } else if (item.kitchen_status === 'sin_producir') {
         item.kitchen_items_state = {};
         item.kitchen_produced_items = 0;
+        item.kitchen_completed_confirmed_at = null;
+        item.kitchen_completed_confirmed_by = '';
     } else {
         item.kitchen_produced_items = getProducidosCocina(item);
+        item.kitchen_completed_confirmed_at = null;
+        item.kitchen_completed_confirmed_by = '';
     }
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
 }
 
 function actualizarProducidosCocina(index, value) {
+    if (!requireEditarCocina()) return;
     const item = (window.cocinaEventosActivos || [])[index];
     if (!item) return;
     const total = getTotalItemsProduccionCocina(item);
@@ -806,21 +1122,72 @@ function getFechaLogisticaItem(item) {
     return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
 }
 
+function getMinutosHastaSalida(item) {
+    const fecha = String(item?.fecha_evento || '').split('T')[0];
+    const hora = String(item?.hora_salida || '').trim();
+    if (!fecha || !hora) return null;
+
+    const salida = new Date(`${fecha}T${hora}`);
+    if (Number.isNaN(salida.getTime())) return null;
+
+    return Math.ceil((salida.getTime() - Date.now()) / 60000);
+}
+
+function getAlertaSalidaHtml(item, estado) {
+    if (estado === 'listo') return '';
+
+    const minutos = getMinutosHastaSalida(item);
+    if (minutos === null || minutos > 15) return '';
+
+    const texto = minutos < 0
+        ? `Salida vencida hace ${Math.abs(minutos)} min`
+        : minutos === 0
+            ? 'Salida ahora'
+            : `Salida en ${minutos} min`;
+
+    return `
+        <div class="logistics-departure-alert" role="status" aria-live="polite">
+            <span>!</span>
+            <strong>${escapeLogisticaHtml(texto)}</strong>
+            <small>Pedido aun no marcado como listo</small>
+        </div>
+    `;
+}
+
+function esPedidoAnulado(item) {
+    return item?.estado === 'anulada'
+        || item?.estado_pedido === 'anulada'
+        || item?.pedido_estado === 'anulada';
+}
+
 function materialLogisticaTieneItems(material) {
     return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length);
 }
 
 function getEventosLogisticaActivos() {
     const historialLogistica = getHistorialLogistica();
+    const historialCocina = getHistorialCocinaLogistica();
     const codigosConLogistica = getCodigosLogistica(historialLogistica);
-    const eventos = historialLogistica.map((item, index) => ({
-        ...item,
-        _logisticaSource: 'logistica',
-        _logisticaIndex: index
-    }));
+    const eventos = historialLogistica.map((item, index) => {
+        const codigoCocina = item.codigo_cocina || item.codigo_original || item.codigo;
+        const comandaCocina = historialCocina.find(cocina => {
+            const codigo = cocina.codigo || cocina.codigo_comanda || cocina.id;
+            return codigo && String(codigo) === String(codigoCocina);
+        });
+        return {
+            ...(comandaCocina || {}),
+            ...item,
+            menu_principal: item.menu_principal || comandaCocina?.menu_principal || null,
+            menus_adicionales: item.menus_adicionales || comandaCocina?.menus_adicionales || [],
+            menu_nombre: item.menu_nombre || comandaCocina?.menu_nombre || '',
+            _logisticaSource: 'logistica',
+            _logisticaIndex: index
+        };
+    }).filter(item => !esPedidoAnulado(item));
 
-    getHistorialCocinaLogistica().forEach((item, index) => {
+    historialCocina.forEach((item, index) => {
         const codigo = item.codigo || item.codigo_comanda || item.id;
+        if (esPedidoAnulado(item)) return;
         if (!codigo || codigosConLogistica.has(codigo)) return;
         if (!materialLogisticaTieneItems(item.material_logistica)) return;
 
@@ -856,9 +1223,24 @@ function guardarEventoLogisticaActivo(evento) {
         historial[index].estado_logistica = evento.logistics_status;
         historial[index].logistics_assigned_to = evento.logistics_assigned_to || '';
         historial[index].logistics_prepared_items = evento.logistics_prepared_items || 0;
+        historial[index].logistics_action_log = evento.logistics_action_log || [];
+        historial[index].logistics_completed_confirmed_at = evento.logistics_completed_confirmed_at || null;
+        historial[index].logistics_completed_confirmed_by = evento.logistics_completed_confirmed_by || '';
         if (evento.logistics_ready_at) historial[index].logistics_ready_at = evento.logistics_ready_at;
         if (evento.logistics_ready_by) historial[index].logistics_ready_by = evento.logistics_ready_by;
         guardarHistorialCocinaLogistica(historial);
+        sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
+            material_logistica: historial[index].material_logistica || {},
+            logistics_status: historial[index].logistics_status || '',
+            estado_logistica: historial[index].estado_logistica || '',
+            logistics_assigned_to: historial[index].logistics_assigned_to || '',
+            logistics_prepared_items: historial[index].logistics_prepared_items || 0,
+            logistics_action_log: historial[index].logistics_action_log || [],
+            logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
+            logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
+            logistics_ready_at: historial[index].logistics_ready_at || null,
+            logistics_ready_by: historial[index].logistics_ready_by || ''
+        });
         return;
     }
 
@@ -872,10 +1254,24 @@ function guardarEventoLogisticaActivo(evento) {
         estado: evento.logistics_status,
         logistics_assigned_to: evento.logistics_assigned_to || '',
         logistics_prepared_items: evento.logistics_prepared_items || 0,
+        logistics_action_log: evento.logistics_action_log || [],
+        logistics_completed_confirmed_at: evento.logistics_completed_confirmed_at || null,
+        logistics_completed_confirmed_by: evento.logistics_completed_confirmed_by || '',
         logistics_ready_at: evento.logistics_ready_at || historial[index].logistics_ready_at,
         logistics_ready_by: evento.logistics_ready_by || historial[index].logistics_ready_by
     };
     guardarHistorialLogistica(historial);
+    sincronizarAccionesOperativasSupabase(historial[index].codigo_cocina || historial[index].codigo_original || historial[index].codigo, {
+        logistics_status: historial[index].logistics_status || historial[index].estado || '',
+        estado_logistica: historial[index].logistics_status || historial[index].estado || '',
+        logistics_assigned_to: historial[index].logistics_assigned_to || '',
+        logistics_prepared_items: historial[index].logistics_prepared_items || 0,
+        logistics_action_log: historial[index].logistics_action_log || [],
+        logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
+        logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
+        logistics_ready_at: historial[index].logistics_ready_at || null,
+        logistics_ready_by: historial[index].logistics_ready_by || ''
+    });
 }
 
 function normalizarEstadoLogistica(estado) {
@@ -954,6 +1350,7 @@ function getComandasServicioSinLogistica(historialLogistica) {
     const historialCocina = JSON.parse(localStorage.getItem('historialComandas') || '[]');
 
     return historialCocina.filter(item => {
+        if (esPedidoAnulado(item)) return false;
         const codigo = item.codigo || item.codigo_comanda || item.id;
         const categoria = item.categoria_id || item.categoriaId || item.categoria;
         const menu = item.menu_principal || item.menu || item.menu_nombre || '';
@@ -988,8 +1385,13 @@ function renderizarAlertasLogistica(historial) {
     if (!box || !title || !list) return;
 
     const fechaFiltro = document.getElementById('logisticaFiltroFecha')?.value || '';
-    const faltantes = getComandasServicioSinLogistica(historial)
-        .filter(item => !fechaFiltro || getFechaLogisticaItem(item) === fechaFiltro);
+    const periodo = fechaFiltro ? 'dia' : (window.logisticaFiltroPeriodo || 'hoy');
+    const faltantes = filtrarEventosPorPeriodoDashboard(
+        getComandasServicioSinLogistica(historial),
+        getFechaLogisticaItem,
+        'logisticaFiltroFecha',
+        periodo
+    );
     if (!faltantes.length) {
         box.style.display = 'none';
         list.innerHTML = '';
@@ -1010,16 +1412,17 @@ function renderizarAlertasLogistica(historial) {
 function renderizarComandasLogistica() {
     const cont = document.getElementById('logisticaComandasList');
     if (!cont) return;
+    const canEdit = puedeEditarLogistica();
 
     const historialLogistica = getHistorialLogistica();
     const eventos = getEventosLogisticaActivos();
     const fechaFiltro = document.getElementById('logisticaFiltroFecha')?.value || '';
-    const eventosFiltrados = fechaFiltro
-        ? eventos.filter(item => getFechaLogisticaItem(item) === fechaFiltro)
-        : eventos;
+    const periodo = fechaFiltro ? 'dia' : (window.logisticaFiltroPeriodo || 'hoy');
+    const eventosFiltrados = filtrarEventosPorPeriodoDashboard(eventos, getFechaLogisticaItem, 'logisticaFiltroFecha', periodo);
 
     window.logisticaEventosActivos = eventosFiltrados;
-    actualizarKpisLogistica(eventos);
+    actualizarKpisLogistica(eventosFiltrados);
+    actualizarBotonesPeriodoDashboard('logistica', periodo);
     renderizarAlertasLogistica(historialLogistica);
 
     if (!eventos.length) {
@@ -1040,27 +1443,35 @@ function renderizarComandasLogistica() {
         const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
         const responsable = item.logistics_assigned_to || '';
         const progreso = totalMaterial ? Math.min(100, Math.round((preparados / totalMaterial) * 100)) : 0;
+        const horaSalida = item.hora_salida || '';
+        const horaEntrega = getHoraEntregaItem(item);
+        const menuResumen = getResumenMenusConPax(item);
         const origen = item._logisticaSource === 'cocina' ? 'Material de menú' : 'Comanda logística';
 
+        const alertaSalida = getAlertaSalidaHtml(item, estado);
+
         return `
-            <article class="logistics-event-card" onclick="abrirPreparacionLogistica(${index})">
+            <article class="logistics-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index})">
                 <div class="logistics-event-main">
                     <div>
                         <strong>${item.codigo_cocina || item.codigo || 'Sin código'}</strong>
-                        <span>${item.empresa || 'Sin empresa'} · ${origen}</span>
+                        <span>${item.empresa || 'Sin empresa'} · ${menuResumen || origen}</span>
                     </div>
                     <span class="logistics-status-pill logistics-status-pill--${estado}">${getLabelEstadoLogistica(estado)}</span>
                 </div>
 
+                ${alertaSalida}
+
                 <div class="logistics-event-meta">
                     <span>📅 ${fecha || 'Sin fecha'}</span>
-                    <span>${item.pax || 0} pax</span>
+                    <span>Salida ${escapeLogisticaHtml(horaSalida || '-')}</span>
+                    <span>Entrega ${escapeLogisticaHtml(horaEntrega || '-')}</span>
                     <span>${totalMaterial} artículos</span>
                 </div>
 
                 <div class="logistics-progress-row">
                     <span>${preparados} preparados</span>
-                    <div class="logistics-progress-bar"><span style="width:${progreso}%"></span></div>
+                    <div class="logistics-progress-bar ${progreso >= 100 ? 'is-complete' : ''}"><span style="width:${progreso}%"></span></div>
                     <span>${progreso}%</span>
                 </div>
 
@@ -1068,12 +1479,13 @@ function renderizarComandasLogistica() {
                     <label>
                         Responsable
                         <input type="text" value="${responsable}" placeholder="Asignar persona"
+                            ${canEdit ? '' : 'disabled'}
                             onclick="event.stopPropagation()"
                             onchange="actualizarResponsableLogistica(${index}, this.value)">
                     </label>
                     <label>
                         Estado
-                        <select onclick="event.stopPropagation()" onchange="actualizarEstadoLogistica(${index}, this.value)">
+                        <select ${canEdit ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoLogistica(${index}, this.value)">
                             <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
                             <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
                             <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
@@ -1082,6 +1494,7 @@ function renderizarComandasLogistica() {
                     <label>
                         Preparados
                         <input type="number" min="0" max="${totalMaterial || 0}" value="${preparados}"
+                            ${canEdit ? '' : 'disabled'}
                             onclick="event.stopPropagation()"
                             onchange="actualizarPreparadosLogistica(${index}, this.value)">
                     </label>
@@ -1093,18 +1506,28 @@ function renderizarComandasLogistica() {
 }
 
 function filtrarLogisticaHoy() {
+    window.logisticaFiltroPeriodo = 'hoy';
     const input = document.getElementById('logisticaFiltroFecha');
     if (input) input.value = getFechaLocalHoyDashboard();
     renderizarComandasLogistica();
 }
 
+function filtrarLogisticaSemana() {
+    window.logisticaFiltroPeriodo = 'semana';
+    const input = document.getElementById('logisticaFiltroFecha');
+    if (input) input.value = '';
+    renderizarComandasLogistica();
+}
+
 function limpiarFiltroFechaLogistica() {
+    window.logisticaFiltroPeriodo = 'todo';
     const input = document.getElementById('logisticaFiltroFecha');
     if (input) input.value = '';
     renderizarComandasLogistica();
 }
 
 function abrirModalArticuloLogistica(id = '') {
+    if (!requireEditarLogistica()) return;
     const modal = document.getElementById('logisticaArticuloModal');
     const form = document.getElementById('logisticaArticuloForm');
     if (!modal || !form) return;
@@ -1133,6 +1556,7 @@ function cerrarModalArticuloLogistica() {
 
 async function guardarArticuloInventarioLogistica(event) {
     event.preventDefault();
+    if (!requireEditarLogistica()) return;
     if (!window.supabaseClient) {
         alert('No se pudo conectar con Supabase para guardar el articulo.');
         return;
@@ -1210,6 +1634,7 @@ async function guardarArticuloInventarioLogistica(event) {
 }
 
 async function eliminarArticuloInventarioLogistica(id) {
+    if (!requireEditarLogistica()) return;
     if (!window.supabaseClient) {
         alert('No se pudo conectar con Supabase para eliminar el articulo.');
         return;
@@ -1237,26 +1662,38 @@ function abrirPreparacionLogistica(index) {
     const modal = document.getElementById('logisticaPreparacionModal');
     const content = document.getElementById('logisticaPreparacionContent');
     if (!item || !modal || !content) return;
+    const canEdit = puedeEditarLogistica();
 
     const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
     const material = item.material_logistica || {};
+    const totalMaterial = getMaterialLogisticaPlano(material).length;
+    const preparados = getMaterialLogisticaPlano(material).filter(mat => mat.preparado).length;
+    const confirmacionHtml = getConfirmacionCompletadoHtml(
+        'logistica',
+        index,
+        item.logistics_completed_confirmed_at,
+        totalMaterial,
+        preparados
+    );
 
     content.innerHTML = `
         <div class="logistics-prep-header">
             <div>
                 <h2>${item.empresa || item.codigo_cocina || item.codigo || 'Servicio'}</h2>
-                <p>${item.codigo_cocina || item.codigo || ''} · ${item.pax || 0} pax · ${item.fecha_evento || 'Sin fecha'}</p>
+                <p>${item.codigo_cocina || item.codigo || ''} · ${item.pax || 0} pax · ${item.fecha_evento || 'Sin fecha'} · Salida ${item.hora_salida || '-'} · Entrega ${getHoraEntregaItem(item) || '-'}</p>
             </div>
         </div>
 
         <div class="logistics-prep-state">
             <label>Estado general:</label>
-            <select onchange="actualizarEstadoLogistica(${index}, this.value); abrirPreparacionLogistica(${index});">
+            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoLogistica(${index}, this.value); abrirPreparacionLogistica(${index});">
                 <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
                 <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
                 <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
             </select>
         </div>
+
+        ${canEdit ? confirmacionHtml : ''}
 
         ${getCategoriasMaterialLogistica().map(cat => {
             const items = material[cat.key] || [];
@@ -1265,26 +1702,29 @@ function abrirPreparacionLogistica(index) {
                 <section class="logistics-prep-group">
                     <h3>${cat.label.toUpperCase()}</h3>
                     <div class="logistics-prep-list">
-                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex)).join('')}
+                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex, canEdit)).join('')}
                     </div>
                 </section>
             `;
         }).join('')}
 
+        ${renderActividadOperativaHtml(item, 'logistica')}
+
         <div class="logistics-prep-actions">
             <button type="button" class="btn-secondary" onclick="cerrarPreparacionLogistica()">Cerrar</button>
-            <button type="button" class="btn-primary" onclick="cerrarPreparacionLogistica()">Guardar cambios</button>
+            ${canEdit ? `<button type="button" class="btn-primary" onclick="cerrarPreparacionLogistica()">Guardar cambios</button>` : ''}
         </div>
     `;
 
     modal.style.display = 'block';
 }
 
-function renderizarItemPreparacionLogistica(index, tipo, item, matIndex) {
+function renderizarItemPreparacionLogistica(index, tipo, item, matIndex, canEdit = true) {
     const preparado = !!item.preparado;
     return `
         <label class="logistics-prep-item">
             <input type="checkbox" ${preparado ? 'checked' : ''}
+                ${canEdit ? '' : 'disabled'}
                 onchange="togglePreparadoLogistica(${index}, '${tipo}', ${matIndex}, this.checked)">
             <span class="logistics-prep-check">${preparado ? '✓' : ''}</span>
             <span class="logistics-prep-name">
@@ -1302,11 +1742,45 @@ function cerrarPreparacionLogistica() {
     renderizarComandasLogistica();
 }
 
+function confirmarCompletadoLogistica(index) {
+    if (!requireEditarLogistica()) return;
+    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    if (!item) return;
+
+    const total = getMaterialLogisticaPlano(item.material_logistica || {}).length;
+    const preparados = getMaterialLogisticaPlano(item.material_logistica || {}).filter(mat => mat.preparado).length;
+    if (!total || preparados < total) {
+        alert('Para confirmar, todo el material debe estar preparado.');
+        return;
+    }
+
+    const ahora = new Date().toISOString();
+    item.logistics_status = 'listo';
+    item.estado = 'listo';
+    item.logistics_prepared_items = preparados;
+    item.logistics_completed_confirmed_at = ahora;
+    item.logistics_completed_confirmed_by = getOperativeActorName();
+    item.logistics_ready_at = ahora;
+    item.logistics_ready_by = getOperativeActorName();
+    registrarAccionOperativa(item, 'logistica', 'Completado confirmado', `${preparados}/${total} materiales`);
+    guardarEventoLogisticaActivo(item);
+    renderizarComandasLogistica();
+    abrirPreparacionLogistica(index);
+}
+
 function togglePreparadoLogistica(index, tipo, matIndex, checked) {
+    if (!requireEditarLogistica()) return;
     const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item?.material_logistica?.[tipo]?.[matIndex]) return;
 
     item.material_logistica[tipo][matIndex].preparado = checked;
+    const materialItem = item.material_logistica[tipo][matIndex];
+    registrarAccionOperativa(
+        item,
+        'logistica',
+        checked ? 'Material preparado' : 'Material desmarcado',
+        materialItem?.nombre || 'Material'
+    );
     const total = getMaterialLogisticaPlano(item.material_logistica).length;
     const preparados = getMaterialLogisticaPlano(item.material_logistica).filter(mat => mat.preparado).length;
     item.logistics_prepared_items = preparados;
@@ -1320,12 +1794,17 @@ function togglePreparadoLogistica(index, tipo, matIndex, checked) {
         item.logistics_ready_at = new Date().toISOString();
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     }
+    if (!checked || preparados < total) {
+        item.logistics_completed_confirmed_at = null;
+        item.logistics_completed_confirmed_by = '';
+    }
     item.fecha_modificacion = new Date().toISOString();
     guardarEventoLogisticaActivo(item);
     abrirPreparacionLogistica(index);
 }
 
 function actualizarResponsableLogistica(index, value) {
+    if (!requireEditarLogistica()) return;
     const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item) return;
     item.logistics_assigned_to = value.trim();
@@ -1335,25 +1814,51 @@ function actualizarResponsableLogistica(index, value) {
 }
 
 function actualizarEstadoLogistica(index, value) {
+    if (!requireEditarLogistica()) return;
     const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item) return;
     item.logistics_status = value;
     item.estado = value;
+    registrarAccionOperativa(item, 'logistica', 'Estado actualizado', getLabelEstadoLogistica(value));
     item.fecha_modificacion = new Date().toISOString();
     if (value === 'listo') {
         item.logistics_ready_at = new Date().toISOString();
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+    } else {
+        item.logistics_completed_confirmed_at = null;
+        item.logistics_completed_confirmed_by = '';
     }
     guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
 
 function actualizarPreparadosLogistica(index, value) {
+    if (!requireEditarLogistica()) return;
     const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
     if (!item) return;
     const material = item.material_logistica || {};
     const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
-    item.logistics_prepared_items = Math.max(0, Math.min(Number(value) || 0, totalMaterial || 0));
+    const preparados = Math.max(0, Math.min(Number(value) || 0, totalMaterial || 0));
+    item.logistics_prepared_items = preparados;
+    registrarAccionOperativa(item, 'logistica', 'Conteo preparado actualizado', `${preparados}/${totalMaterial || 0} materiales`);
+
+    if (totalMaterial > 0 && preparados >= totalMaterial) {
+        item.logistics_status = 'listo';
+        item.estado = 'listo';
+        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+    } else if (preparados > 0) {
+        item.logistics_status = 'en_preparacion';
+        item.estado = 'en_preparacion';
+        item.logistics_completed_confirmed_at = null;
+        item.logistics_completed_confirmed_by = '';
+    } else {
+        item.logistics_status = 'sin_preparar';
+        item.estado = 'sin_preparar';
+        item.logistics_completed_confirmed_at = null;
+        item.logistics_completed_confirmed_by = '';
+    }
+
     item.fecha_modificacion = new Date().toISOString();
     guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
@@ -1398,6 +1903,7 @@ function filtrarInventarioLogistica(tipo) {
 function pintarInventarioLogistica(filtro = 'todos') {
     const cont = document.getElementById('logisticaInventarioList');
     if (!cont) return;
+    const canEdit = puedeEditarLogistica();
     const items = (window.logisticaInventarioItems || []).filter(item => !item.parent_id);
     const categorias = getCategoriasMaterialLogistica().filter(cat => filtro === 'todos' || cat.key === filtro);
 
@@ -1414,10 +1920,10 @@ function pintarInventarioLogistica(filtro = 'todos') {
                                 <span>${escapeLogisticaHtml(item.presentacion || item.descripcion || item.categoria || item.unidad || 'Inventario')}</span>
                                 <small><b>${Number(item.stock_total ?? item.stock ?? 0)}</b> ${escapeLogisticaHtml(item.unidad_stock || item.unidad || 'ud')} en stock</small>
                             </div>
-                            <div class="logistics-inventory-actions">
+                            ${canEdit ? `<div class="logistics-inventory-actions">
                                 <button type="button" class="inventory-action-btn inventory-action-btn--edit" title="Editar" aria-label="Editar"></button>
                                 <button type="button" class="inventory-action-btn inventory-action-btn--delete" title="Eliminar" aria-label="Eliminar"></button>
-                            </div>
+                            </div>` : ''}
                         </article>
                     `).join('') : '<div class="logistics-empty logistics-empty--small">Sin elementos</div>'}
                 </div>

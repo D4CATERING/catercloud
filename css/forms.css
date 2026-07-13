@@ -4901,6 +4901,12 @@ h3 {
   background: #f8f0df;
 }
 
+.logistics-events-toolbar button.active {
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
 .logistics-missing-box {
   padding: 16px;
   border: 1px solid #fbbf24;
@@ -4952,6 +4958,46 @@ h3 {
   border-color: #d1aa68;
   box-shadow: 0 4px 14px rgba(92, 61, 18, .12);
   transform: translateY(-1px);
+}
+
+.logistics-event-card--urgent {
+  border-color: rgba(225, 52, 46, .55);
+  box-shadow: 0 4px 16px rgba(225, 52, 46, .12);
+}
+
+.logistics-departure-alert {
+  display: grid;
+  grid-template-columns: 24px auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(225, 52, 46, .35);
+  border-radius: 8px;
+  background: #fff8f7;
+  color: #991b1b;
+  font-size: .76rem;
+}
+
+.logistics-departure-alert span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #E1342E;
+  color: #fff;
+  font-weight: 800;
+}
+
+.logistics-departure-alert strong {
+  color: #991b1b;
+  font-weight: 800;
+}
+
+.logistics-departure-alert small {
+  color: #7f1d1d;
+  text-align: right;
 }
 
 .logistics-event-main,
@@ -5357,6 +5403,96 @@ h3 {
 .logistics-prep-actions .btn-secondary,
 .logistics-prep-actions .btn-primary {
   justify-content: center;
+}
+
+.operative-confirmation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 16px;
+  padding: 10px 12px;
+  border: 1px solid rgba(16, 185, 129, .32);
+  border-radius: 9px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: .8rem;
+}
+
+.operative-confirmation button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #10b981;
+  color: #fff;
+  font-family: var(--font-title);
+  font-size: .78rem;
+  letter-spacing: .25px;
+  cursor: pointer;
+}
+
+.operative-confirmation--done {
+  justify-content: flex-start;
+}
+
+.operative-confirmation--done strong {
+  font-family: var(--font-title);
+  color: #065f46;
+  text-transform: uppercase;
+}
+
+.operative-confirmation--done span {
+  color: #047857;
+}
+
+.operative-log {
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid var(--dc-border);
+  border-radius: 9px;
+  background: #fff;
+}
+
+.operative-log h3 {
+  margin: 0 0 9px;
+  color: var(--dc-negro);
+  font-family: var(--font-title);
+  font-size: .8rem;
+  letter-spacing: .35px;
+  text-transform: uppercase;
+}
+
+.operative-log-list {
+  display: grid;
+  gap: 7px;
+}
+
+.operative-log-item {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid #edf0f3;
+  font-size: .76rem;
+}
+
+.operative-log-item:first-child {
+  border-top: 0;
+}
+
+.operative-log-item strong {
+  color: var(--dc-text);
+}
+
+.operative-log-item span {
+  color: var(--dc-muted);
+  min-width: 0;
+}
+
+.operative-log-item small {
+  color: #64748b;
+  white-space: nowrap;
 }
 
 .logistics-article-modal {
@@ -6149,6 +6285,10 @@ h3 {
   background: var(--dc-rojo);
 }
 
+.logistics-progress-bar.is-complete span {
+  background: #10b981;
+}
+
 .logistics-prep-close,
 .logistics-article-close {
   color: var(--dc-muted);
@@ -6238,6 +6378,166 @@ h3 {
     grid-column: auto;
     grid-row: auto;
     width: max-content;
+  }
+}
+
+/* Popups de produccion/preparacion mas compactos para tablet y movil */
+#cocinaProduccionModal .logistics-prep-modal,
+#logisticaPreparacionModal .logistics-prep-modal {
+  width: min(900px, calc(100vw - 28px));
+  max-height: calc(100vh - 32px);
+  padding: 18px 20px;
+}
+
+#cocinaProduccionModal .logistics-prep-close,
+#logisticaPreparacionModal .logistics-prep-close {
+  top: 10px;
+  right: 10px;
+  width: 26px;
+  height: 26px;
+}
+
+#cocinaProduccionModal .logistics-prep-header,
+#logisticaPreparacionModal .logistics-prep-header {
+  padding-right: 30px;
+}
+
+#cocinaProduccionModal .logistics-prep-header h2,
+#logisticaPreparacionModal .logistics-prep-header h2 {
+  font-size: 1.18rem;
+}
+
+#cocinaProduccionModal .logistics-prep-header p,
+#logisticaPreparacionModal .logistics-prep-header p {
+  margin-top: 4px;
+  font-size: .76rem;
+}
+
+#cocinaProduccionModal .logistics-prep-state,
+#logisticaPreparacionModal .logistics-prep-state {
+  margin: 10px 0 14px;
+  gap: 8px;
+}
+
+#cocinaProduccionModal .kitchen-prep-progress,
+#logisticaPreparacionModal .kitchen-prep-progress {
+  margin: 8px 0 12px;
+}
+
+#cocinaProduccionModal .logistics-prep-group,
+#logisticaPreparacionModal .logistics-prep-group {
+  margin-top: 12px;
+}
+
+#cocinaProduccionModal .kitchen-prep-group,
+#logisticaPreparacionModal .kitchen-prep-group {
+  padding: 10px;
+}
+
+#cocinaProduccionModal .logistics-prep-list,
+#logisticaPreparacionModal .logistics-prep-list,
+#cocinaProduccionModal .kitchen-prep-subgroup .logistics-prep-list {
+  gap: 7px;
+}
+
+#cocinaProduccionModal .logistics-prep-item,
+#logisticaPreparacionModal .logistics-prep-item {
+  min-height: 48px;
+  padding: 8px 10px;
+  gap: 8px;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+}
+
+#cocinaProduccionModal .logistics-prep-name strong,
+#logisticaPreparacionModal .logistics-prep-name strong {
+  font-size: .8rem;
+}
+
+#cocinaProduccionModal .logistics-prep-name small,
+#logisticaPreparacionModal .logistics-prep-name small {
+  font-size: .7rem;
+}
+
+#cocinaProduccionModal .logistics-prep-pill,
+#logisticaPreparacionModal .logistics-prep-pill {
+  padding: 4px 8px;
+  font-size: .68rem;
+}
+
+#cocinaProduccionModal .operative-log,
+#logisticaPreparacionModal .operative-log {
+  margin-top: 12px;
+  padding: 10px;
+}
+
+#cocinaProduccionModal .logistics-prep-actions,
+#logisticaPreparacionModal .logistics-prep-actions {
+  margin-top: 18px;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  #cocinaProduccionModal .logistics-prep-modal,
+  #logisticaPreparacionModal .logistics-prep-modal {
+    width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+    padding: 14px;
+  }
+
+  #cocinaProduccionModal .logistics-prep-list,
+  #logisticaPreparacionModal .logistics-prep-list,
+  #cocinaProduccionModal .kitchen-prep-subgroup .logistics-prep-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  #cocinaProduccionModal,
+  #logisticaPreparacionModal {
+    align-items: stretch;
+    padding: 0;
+  }
+
+  #cocinaProduccionModal .logistics-prep-modal,
+  #logisticaPreparacionModal .logistics-prep-modal {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 12px;
+  }
+
+  #cocinaProduccionModal .logistics-prep-header h2,
+  #logisticaPreparacionModal .logistics-prep-header h2 {
+    font-size: 1.02rem;
+  }
+
+  #cocinaProduccionModal .logistics-prep-state,
+  #logisticaPreparacionModal .logistics-prep-state,
+  #cocinaProduccionModal .operative-confirmation,
+  #logisticaPreparacionModal .operative-confirmation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  #cocinaProduccionModal .logistics-prep-state select,
+  #logisticaPreparacionModal .logistics-prep-state select,
+  #cocinaProduccionModal .operative-confirmation button,
+  #logisticaPreparacionModal .operative-confirmation button {
+    width: 100%;
+  }
+
+  #cocinaProduccionModal .logistics-prep-item,
+  #logisticaPreparacionModal .logistics-prep-item {
+    min-height: 44px;
+    padding: 7px 8px;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+  }
+
+  #cocinaProduccionModal .logistics-prep-actions,
+  #logisticaPreparacionModal .logistics-prep-actions {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -1,5 +1,27 @@
 // ========== STORAGE (LOCALSTORAGE) ==========
 
+function getAuditActionForUpdate(nuevosDatos = {}) {
+    if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'estado')) {
+        if (nuevosDatos.estado === 'anulada') return 'pedido_anulado';
+        if (nuevosDatos.estado === 'confirmado') return 'pedido_confirmado';
+        return 'estado_actualizado';
+    }
+    if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'adjuntos')) return 'archivos_actualizados';
+    if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'notas_pedido')) return 'anotaciones_actualizadas';
+    return 'pedido_editado';
+}
+
+function logActividadApp(action, codigo, details = {}, area = null) {
+    if (typeof window.registrarActividadApp === 'function') {
+        window.registrarActividadApp(action, {
+            entityType: 'pedido',
+            entityCode: codigo,
+            area,
+            details
+        });
+    }
+}
+
 /**
  * Guarda una comanda en Supabase (multiusuario)
  * @param {Object} comandaData - Datos de la comanda
@@ -28,6 +50,10 @@ async function guardarComandaEnHistorial(comandaData) {
   // Si NO hay supabase o NO hay login -> guardamos SOLO en local como backup
   if (!window.supabaseClient || !window.currentUser?.id) {
     guardarComandaEnHistorialLocal(payload);
+    logActividadApp('comanda_creada_local', codigo, {
+      empresa: payload.empresa || payload.company_name || '',
+      motivo: 'sin_supabase_o_sin_login'
+    });
     return codigo;
   }
 
@@ -77,6 +103,11 @@ async function guardarComandaEnHistorial(comandaData) {
 
     // ✅ Backup local también (opcional, pero recomendado)
     guardarComandaEnHistorialLocal(payload);
+    logActividadApp('comanda_creada', codigo, {
+      empresa: payload.empresa || payload.company_name || '',
+      fecha_evento: payload.fecha_evento || null,
+      pax: payload.pax || payload.pax_total || null
+    });
 
     return codigo;
 
@@ -84,6 +115,10 @@ async function guardarComandaEnHistorial(comandaData) {
     // ✅ Si Supabase falla, guardamos en local como respaldo
     console.warn('Supabase falló, guardando backup en localStorage:', error);
     guardarComandaEnHistorialLocal(payload);
+    logActividadApp('comanda_creada_local', codigo, {
+      empresa: payload.empresa || payload.company_name || '',
+      motivo: 'fallo_supabase'
+    });
     return codigo;
   }
 }
@@ -151,6 +186,11 @@ async function sincronizarSolicitudPedido(solicitud) {
         }]);
 
         if (error) throw error;
+        logActividadApp('solicitud_creada', solicitud.codigo, {
+            empresa: solicitud.empresa || '',
+            fecha_evento: solicitud.fecha_evento || null,
+            pax: solicitud.pax || solicitud.pax_total || null
+        });
         return true;
     } catch (error) {
         console.warn('No se pudo sincronizar la solicitud con Supabase:', error);
@@ -182,6 +222,12 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
         };
         
         localStorage.setItem('historialComandas', JSON.stringify(historial));
+        const auditAction = getAuditActionForUpdate(nuevosDatos);
+        logActividadApp(auditAction, codigo, {
+            cambios: Object.keys(nuevosDatos || {}),
+            estado: historial[index].estado || null,
+            version: historial[index].version
+        });
 
         if (window.supabaseClient && window.currentUser?.id) {
             try {
@@ -227,8 +273,13 @@ function obtenerComandaDelHistorial(codigo) {
  */
 function eliminarComandaDelHistorial(codigo) {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const comanda = historial.find(c => c.codigo === codigo);
     const nuevoHistorial = historial.filter(c => c.codigo !== codigo);
     localStorage.setItem('historialComandas', JSON.stringify(nuevoHistorial));
+    logActividadApp('pedido_eliminado_local', codigo, {
+        empresa: comanda?.empresa || comanda?.company_name || '',
+        fecha_evento: comanda?.fecha_evento || null
+    });
 }
 
 /**

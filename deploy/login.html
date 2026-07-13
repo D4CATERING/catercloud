@@ -469,7 +469,9 @@
     }
   });
 
-  btn.addEventListener("click", async () => {
+  async function iniciarSesion() {
+    if (btn.disabled) return;
+
     const email = document.getElementById("email").value.trim();
     const pass = document.getElementById("password").value;
 
@@ -500,6 +502,16 @@
       btn.disabled = false;
       btn.textContent = "Entrar";
     }
+  }
+
+  btn.addEventListener("click", iniciarSesion);
+
+  [document.getElementById("email"), document.getElementById("password")].forEach(input => {
+    input?.addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      iniciarSesion();
+    });
   });
 
   resetBtn.addEventListener("click", async () => {

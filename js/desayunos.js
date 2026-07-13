@@ -67,8 +67,8 @@ function cargarReferenciasDesayuno(menu) {
                   cantidadPorPax: 1/5, unidad: 'litro' },
                 { id: 'healthy_bolleria', nombre: 'Bollería', tipo: 'bolleria', 
                   cantidadPorPax: 1, unidad: 'uds', opciones: opcionesBolleria },
-                { id: 'healthy_sandwich', nombre: 'Mini sándwich', tipo: 'sandwich', 
-                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches },
+                { id: 'healthy_sandwich', nombre: 'Mini sándwich', tipo: 'sandwich_multiple', 
+                  cantidadPorPax: 1, unidad: 'uds', opciones: opcionesSandwiches, cantidadSandwiches: 2 },
                 { id: 'healthy_fruta', nombre: 'Vaso de fruta natural preparada', tipo: 'simple', 
                   cantidadPorPax: 1, unidad: 'uds' }
             ]
@@ -2002,7 +2002,7 @@ window.abrirModalDesayunoSandwichMultiple = function(refId) {
         </label>`).join('');
     _abrirModalDesayuno(
         'Elegir sabores',
-        `<p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona ${maxSelecciones} sabores.</p><div style="display:flex;flex-direction:column;gap:2px;">${body}</div>`,
+        `<p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona hasta ${maxSelecciones} sabores.</p><div style="display:flex;flex-direction:column;gap:2px;">${body}</div>`,
         true,
         null,
         refId
@@ -2078,7 +2078,7 @@ window.abrirModalDesayunoSandwichOPulguita = function(refId) {
 
     const sopOpts = tipo === 'sandwich'
         ? `
-            <p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona ${maxSandwiches} sabores.</p>
+            <p style="font-size:0.72rem;color:#64748b;margin-bottom:6px">Selecciona hasta ${maxSandwiches} sabores.</p>
             <div style="display:flex;flex-direction:column;gap:2px;">
                 ${opciones.map(o => `
                     <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:4px;

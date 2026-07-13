@@ -7,7 +7,7 @@
     };
 
     function normalizeRole(role) {
-        return ['admin', 'editor', 'viewer'].includes(role) ? role : 'editor';
+        return ['admin', 'editor', 'viewer', 'cocina', 'logistica'].includes(role) ? role : 'viewer';
     }
 
     window.AppPermissions = {
@@ -16,11 +16,27 @@
         },
 
         canRead() {
-            return ['admin', 'editor', 'viewer'].includes(this.role);
+            return ['admin', 'editor', 'viewer', 'cocina', 'logistica'].includes(this.role);
         },
 
         canWrite() {
             return ['admin', 'editor'].includes(this.role);
+        },
+
+        canEditOrders() {
+            return ['admin', 'editor'].includes(this.role);
+        },
+
+        canEditKitchen() {
+            return ['admin', 'cocina'].includes(this.role);
+        },
+
+        canEditLogistics() {
+            return ['admin', 'logistica'].includes(this.role);
+        },
+
+        canManageLogisticsInventory() {
+            return ['admin', 'logistica'].includes(this.role);
         },
 
         isAdmin() {
@@ -29,7 +45,7 @@
 
         async load() {
             if (!window.supabaseClient || !window.currentUser?.id) {
-                state.role = 'editor';
+                state.role = 'viewer';
                 state.loaded = true;
                 this.applyUI();
                 return state.role;
@@ -60,7 +76,23 @@
             document.body.classList.toggle('role-viewer', !this.canWrite());
 
             document.querySelectorAll('[data-requires-write]').forEach(el => {
-                el.style.display = this.canWrite() ? '' : 'none';
+                el.style.display = this.canEditOrders() ? '' : 'none';
+            });
+
+            document.querySelectorAll('[data-requires-order-write]').forEach(el => {
+                el.style.display = this.canEditOrders() ? '' : 'none';
+            });
+
+            document.querySelectorAll('[data-requires-kitchen-write]').forEach(el => {
+                el.style.display = this.canEditKitchen() ? '' : 'none';
+            });
+
+            document.querySelectorAll('[data-requires-logistics-write]').forEach(el => {
+                el.style.display = this.canEditLogistics() ? '' : 'none';
+            });
+
+            document.querySelectorAll('[data-requires-logistics-inventory]').forEach(el => {
+                el.style.display = this.canManageLogisticsInventory() ? '' : 'none';
             });
 
             document.querySelectorAll('[data-requires-admin]').forEach(el => {
@@ -69,7 +101,19 @@
         },
 
         requireWrite(message = 'Tu usuario solo tiene permiso de consulta.') {
-            if (this.canWrite()) return true;
+            if (this.canEditOrders()) return true;
+            alert(message);
+            return false;
+        },
+
+        requireKitchen(message = 'Tu usuario no tiene permiso para editar cocina.') {
+            if (this.canEditKitchen()) return true;
+            alert(message);
+            return false;
+        },
+
+        requireLogistics(message = 'Tu usuario no tiene permiso para editar logistica.') {
+            if (this.canEditLogistics()) return true;
             alert(message);
             return false;
         }

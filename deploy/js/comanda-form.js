@@ -8,6 +8,18 @@ if (!window.pax) window.pax = 0;
 if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
 if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
 
+function resetPaxMenuActual() {
+    if (window._cargandoComandaEnFormulario) return;
+    window.pax = 0;
+    const paxInput = document.getElementById('pax');
+    if (paxInput) paxInput.value = '0';
+    document.querySelectorAll('#paxValue, #paxValue2, #paxTotalValor').forEach(span => {
+        span.textContent = '0';
+    });
+    if (typeof actualizarCantidadesReferencias === 'function') actualizarCantidadesReferencias();
+    if (typeof actualizarCantidadesDesayuno === 'function') actualizarCantidadesDesayuno();
+}
+
 function asegurarLogisticaInlineVisible() {
     const logisticaSection = document.getElementById('logisticaInlineSection');
     const notasSection = document.getElementById('logisticaInlineNotasSection');
@@ -81,14 +93,13 @@ function actualizarCantidadesReferencias() {
 
     if (!window.referenciasSeleccionadas) return;
 
-    const catalogos = {
-        gris: typeof CATALOGO_GRIS !== 'undefined' ? CATALOGO_GRIS : [],
-        rojo: typeof CATALOGO_ROJO !== 'undefined' ? CATALOGO_ROJO : [],
-        postres: typeof CATALOGO_POSTRES !== 'undefined' ? CATALOGO_POSTRES : []
-    };
-
     ['gris', 'rojo', 'postres'].forEach(tipo => {
-        const catalogo = catalogos[tipo] || [];
+        const catalogo = window.referenciasPaginacion?.[tipo]?.items
+            || (tipo === 'gris'
+                ? (typeof CATALOGO_GRIS !== 'undefined' ? CATALOGO_GRIS : [])
+                : tipo === 'rojo'
+                    ? (typeof CATALOGO_ROJO !== 'undefined' ? CATALOGO_ROJO : [])
+                    : (typeof CATALOGO_POSTRES !== 'undefined' ? CATALOGO_POSTRES : []));
         const seleccionadas = window.referenciasSeleccionadas[tipo] || [];
 
         seleccionadas.forEach(sel => {
@@ -236,6 +247,7 @@ async function cargarMenus() {
     const categoriaId = document.getElementById('categoria').value;
     const container = document.getElementById('menusContainer');
     container.innerHTML = '';
+    resetPaxMenuActual();
     const esCategoriaServicios = String(categoriaId) === '3';
     const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
     const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
@@ -350,18 +362,7 @@ async function cargarMenus() {
             container.innerHTML = '';
             return;
         }
-        if (servicioTipo === 'welcome') {
-            menus = [
-                {
-                    id: 17,
-                    nombre: 'WELCOME COFFEE & COFFEE BREAK',
-                    descripcion: 'Termo café + leche + 2 mini cookies o pastas de té + 1 mini bollería + agua mineral',
-                    servicio_categoria: 'welcome',
-                    _cat: 1,
-                    omitir_material_menu: true
-                }
-            ];
-        } else if (servicioTipo === 'vino') {
+        if (servicioTipo === 'vino') {
             menus = [
                 { id: 301, nombre: 'BRINDIS', descripcion: 'Vino Español · selección de 4 ítems', items_salados_min: 4, items_salados_max: 4, servicio_categoria: 'vino' },
                 { id: 302, nombre: 'NETWORKING', descripcion: 'Vino Español · selección de 6 ítems', items_salados_min: 6, items_salados_max: 6, servicio_categoria: 'vino' },
@@ -428,6 +429,7 @@ async function seleccionarMenu(menuId, element) {
     // Estado global
     window.menuSeleccionado = JSON.parse(element.dataset.menu);
     document.getElementById('menu_id').value = menuId;
+    resetPaxMenuActual();
     window.pax = parseInt(document.getElementById('pax').value) || 0;
 
     // Aplicar tipo de menaje ya seleccionado a los termos y material
