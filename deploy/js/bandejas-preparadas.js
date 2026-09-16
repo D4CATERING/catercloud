@@ -8,19 +8,159 @@
 
   // ── Estado ──────────────────────────────────────────
   window.BandejasState = window.BandejasState || {
-    diy_dulces:        { items: [], selected: [] },
-    diy_salados:       { items: [], selected: [] },
-    diy_termos:        { items: [], selected: [] },
+    diy_dulces:        { items: [], selected: [], page: 1, perPage: 14, query: '' },
+    diy_salados:       { items: [], selected: [], page: 1, perPage: 14, query: '' },
+    diy_termos:        { items: [], selected: [], page: 1, perPage: 14, query: '' },
 
-    diy_fb_saladas:    { items: [], selected: [] },
-    diy_fb_postres:    { items: [], selected: [] },
+    diy_fb_saladas:    { items: [], selected: [], page: 1, perPage: 14, query: '' },
+    diy_fb_postres:    { items: [], selected: [], page: 1, perPage: 14, query: '' },
   };
+
+  function normalizarClave(texto) {
+    return String(texto || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function asegurarEstadoGrupo(stKey) {
+    window.BandejasState[stKey] = window.BandejasState[stKey] || {};
+    const st = window.BandejasState[stKey];
+    st.items = Array.isArray(st.items) ? st.items : [];
+    st.selected = Array.isArray(st.selected) ? st.selected : [];
+    st.page = Math.max(1, Number(st.page || 1));
+    st.perPage = 14;
+    st.query = String(st.query || '');
+    return st;
+  }
+
+  function textoBusquedaItemDIY(item) {
+    return normalizarClave([
+      item?.nombre,
+      item?.name,
+      item?.tipo,
+      item?.categoria,
+      ...(item?.variantes || []).map(v => v?.nombre || v?.name || '')
+    ].filter(Boolean).join(' '));
+  }
+
+  function getItemsFiltradosDIY(stKey) {
+    const st = asegurarEstadoGrupo(stKey);
+    const query = normalizarClave(st.query);
+    const items = st.items || [];
+    if (!query) return items;
+    return items.filter(item => textoBusquedaItemDIY(item).includes(query));
+  }
+
+  function ensureBuscadorDIY(stKey, containerId) {
+    const st = asegurarEstadoGrupo(stKey);
+    const container = $(containerId);
+    if (!container) return;
+
+    const enlazarBuscador = () => {
+      const input = $(`${containerId}__search`);
+      const clear = $(`${containerId}__clear`);
+      if (!input || !clear) return;
+      const getEstadoActual = () => asegurarEstadoGrupo(stKey);
+      const syncClear = () => clear.classList.toggle('hidden', !input.value.trim());
+      input.value = getEstadoActual().query || '';
+      syncClear();
+      input.oninput = () => {
+        const estadoActual = getEstadoActual();
+        estadoActual.query = input.value || '';
+        estadoActual.page = 1;
+        syncClear();
+        renderGrupo(stKey, containerId);
+      };
+      clear.onclick = () => {
+        const estadoActual = getEstadoActual();
+        estadoActual.query = '';
+        input.value = '';
+        estadoActual.page = 1;
+        syncClear();
+        renderGrupo(stKey, containerId);
+        input.focus();
+      };
+    };
+
+    if ($(`${containerId}__search`)) {
+      enlazarBuscador();
+      return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'referencias-search diy-search';
+    wrapper.innerHTML = `
+      <input id="${containerId}__search" type="text"
+        placeholder="Buscar referencia..." value="${escapeHtml(st.query)}" autocomplete="off">
+      <button type="button" id="${containerId}__clear" class="search-clear ${st.query ? '' : 'hidden'}" aria-label="Limpiar busqueda">
+        <svg viewBox="0 0 24 24" width="16" height="16">
+          <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>`;
+
+    container.parentNode.insertBefore(wrapper, container);
+    enlazarBuscador();
+  }
+
+  function normalizarTipoDesayuno(item) {
+    const valor = normalizarClave(
+      item.tipo || item.item_type || item.grupo || item.item_group || item.seccion || item.category || item.categoria_nombre
+    );
+    const nombre = normalizarClave(item.nombre || item.name);
+
+    if (['dulce', 'dulces', 'bolleria', 'bolleria y dulces'].includes(valor) || valor.includes('dulce') || valor.includes('bolleria')) {
+      return 'dulce';
+    }
+    if (['salado', 'salados', 'sandwich', 'sandwiches'].includes(valor) || valor.includes('salado') || valor.includes('sandwich')) {
+      return 'salado';
+    }
+    if (['termo', 'termos', 'bebida', 'bebidas'].includes(valor) || valor.includes('termo') || valor.includes('bebida')) {
+      return 'termo';
+    }
+
+    if (nombre.includes('termo') || nombre.includes('cafe') || nombre.includes('zumo') || nombre.includes('agua') || nombre.includes('smoothie')) {
+      return 'termo';
+    }
+    if (nombre.includes('bolleria') || nombre.includes('cookie') || nombre.includes('bizcocho') || nombre.includes('fruta') || nombre.includes('yogur') || nombre.includes('muffin') || nombre.includes('croissant')) {
+      return 'dulce';
+    }
+    return 'salado';
+  }
+
+  function normalizarTipoFoodbox(item) {
+    const valor = normalizarClave(item.tipo || item.item_type || item.grupo || item.item_group || item.seccion || item.category);
+    const nombre = normalizarClave(item.nombre || item.name);
+    if (valor.includes('postre') || nombre.includes('postre') || nombre.includes('brownie') || nombre.includes('cheesecake') || nombre.includes('tirami') || nombre.includes('fruta')) {
+      return 'postre';
+    }
+    return 'salado';
+  }
+
+  function resumirTipos(items) {
+    return items.reduce((acc, item) => {
+      const tipo = item.tipo || '(sin tipo)';
+      acc[tipo] = (acc[tipo] || 0) + 1;
+      return acc;
+    }, {});
+  }
 
   // ── Carga desde Supabase ─────────────────────────────
   async function cargarDesdeSupabase(categoria) {
     if (!window.supabaseClient) throw new Error('Supabase no inicializado');
 
-    const { data: opciones, error } = await window.supabaseClient
+    let { data: opciones, error } = await window.supabaseClient
       .from('diy_bandejas_desayunos')
       .select('*')
       .eq('categoria', categoria)
@@ -28,6 +168,23 @@
       .order('orden', { ascending: true });
 
     if (error) throw error;
+
+    if (!opciones?.length) {
+      const { data: opcionesActivas, error: errorActivas } = await window.supabaseClient
+        .from('diy_bandejas_desayunos')
+        .select('*')
+        .eq('activo', true)
+        .order('orden', { ascending: true });
+
+      if (errorActivas) throw errorActivas;
+      if (opcionesActivas?.length) {
+        console.warn(`DIY Desayunos no encontro filas con categoria=${categoria}; usando todos los items activos de la tabla.`, {
+          totalActivos: opcionesActivas.length,
+          categoriasRecibidas: [...new Set(opcionesActivas.map(o => o.categoria ?? '(sin categoria)'))]
+        });
+        opciones = opcionesActivas;
+      }
+    }
 
     const ids = opciones.map(o => o.id);
     let variantes = [];
@@ -38,14 +195,96 @@
         .in('opcion_id', ids)
         .eq('activo', true)
         .order('orden', { ascending: true });
-      if (!errV) variantes = vars || [];
+      if (errV) {
+        console.warn('No se pudieron cargar variantes DIY Desayunos desde Supabase:', errV);
+      } else {
+        variantes = vars || [];
+      }
     }
 
     return opciones.map(o => ({
       ...o,
-      variantes: variantes.filter(v => v.opcion_id === o.id)
+      nombre: o.nombre || o.name || '',
+      tipo: normalizarTipoDesayuno(o),
+      variantes: variantes.filter(v => String(v.opcion_id) === String(o.id))
     }));
   }
+
+  window.verificarBandejasDesayunoSupabase = async function () {
+    if (!window.supabaseClient) {
+      return { ok: false, error: 'Supabase no inicializado' };
+    }
+
+    const resultado = {
+      ok: true,
+      opciones: [],
+      opcionesActivasSinFiltro: [],
+      variantes: [],
+      miniSandwich: [],
+      errorOpciones: null,
+      errorOpcionesActivas: null,
+      errorVariantes: null
+    };
+
+    const { data: opciones, error } = await window.supabaseClient
+      .from('diy_bandejas_desayunos')
+      .select('*')
+      .eq('categoria', 5)
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+
+    resultado.opciones = opciones || [];
+    resultado.errorOpciones = error || null;
+    if (error) {
+      resultado.ok = false;
+      return resultado;
+    }
+
+    const { data: opcionesActivas, error: errorActivas } = await window.supabaseClient
+      .from('diy_bandejas_desayunos')
+      .select('*')
+      .eq('activo', true)
+      .order('orden', { ascending: true });
+
+    resultado.opcionesActivasSinFiltro = opcionesActivas || [];
+    resultado.errorOpcionesActivas = errorActivas || null;
+    if (errorActivas) resultado.ok = false;
+
+    const baseOpciones = resultado.opciones.length ? resultado.opciones : resultado.opcionesActivasSinFiltro;
+    resultado.opciones = baseOpciones;
+
+    const ids = baseOpciones.map(o => o.id);
+    if (ids.length) {
+      const { data: vars, error: errV } = await window.supabaseClient
+        .from('diy_bandejas_desayunos_variantes')
+        .select('*')
+        .in('opcion_id', ids)
+        .eq('activo', true)
+        .order('orden', { ascending: true });
+
+      resultado.variantes = vars || [];
+      resultado.errorVariantes = errV || null;
+      if (errV) resultado.ok = false;
+    }
+
+    resultado.resumen = {
+      totalCategoria5: (opciones || []).length,
+      totalActivosSinFiltro: (opcionesActivas || []).length,
+      categoriasActivas: [...new Set((opcionesActivas || []).map(o => o.categoria ?? '(sin categoria)'))],
+      tiposActivos: [...new Set((opcionesActivas || []).map(o => o.tipo ?? o.item_type ?? o.grupo ?? o.item_group ?? '(sin tipo)'))]
+    };
+
+    const opcionMini = baseOpciones.find(o => {
+      const nombre = normalizarClave(o.nombre || o.name);
+      return nombre.includes('mini') && nombre.includes('sandwich');
+    });
+    resultado.miniSandwich = opcionMini
+      ? resultado.variantes.filter(v => String(v.opcion_id) === String(opcionMini.id))
+      : [];
+
+    console.table(resultado.miniSandwich);
+    return resultado;
+  };
 
   // ── Fallback (Cat 5) ─────────────────────────────────
   function getFallbackDesayunos() {
@@ -153,28 +392,62 @@
     if (typeof window.actualizarResumenLateral === 'function') window.actualizarResumenLateral();
   }
 
+  function enfocarCantidadDIY(containerId, itemId) {
+    setTimeout(() => {
+      const container = $(containerId);
+      const row = Array.from(container?.querySelectorAll('.diy-item-row') || [])
+        .find(node => String(node.dataset.itemId) === String(itemId));
+      const input = row?.querySelector('.diy-ctrl-input');
+      if (input) {
+        input.focus();
+        input.select();
+      }
+    }, 0);
+  }
+
   function renderGrupo(stKey, containerId) {
     const container = $(containerId);
     if (!container) return;
-    const items = window.BandejasState[stKey].items;
-    const selected = window.BandejasState[stKey].selected;
+    const st = asegurarEstadoGrupo(stKey);
+    const items = st.items;
+    const selected = st.selected;
+    const itemIds = new Set(items.map(item => String(item.id)));
+    const itemsFueraCarta = selected
+      .filter(item => item.fuera_carta && !itemIds.has(String(item.id)))
+      .map(item => ({ ...item, variantes: item.variantes || [] }));
+    const itemsFiltrados = getItemsFiltradosDIY(stKey);
+    const fueraCartaFiltrados = itemsFueraCarta
+      .filter(item => !normalizarClave(st.query) || textoBusquedaItemDIY(item).includes(normalizarClave(st.query)));
+    const itemsRender = [...itemsFiltrados, ...fueraCartaFiltrados];
+    const totalPages = Math.max(1, Math.ceil(itemsRender.length / st.perPage));
+    if (st.page > totalPages) st.page = totalPages;
+    if (st.page < 1) st.page = 1;
+    const pageItems = itemsRender.slice((st.page - 1) * st.perPage, st.page * st.perPage);
 
     container.innerHTML = '';
     container.className = 'diy-item-list';
+    ensureBuscadorDIY(stKey, containerId);
 
-    items.forEach(item => {
+    if (!pageItems.length) {
+      container.innerHTML = '<div class="diy-empty">No hay referencias para esta busqueda.</div>';
+    }
+
+    pageItems.forEach(item => {
       const sel = selected.find(x => x.id === item.id);
       const qty = sel ? sel.cantidad : 0;
       const tieneVariantes = item.variantes?.length > 0;
       const precio = item.precio != null ? item.precio : null;
 
       const row = document.createElement('div');
-      row.className = 'diy-item-row' + (qty > 0 ? ' diy-item-row--active' : '');
+      row.className = 'diy-item-row'
+        + (qty > 0 ? ' diy-item-row--active' : '')
+        + (item.fuera_carta ? ' diy-item-row--fuera-carta' : '');
+      row.dataset.itemId = item.id;
       row.innerHTML = `
         <div class="diy-item-info">
-          <span class="diy-item-nombre">${item.nombre}</span>
+          <span class="diy-item-nombre">${escapeHtml(item.nombre)}${item.fuera_carta ? ' <small>Fuera de Carta</small>' : ''}</span>
           ${precio != null ? `<span class="diy-item-precio">${precio.toFixed(2).replace('.', ',')} € / bandeja</span>` : ''}
-          ${tieneVariantes && sel?.variantes?.length ? `<span class="diy-item-variantes-sel">${sel.variantes.map(v => v.nombre).join(', ')}</span>` : ''}
+          ${tieneVariantes && sel?.variantes?.length ? `<span class="diy-item-variantes-sel">${sel.variantes.map(v => escapeHtml(v.nombre)).join(', ')}</span>` : ''}
         </div>
         <div class="diy-item-controls">
           <button type="button" class="diy-ctrl-btn diy-ctrl-minus" ${qty === 0 ? 'disabled' : ''}>−</button>
@@ -188,10 +461,23 @@
         const idx = selected.findIndex(x => x.id === item.id);
         if (c === 0) {
           if (idx >= 0) selected.splice(idx, 1);
+          if (item.fuera_carta) {
+            window.BandejasState[stKey].items = window.BandejasState[stKey].items
+              .filter(actual => String(actual.id) !== String(item.id));
+          }
         } else if (idx >= 0) {
           selected[idx].cantidad = c;
         } else {
-          selected.push({ id: item.id, nombre: item.nombre, precio: item.precio || null, cantidad: c, variantes: [] });
+          selected.push({
+            id: item.id,
+            nombre: item.nombre,
+            precio: item.precio || null,
+            cantidad: c,
+            unidad: item.unidad || 'uds',
+            fuera_carta: !!item.fuera_carta,
+            tipo: item.tipo || null,
+            variantes: []
+          });
         }
         renderGrupo(stKey, containerId);
         actualizarResumen();
@@ -209,7 +495,16 @@
         if (tieneVariantes && !sel) {
           mostrarModalVariantes(item, stKey, (variantesSeleccionadas) => {
             if (variantesSeleccionadas.length > 0) {
-              selected.push({ id: item.id, nombre: item.nombre, precio: item.precio || null, cantidad: 1, variantes: variantesSeleccionadas });
+              selected.push({
+                id: item.id,
+                nombre: item.nombre,
+                precio: item.precio || null,
+                cantidad: 1,
+                unidad: item.unidad || 'uds',
+                fuera_carta: !!item.fuera_carta,
+                tipo: item.tipo || null,
+                variantes: variantesSeleccionadas
+              });
               renderGrupo(stKey, containerId);
               actualizarResumen();
             }
@@ -224,14 +519,134 @@
         e.stopPropagation();
         aplicarCantidad(e.target.value);
       };
-      row.querySelector('.diy-ctrl-input').onclick = (e) => e.stopPropagation();
+      row.querySelector('.diy-ctrl-input').onclick = (e) => {
+        e.stopPropagation();
+        e.target.select();
+      };
+      row.querySelector('.diy-ctrl-input').onfocus = (e) => e.target.select();
+      row.onclick = (e) => {
+        if (e.target.closest('input, button, select, textarea')) return;
+        if (qty <= 0) {
+          if (tieneVariantes && !sel) {
+            mostrarModalVariantes(item, stKey, (variantesSeleccionadas) => {
+              if (variantesSeleccionadas.length > 0) {
+                selected.push({
+                  id: item.id,
+                  nombre: item.nombre,
+                  precio: item.precio || null,
+                  cantidad: 1,
+                  unidad: item.unidad || 'uds',
+                  fuera_carta: !!item.fuera_carta,
+                  tipo: item.tipo || null,
+                  variantes: variantesSeleccionadas
+                });
+                renderGrupo(stKey, containerId);
+                actualizarResumen();
+                enfocarCantidadDIY(containerId, item.id);
+              }
+            });
+          } else {
+            aplicarCantidad(1);
+            enfocarCantidadDIY(containerId, item.id);
+          }
+        } else {
+          enfocarCantidadDIY(containerId, item.id);
+        }
+      };
 
       container.appendChild(row);
     });
+
+    const pager = document.createElement('div');
+    pager.className = 'pager-sutil diy-pager';
+    pager.innerHTML = `
+      <button type="button" class="pager-btn" data-dir="-1">‹</button>
+      <span class="pager-text">${st.page} / ${totalPages} · ${itemsRender.length} refs</span>
+      <button type="button" class="pager-btn" data-dir="1">›</button>`;
+    const prev = pager.querySelector('[data-dir="-1"]');
+    const next = pager.querySelector('[data-dir="1"]');
+    prev.disabled = st.page <= 1;
+    next.disabled = st.page >= totalPages;
+    prev.onclick = () => { st.page--; renderGrupo(stKey, containerId); };
+    next.onclick = () => { st.page++; renderGrupo(stKey, containerId); };
+    container.appendChild(pager);
   }
 
+  function getOpcionesFueraCarta(categoria) {
+    if (Number(categoria) === 6) {
+      return [
+        { stKey: 'diy_fb_saladas', label: 'Salada', tipo: 'salado' },
+        { stKey: 'diy_fb_postres', label: 'Postre', tipo: 'postre' },
+      ];
+    }
+    return [
+      { stKey: 'diy_salados', label: 'Salado', tipo: 'salado' },
+      { stKey: 'diy_dulces', label: 'Dulce', tipo: 'dulce' },
+      { stKey: 'diy_termos', label: 'Bebida / termo', tipo: 'termo' },
+    ];
+  }
+
+  function renderFueraCartaBandejas(sectionId, categoria) {
+    const opciones = getOpcionesFueraCarta(categoria);
+    return `
+      <div class="diy-fuera-carta" data-diy-fuera-carta="${escapeHtml(sectionId)}">
+        <div class="diy-fuera-carta-title">
+          <strong>Fuera de Carta</strong>
+          <span>Añade referencias puntuales para esta comanda</span>
+        </div>
+        <div class="diy-fuera-carta-form">
+          <input type="text" id="${sectionId}_fueraCartaNombre" class="dc-input" placeholder="Nombre de la referencia">
+          <input type="number" id="${sectionId}_fueraCartaCantidad" class="dc-input" min="1" step="1" value="1" aria-label="Cantidad">
+          <select id="${sectionId}_fueraCartaTipo" class="dc-input" aria-label="Tipo">
+            ${opciones.map(opcion => `<option value="${escapeHtml(opcion.stKey)}">${escapeHtml(opcion.label)}</option>`).join('')}
+          </select>
+          <button type="button" class="btn-fuera-carta" onclick="agregarFueraCartaBandejas('${escapeHtml(sectionId)}', ${Number(categoria)})">Añadir</button>
+        </div>
+      </div>
+    `;
+  }
+
+  window.agregarFueraCartaBandejas = function (sectionId, categoria) {
+    const nombreInput = $(`${sectionId}_fueraCartaNombre`);
+    const cantidadInput = $(`${sectionId}_fueraCartaCantidad`);
+    const tipoSelect = $(`${sectionId}_fueraCartaTipo`);
+    const nombre = (nombreInput?.value || '').trim();
+    const cantidad = Math.max(1, parseInt(cantidadInput?.value || '1', 10) || 1);
+    const stKey = tipoSelect?.value || getOpcionesFueraCarta(categoria)[0]?.stKey;
+    const opcion = getOpcionesFueraCarta(categoria).find(item => item.stKey === stKey) || {};
+    const state = window.BandejasState?.[stKey];
+    if (!state) return;
+    if (!nombre) {
+      alert('Escribe el nombre de la referencia fuera de carta.');
+      nombreInput?.focus();
+      return;
+    }
+
+    const item = {
+      id: `diy_fuera_carta_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      nombre,
+      cantidad,
+      unidad: 'uds',
+      fuera_carta: true,
+      tipo: opcion.tipo || null,
+      precio: null,
+      variantes: []
+    };
+
+    state.selected.push(item);
+    if (!state.items.some(actual => String(actual.id) === String(item.id))) {
+      state.items.push({ ...item });
+    }
+
+    if (nombreInput) nombreInput.value = '';
+    if (cantidadInput) cantidadInput.value = '1';
+    window.renderDIYGrupos?.(categoria);
+    actualizarResumen();
+    nombreInput?.focus();
+  };
+
   // ── Sección HTML ─────────────────────────────────────
-  function crearSeccion(id, titulo, grupos) {
+  function crearSeccion(id, titulo, grupos, options = {}) {
     if ($(id)) $(id).remove();
     const ref = $('referenciasSection') || document.body;
     const gruposHtml = grupos.map(g => `
@@ -243,7 +658,10 @@
     ref.insertAdjacentHTML('afterend', `
       <div class="form-section dc-section" id="${id}">
         <div class="dc-section-header"><h3>${titulo}</h3></div>
-        <div style="padding: 10px 14px 16px;">${gruposHtml}</div>
+        <div style="padding: 10px 14px 16px;">
+          ${gruposHtml}
+          ${renderFueraCartaBandejas(id, options.categoria || 5)}
+        </div>
       </div>`);
   }
 
@@ -253,7 +671,7 @@
       { icono: '☕', titulo: 'Termos y Bebidas',  containerId: 'diyTermosContainer'   },
       { icono: '🍰', titulo: 'Dulces y Bollería', containerId: 'diyDulcesContainer'   },
       { icono: '🥪', titulo: 'Salados y Bebidas', containerId: 'diySaladosContainer'  },
-    ]);
+    ], { categoria: 5 });
 
     // Loading
     ['diyTermosContainer','diyDulcesContainer','diySaladosContainer']
@@ -264,13 +682,19 @@
       items = await cargarDesdeSupabase(5);
       const tieneTiposDIY = items.some(i => ['termo', 'dulce', 'salado'].includes(i.tipo));
       if (!items.length || !tieneTiposDIY) {
-        console.warn('DIY Desayunos sin items activos en Supabase, usando fallback local');
+        console.warn('DIY Desayunos no pudo distribuir items de Supabase, usando fallback local', {
+          totalRecibido: items.length,
+          tiposNormalizados: resumirTipos(items)
+        });
         items = getFallbackDesayunos();
+        console.log('DIY Desayunos desde fallback local:', items.length, 'ítems');
+      } else {
+        console.log('DIY Desayunos desde Supabase:', items.length, 'ítems', resumirTipos(items));
       }
-      console.log('✅ DIY Desayunos desde Supabase:', items.length, 'ítems');
     } catch (err) {
-      console.warn('⚠️ Fallback DIY Desayunos:', err.message);
+      console.warn('Fallback DIY Desayunos:', err.message);
       items = getFallbackDesayunos();
+      console.log('DIY Desayunos desde fallback local:', items.length, 'ítems');
     }
 
     const mapa = { termo: 'diy_termos', dulce: 'diy_dulces', salado: 'diy_salados' };
@@ -278,8 +702,14 @@
 
     Object.keys(mapa).forEach(tipo => {
       const stKey = mapa[tipo];
-      window.BandejasState[stKey].items    = items.filter(i => i.tipo === tipo);
-      window.BandejasState[stKey].selected = [];
+      const state = asegurarEstadoGrupo(stKey);
+      state.items = items.filter(i => i.tipo === tipo);
+      state.selected = [];
+      state.page = 1;
+      state.query = '';
+      const search = $(`${contenedores[tipo]}__search`);
+      if (search) search.value = '';
+      $(`${contenedores[tipo]}__clear`)?.classList.add('hidden');
       renderGrupo(stKey, contenedores[tipo]);
     });
   };
@@ -305,12 +735,18 @@
         .in('opcion_id', ids)
         .eq('activo', true)
         .order('orden', { ascending: true });
-      if (!errV) variantes = vars || [];
+      if (errV) {
+        console.warn('No se pudieron cargar variantes DIY Foodbox desde Supabase:', errV);
+      } else {
+        variantes = vars || [];
+      }
     }
 
     return opciones.map(o => ({
       ...o,
-      variantes: variantes.filter(v => v.opcion_id === o.id)
+      nombre: o.nombre || o.name || '',
+      tipo: normalizarTipoFoodbox(o),
+      variantes: variantes.filter(v => String(v.opcion_id) === String(o.id))
     }));
   }
 
@@ -318,7 +754,7 @@
     crearSeccion('diyFoodboxSection', '🥗 Do It Yourself Foodbox', [
       { icono: '🥗', titulo: 'Saladas',    containerId: 'diyFbSaladasContainer'    },
       { icono: '🍰', titulo: 'Postres',    containerId: 'diyFbPostresContainer'    },
-    ]);
+    ], { categoria: 6 });
 
     let items = [];
     try {
@@ -434,16 +870,19 @@
       items = [...fallbackSaladas, ...fallbackPostres];
     }
 
-    // Distribuir por tipo (Supabase) o usar fallback directamente
+    // Distribuir por tipo, normalizando datos de Supabase y fallback local.
+    const itemsNormalizados = items.map(item => ({
+      ...item,
+      nombre: item.nombre || item.name || '',
+      tipo: item.tipo ? normalizarTipoFoodbox(item) : item.tipo
+    }));
     let saladas, postres;
-    if (items.length && items[0].tipo) {
-      // Datos de Supabase — tienen campo tipo
-      saladas = items.filter(o => o.tipo === 'salado');
-      postres  = items.filter(o => o.tipo === 'postre');
+    if (itemsNormalizados.length && itemsNormalizados.some(o => o.tipo === 'salado' || o.tipo === 'postre')) {
+      saladas = itemsNormalizados.filter(o => o.tipo === 'salado');
+      postres = itemsNormalizados.filter(o => o.tipo === 'postre');
     } else {
-      // Fallback — ya están separados
-      saladas = items.filter(o => !['fp1','fp2'].includes(o.id));
-      postres  = items.filter(o =>  ['fp1','fp2'].includes(o.id));
+      saladas = itemsNormalizados.filter(o => !['fp1','fp2'].includes(o.id));
+      postres = itemsNormalizados.filter(o =>  ['fp1','fp2'].includes(o.id));
     }
 
     const data = {
@@ -457,8 +896,14 @@
     };
 
     Object.keys(data).forEach(stKey => {
-      window.BandejasState[stKey].items    = data[stKey];
-      window.BandejasState[stKey].selected = [];
+      const state = asegurarEstadoGrupo(stKey);
+      state.items = data[stKey];
+      state.selected = [];
+      state.page = 1;
+      state.query = '';
+      const search = $(`${contenedores[stKey]}__search`);
+      if (search) search.value = '';
+      $(`${contenedores[stKey]}__clear`)?.classList.add('hidden');
       renderGrupo(stKey, contenedores[stKey]);
     });
   };

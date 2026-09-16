@@ -151,12 +151,15 @@ const CATALOGO_POSTRES = [
 
 window.referenciasPaginacion = window.referenciasPaginacion || {
     gris:    { page: 1, perPage: 10, items: [], containerId: 'referenciasGrisGrid',    query: '' },
-    rojo:    { page: 1, perPage: 10, items: [], containerId: 'referenciasRojoGrid',    query: '' },
-    postres: { page: 1, perPage: 8,  items: [], containerId: 'referenciasPostresGrid', query: '' }
+    rojo:    { page: 1, perPage: 12, items: [], containerId: 'referenciasRojoGrid',    query: '' },
+    postres: { page: 1, perPage: 10, items: [], containerId: 'referenciasPostresGrid', query: '' }
 };
 
 if (!window.referenciasSeleccionadas) {
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+}
+if (!window.referenciasExtras) {
+    window.referenciasExtras = [];
 }
 
 // Alias de compatibilidad con código que use 'saladas'
@@ -169,8 +172,15 @@ Object.defineProperty(window.referenciasSeleccionadas, 'saladas', {
 // =================== HELPERS ===================
 
 function calcularCantidad(ref, pax) {
-    if (ref.tipo === 'fijo')     return ref.cantidad * pax;       // ej: 2 uds × 20 pax = 40
-    if (ref.tipo === 'porPax')   return pax * ref.cantidad;       // ej: 15 grs × 20 pax = 300 grs
+    if (ref.fuera_carta) {
+        const tipo = ref.grupo === 'postre' ? 'postres' : 'saladas';
+        const mult = tipo === 'postres'
+            ? (window.multiplicadores?.postres ?? window.menuSeleccionado?.mult_postres ?? 1)
+            : (window.multiplicadores?.saladas ?? 1);
+        return Math.max(1, Math.ceil((Number(pax) || 0) * mult));
+    }
+    if (ref.tipo === 'fijo')     return ref.cantidad * pax;       // ej: 2 uds x 20 pax = 40
+    if (ref.tipo === 'porPax')   return pax * ref.cantidad;       // ej: 15 grs x 20 pax = 300 grs
     if (ref.tipo === 'cadaXpax') return Math.ceil(pax / (ref.divisor || 15)); // ej: ceil(20/15) = 2
     if (ref.tipo === 'postre') {
         const mult = window.menuSeleccionado?.mult_postres ?? 1;
@@ -182,6 +192,21 @@ function calcularCantidad(ref, pax) {
 function normalizarTexto(s) {
     return (s || '').toString().trim().toLowerCase()
         .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+function textoBusquedaReferencia(ref) {
+    return normalizarTexto([
+        ref?.nombre,
+        ref?.name,
+        ref?.descripcion,
+        ref?.description,
+        ref?.tipo,
+        ref?.grupo,
+        ref?.categoria,
+        ref?.categoria_nombre,
+        ref?.unidad,
+        ...(ref?.variantes || []).map(v => v?.nombre || v?.name || '')
+    ].filter(Boolean).join(' '));
 }
 
 function esReferenciaTablaServicio(nombre) {
@@ -271,8 +296,128 @@ async function cargarCatalogoServiciosDesdeSupabase(servicioTipo) {
     };
 }
 
+async function cargarCatalogoReferenciasMenuDesdeSupabase(categoriaId) {
+    if (!window.supabaseClient) throw new Error('Supabase no inicializado');
+
+    const { data, error } = await window.supabaseClient
+        .from('menu_reference_items')
+        .select('*')
+        .eq('category_id', Number(categoriaId))
+        .eq('active', true)
+        .order('display_order', { ascending: true });
+
+    if (error) throw error;
+
+    const items = (data || []).map(item => ({
+        id: item.legacy_id || item.id,
+        nombre: item.name,
+        grupo: item.item_group || 'gris',
+        tipo: item.quantity_type || 'fijo',
+        cantidad: Number(item.quantity ?? 1),
+        divisor: item.quantity_type === 'cadaXpax'
+            ? Number(item.divisor || 15)
+            : (item.divisor ? Number(item.divisor) : undefined),
+        unidad: item.unit || 'ud',
+        orden: item.display_order
+    }));
+
+    return {
+        gris: items.filter(item => item.grupo === 'gris'),
+        rojo: items.filter(item => item.grupo === 'rojo'),
+        postres: items.filter(item => item.grupo === 'postre')
+    };
+}
+
+window.verificarCatalogosMenusSupabase = async function () {
+    if (!window.supabaseClient) {
+        return { ok: false, error: 'Supabase no inicializado' };
+    }
+
+    const consultar = async (tabla, columnas = '*', filtros = []) => {
+        let query = window.supabaseClient.from(tabla).select(columnas);
+        filtros.forEach(([campo, valor]) => {
+            query = query.eq(campo, valor);
+        });
+        const { data, error } = await query;
+        return { data: data || [], error: error || null };
+    };
+
+    const [
+        menus,
+        referenciasMenu,
+        servicios,
+        foodboxLunch,
+        diyDesayunos,
+        diyDesayunosVariantes,
+        diyFoodbox,
+        diyFoodboxVariantes,
+        materialesLogistica,
+        materialesPorMenu
+    ] = await Promise.all([
+        consultar('menu_menus', 'id, legacy_id, category_id, name, service_category, active, display_order', [['active', true]]),
+        consultar('menu_reference_items', 'id, legacy_id, category_id, menu_legacy_id, item_group, name, active, display_order', [['active', true]]),
+        consultar('service_menu_items', 'id, service_category, item_group, name, active, display_order', [['active', true]]),
+        consultar('foodbox_opciones', 'id, tipo, nombre, activo, orden', [['activo', true]]),
+        consultar('diy_bandejas_desayunos', 'id, categoria, tipo, nombre, activo, orden', [['activo', true]]),
+        consultar('diy_bandejas_desayunos_variantes', 'id, opcion_id, nombre, activo, orden', [['activo', true]]),
+        consultar('diy_bandejas_foodbox', 'id, tipo, nombre, activo, orden', [['activo', true]]),
+        consultar('diy_bandejas_foodbox_variantes', 'id, opcion_id, nombre, activo, orden', [['activo', true]]),
+        consultar('logistics_materials', 'id, parent_id, tipo, nombre, activo, orden', [['activo', true]]),
+        consultar('menu_materials', 'menu_tipo, material_id, cantidad_base')
+    ]);
+
+    const resultado = {
+        ok: ![
+            menus, referenciasMenu, servicios, foodboxLunch, diyDesayunos,
+            diyDesayunosVariantes, diyFoodbox, diyFoodboxVariantes,
+            materialesLogistica, materialesPorMenu
+        ].some(r => r.error),
+        errores: {
+            menu_menus: menus.error,
+            menu_reference_items: referenciasMenu.error,
+            service_menu_items: servicios.error,
+            foodbox_opciones: foodboxLunch.error,
+            diy_bandejas_desayunos: diyDesayunos.error,
+            diy_bandejas_desayunos_variantes: diyDesayunosVariantes.error,
+            diy_bandejas_foodbox: diyFoodbox.error,
+            diy_bandejas_foodbox_variantes: diyFoodboxVariantes.error,
+            logistics_materials: materialesLogistica.error,
+            menu_materials: materialesPorMenu.error
+        },
+        totales: {
+            menus: menus.data.length,
+            referenciasMenu: referenciasMenu.data.length,
+            servicios: servicios.data.length,
+            foodboxLunch: foodboxLunch.data.length,
+            diyDesayunos: diyDesayunos.data.length,
+            diyDesayunosVariantes: diyDesayunosVariantes.data.length,
+            diyFoodbox: diyFoodbox.data.length,
+            diyFoodboxVariantes: diyFoodboxVariantes.data.length,
+            materialesLogistica: materialesLogistica.data.length,
+            materialesPorMenu: materialesPorMenu.data.length
+        },
+        datos: {
+            menus: menus.data,
+            referenciasMenu: referenciasMenu.data,
+            servicios: servicios.data,
+            foodboxLunch: foodboxLunch.data,
+            diyDesayunos: diyDesayunos.data,
+            diyDesayunosVariantes: diyDesayunosVariantes.data,
+            diyFoodbox: diyFoodbox.data,
+            diyFoodboxVariantes: diyFoodboxVariantes.data,
+            materialesLogistica: materialesLogistica.data,
+            materialesPorMenu: materialesPorMenu.data
+        }
+    };
+
+    console.table(resultado.totales);
+    return resultado;
+};
+
 async function cargarReferencias() {
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [] };
+    window.referenciasFueraCarta = [];
+    window.referenciasExtras = [];
 
     const servicioTipo = document.getElementById('serviciosCategoria')?.value || '';
     const esServicios = !!window.serviciosMode && parseInt(document.getElementById('categoria')?.value) === 3;
@@ -295,6 +440,16 @@ async function cargarReferencias() {
             console.warn('No se pudo cargar Servicios desde Supabase. Usando respaldo local.', error);
         }
     }
+    if (!esServicios && parseInt(document.getElementById('categoria')?.value) === 2) {
+        try {
+            const catalogosMenu = await cargarCatalogoReferenciasMenuDesdeSupabase(2);
+            if (catalogosMenu.gris.length) catalogoGris = catalogosMenu.gris;
+            if (catalogosMenu.rojo.length) catalogoRojo = catalogosMenu.rojo;
+            if (catalogosMenu.postres.length) catalogoPostres = catalogosMenu.postres;
+        } catch (error) {
+            console.warn('No se pudieron cargar referencias de menú desde Supabase. Usando respaldo local.', error);
+        }
+    }
     if (esServicios) {
         aplicarReferenciasObligatoriasServicios(catalogoGris);
     }
@@ -305,9 +460,11 @@ async function cargarReferencias() {
     const perPageGris = esServicios ? 20 : 10;
 
     initReferenciasPaginadas('gris',    catalogoGris,     'referenciasGrisGrid',    perPageGris);
-    initReferenciasPaginadas('rojo',    catalogoRojo,     'referenciasRojoGrid',    10);
-    initReferenciasPaginadas('postres', catalogoPostres,  'referenciasPostresGrid', esServicios ? 20 : 8);
+    initReferenciasPaginadas('rojo',    catalogoRojo,     'referenciasRojoGrid',    12);
+    initReferenciasPaginadas('postres', catalogoPostres,  'referenciasPostresGrid', esServicios ? 20 : 10);
 
+    asegurarReferenciasFueraCartaSection();
+    renderReferenciasFueraCarta();
     actualizarContadoresSeleccion();
 }
 
@@ -359,14 +516,47 @@ function ensureBuscador(tipo) {
     const st = window.referenciasPaginacion[tipo];
     const container = document.getElementById(st.containerId);
     if (!container) return;
-    if (document.getElementById(`${st.containerId}__search`)) return;
+    const searchId = `${st.containerId}__search`;
+    const clearId = `${st.containerId}__clear`;
+    const enlazarBuscador = () => {
+        const input = document.getElementById(searchId);
+        const clear = document.getElementById(clearId);
+        if (!input || !clear) return;
+
+        const getEstadoActual = () => window.referenciasPaginacion?.[tipo] || st;
+        const syncClear = () => clear.classList.toggle('hidden', !input.value.trim());
+        input.value = getEstadoActual().query || '';
+        syncClear();
+
+        input.oninput = () => {
+            const estadoActual = getEstadoActual();
+            estadoActual.query = input.value || '';
+            estadoActual.page = 1;
+            syncClear();
+            renderReferenciasPagina(tipo);
+        };
+        clear.onclick = () => {
+            const estadoActual = getEstadoActual();
+            estadoActual.query = '';
+            input.value = '';
+            estadoActual.page = 1;
+            syncClear();
+            renderReferenciasPagina(tipo);
+            input.focus();
+        };
+    };
+
+    if (document.getElementById(searchId)) {
+        enlazarBuscador();
+        return;
+    }
 
     const wrapper = document.createElement('div');
     wrapper.className = 'referencias-search';
     wrapper.innerHTML = `
-        <input id="${st.containerId}__search" type="text"
+        <input id="${searchId}" type="text"
             placeholder="Buscar..." value="${st.query || ''}" autocomplete="off"/>
-        <button type="button" id="${st.containerId}__clear" class="search-clear hidden">
+        <button type="button" id="${clearId}" class="search-clear hidden">
             <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M18 6L6 18M6 6l12 12" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round"/>
@@ -374,24 +564,7 @@ function ensureBuscador(tipo) {
         </button>`;
 
     container.parentNode.insertBefore(wrapper, container);
-
-    const input = document.getElementById(`${st.containerId}__search`);
-    const clear = document.getElementById(`${st.containerId}__clear`);
-    const syncClear = () => clear.classList.toggle('hidden', !input.value.trim());
-    syncClear();
-
-    input.addEventListener('input', () => {
-        st.query = input.value || '';
-        st.page = 1;
-        syncClear();
-        renderReferenciasPagina(tipo);
-    });
-    clear.addEventListener('click', () => {
-        st.query = ''; input.value = '';
-        st.page = 1; syncClear();
-        renderReferenciasPagina(tipo);
-        input.focus();
-    });
+    enlazarBuscador();
 }
 
 // =================== PAGINACIÓN ===================
@@ -409,7 +582,7 @@ function getItemsFiltrados(tipo) {
     const st = window.referenciasPaginacion[tipo];
     const q = normalizarTexto(st.query || '');
     if (!q) return st.items || [];
-    return (st.items || []).filter(r => normalizarTexto(r.nombre).includes(q));
+    return (st.items || []).filter(r => textoBusquedaReferencia(r).includes(q));
 }
 
 function renderReferenciasPagina(tipo) {
@@ -461,6 +634,7 @@ function renderReferenciasPagina(tipo) {
                 <span class="ref-cant-badge" style="font-size:0.75rem;color:#64748b;white-space:nowrap;">${badgeLabel}</span>
                 <input type="number" class="cantidad-input" value="${cantMostrar}" min="0.1" step="0.5"
                     style="width:52px;"
+                    onfocus="this.select()"
                     oninput="actualizarCantidadReferencia('${String(ref.id).replace(/'/g, "\\'")}', '${tipo}', this.value)">
             </div>`;
 
@@ -468,6 +642,7 @@ function renderReferenciasPagina(tipo) {
             if (e.target.classList.contains('cantidad-input')) return;
             if (obligatoria) return;
             seleccionarReferenciaPrincipal(ref.id, ref.nombre, tipo, div, cantCalculada, ref.unidad);
+            enfocarCantidadReferencia(div);
         };
 
         container.appendChild(div);
@@ -487,7 +662,295 @@ function renderReferenciasPagina(tipo) {
     container.appendChild(pager);
 }
 
+function enfocarCantidadReferencia(element) {
+    setTimeout(() => {
+        const input = element?.querySelector?.('.cantidad-input');
+        if (!input) return;
+        input.focus();
+        input.select();
+    }, 0);
+}
+
 // =================== SELECCIÓN ===================
+
+function asegurarReferenciasFueraCartaSection() {
+    const section = document.getElementById('referenciasSection');
+    const body = section?.querySelector('.dc-section-body');
+    if (!body || document.getElementById('referenciasFueraCartaSection')) return;
+
+    body.insertAdjacentHTML('beforeend', `
+        <div id="referenciasFueraCartaSection" class="referencias-group referencias-fuera-carta">
+            <div class="referencias-group-header">
+                <label class="referencias-group-title">Fuera de carta</label>
+                <span id="contadorFueraCarta" class="referencias-counter">0</span>
+            </div>
+            <div class="fuera-carta-form">
+                <input type="text" id="fueraCartaNombre" class="dc-input" placeholder="Nombre de la referencia">
+                <select id="fueraCartaTipo" class="dc-input">
+                    <option value="saladas">Salada</option>
+                    <option value="postres">Postre</option>
+                </select>
+                <input type="number" id="fueraCartaCantidad" class="dc-input" min="0.1" step="0.5" placeholder="Auto">
+                <select id="fueraCartaUnidad" class="dc-input">
+                    <option value="uds">uds</option>
+                    <option value="ud">ud</option>
+                    <option value="grs">grs</option>
+                    <option value="kg">kg</option>
+                    <option value="bandeja">bandeja</option>
+                    <option value="porción">porción</option>
+                </select>
+                <button type="button" class="btn-fuera-carta" onclick="agregarReferenciaFueraCarta()">+ Añadir</button>
+            </div>
+            <div id="referenciasFueraCartaList" class="fuera-carta-list"></div>
+        </div>
+        <div id="referenciasExtrasSection" class="referencias-group referencias-extras-carta">
+            <div class="referencias-group-header">
+                <label class="referencias-group-title">Extras</label>
+                <span id="contadorExtrasCarta" class="referencias-counter">0</span>
+            </div>
+            <div class="fuera-carta-form">
+                <input type="text" id="extraCartaNombre" class="dc-input" placeholder="Nombre del extra">
+                <select id="extraCartaTipo" class="dc-input">
+                    <option value="saladas">Salada</option>
+                    <option value="postres">Postre</option>
+                </select>
+                <input type="number" id="extraCartaCantidad" class="dc-input" min="0.1" step="0.5" placeholder="Cantidad">
+                <select id="extraCartaUnidad" class="dc-input">
+                    <option value="uds">uds</option>
+                    <option value="ud">ud</option>
+                    <option value="grs">grs</option>
+                    <option value="kg">kg</option>
+                    <option value="bandeja">bandeja</option>
+                    <option value="porción">porción</option>
+                </select>
+                <button type="button" class="btn-fuera-carta btn-extra-carta" onclick="agregarReferenciaExtraCarta()">+ Añadir</button>
+            </div>
+            <div id="referenciasExtrasList" class="fuera-carta-list"></div>
+        </div>
+    `);
+}
+
+function getTipoSeleccionFueraCarta(tipo) {
+    return tipo === 'postres' ? 'postres' : 'gris';
+}
+
+function getMaxReferenciasPorTipoSeleccion(tipoSeleccion) {
+    if (tipoSeleccion === 'postres') return window.menuSeleccionado?.items_postres_max || 0;
+    return (window.menuSeleccionado?.items_gris_max || window.menuSeleccionado?.items_salados_max || 0)
+        + (window.menuSeleccionado?.items_rojo_max || 0);
+}
+
+function contarReferenciasSeleccionadas(tipoGrupo) {
+    if (tipoGrupo === 'postres') return (window.referenciasSeleccionadas?.postres || []).length;
+
+    const ids = new Set();
+    ['gris', 'rojo'].forEach(tipo => {
+        (window.referenciasSeleccionadas?.[tipo] || []).forEach(ref => ids.add(String(ref.id)));
+    });
+    return ids.size;
+}
+
+function calcularCantidadFueraCarta(tipo) {
+    return calcularCantidad({
+        fuera_carta: true,
+        grupo: tipo === 'postres' ? 'postre' : 'salado'
+    }, window.pax || 0);
+}
+
+function agregarReferenciaFueraCarta() {
+    asegurarReferenciasFueraCartaSection();
+
+    const nombreEl = document.getElementById('fueraCartaNombre');
+    const tipoEl = document.getElementById('fueraCartaTipo');
+    const cantidadEl = document.getElementById('fueraCartaCantidad');
+    const unidadEl = document.getElementById('fueraCartaUnidad');
+
+    const nombre = (nombreEl?.value || '').trim();
+    const tipo = tipoEl?.value || 'saladas';
+    const tipoSeleccion = getTipoSeleccionFueraCarta(tipo);
+    const unidad = unidadEl?.value || 'uds';
+    const cantidadManual = cantidadEl?.value !== '';
+    const cantidad = cantidadManual
+        ? Math.max(0.1, parseFloat(cantidadEl.value) || 1)
+        : calcularCantidadFueraCarta(tipo);
+
+    if (!nombre) {
+        alert('Escribe el nombre de la referencia fuera de carta.');
+        nombreEl?.focus();
+        return;
+    }
+
+    const max = getMaxReferenciasPorTipoSeleccion(tipoSeleccion);
+    if (tipoSeleccion === 'postres' && max <= 0) {
+        alert('Este menú no requiere postres.');
+        return;
+    }
+    const totalActual = contarReferenciasSeleccionadas(tipoSeleccion === 'postres' ? 'postres' : 'saladas');
+    if (max > 0 && totalActual >= max) {
+        alert(`Ya tienes seleccionadas las ${max} referencias permitidas para este grupo.`);
+        return;
+    }
+
+    if (!window.referenciasSeleccionadas[tipoSeleccion]) window.referenciasSeleccionadas[tipoSeleccion] = [];
+
+    const ref = {
+        id: `fuera_carta_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        nombre,
+        cantidad,
+        unidad,
+        fuera_carta: true,
+        cantidad_manual: cantidadManual,
+        grupo: tipo === 'postres' ? 'postre' : 'salado'
+    };
+
+    window.referenciasSeleccionadas[tipoSeleccion].push(ref);
+    window.referenciasFueraCarta = [...(window.referenciasFueraCarta || []), { ...ref, tipoSeleccion }];
+
+    if (nombreEl) nombreEl.value = '';
+    if (cantidadEl) cantidadEl.value = '';
+    renderReferenciasFueraCarta();
+    actualizarContadoresSeleccion();
+}
+
+function eliminarReferenciaFueraCarta(refId) {
+    ['gris', 'rojo', 'postres'].forEach(tipo => {
+        const arr = window.referenciasSeleccionadas?.[tipo] || [];
+        const idx = arr.findIndex(ref => String(ref.id) === String(refId));
+        if (idx >= 0) arr.splice(idx, 1);
+    });
+    window.referenciasFueraCarta = (window.referenciasFueraCarta || []).filter(ref => String(ref.id) !== String(refId));
+    renderReferenciasFueraCarta();
+    actualizarContadoresSeleccion();
+}
+
+function actualizarCantidadFueraCarta(refId, cantidad) {
+    const valor = Math.max(0.1, parseFloat(cantidad) || 1);
+    ['gris', 'rojo', 'postres'].forEach(tipo => {
+        const ref = (window.referenciasSeleccionadas?.[tipo] || []).find(item => String(item.id) === String(refId));
+        if (ref) {
+            ref.cantidad = valor;
+            ref.cantidad_manual = true;
+        }
+    });
+    const refLista = (window.referenciasFueraCarta || []).find(item => String(item.id) === String(refId));
+    if (refLista) {
+        refLista.cantidad = valor;
+        refLista.cantidad_manual = true;
+    }
+}
+
+function renderReferenciasFueraCarta() {
+    asegurarReferenciasFueraCartaSection();
+    const list = document.getElementById('referenciasFueraCartaList');
+    const contador = document.getElementById('contadorFueraCarta');
+    if (!list) return;
+
+    const items = [
+        ...(window.referenciasSeleccionadas?.gris || []),
+        ...(window.referenciasSeleccionadas?.rojo || []),
+        ...(window.referenciasSeleccionadas?.postres || [])
+    ].filter(ref => ref.fuera_carta);
+
+    window.referenciasFueraCarta = items.map(ref => ({
+        ...ref,
+        tipoSeleccion: ref.grupo === 'postre' ? 'postres' : 'gris'
+    }));
+
+    if (contador) contador.textContent = String(items.length);
+    if (!items.length) {
+        list.innerHTML = '<div class="fuera-carta-empty">Sin referencias fuera de carta.</div>';
+        return;
+    }
+
+    list.innerHTML = items.map(ref => `
+        <div class="fuera-carta-item">
+            <div class="fuera-carta-name">
+                <strong>${ref.nombre}</strong>
+                <span>${ref.grupo === 'postre' ? 'Postre' : 'Salada'}</span>
+            </div>
+            <input type="number" min="0.1" step="0.5" value="${ref.cantidad || 1}"
+                oninput="actualizarCantidadFueraCarta('${String(ref.id).replace(/'/g, "\\'")}', this.value)">
+            <span class="fuera-carta-unit">${ref.unidad || 'uds'}</span>
+            <button type="button" class="fuera-carta-delete"
+                onclick="eliminarReferenciaFueraCarta('${String(ref.id).replace(/'/g, "\\'")}')">×</button>
+        </div>
+    `).join('');
+}
+
+function agregarReferenciaExtraCarta() {
+    asegurarReferenciasFueraCartaSection();
+
+    const nombreEl = document.getElementById('extraCartaNombre');
+    const tipoEl = document.getElementById('extraCartaTipo');
+    const cantidadEl = document.getElementById('extraCartaCantidad');
+    const unidadEl = document.getElementById('extraCartaUnidad');
+
+    const nombre = (nombreEl?.value || '').trim();
+    const tipo = tipoEl?.value || 'saladas';
+    const cantidad = Math.max(0.1, parseFloat(cantidadEl?.value) || 1);
+    const unidad = unidadEl?.value || 'uds';
+
+    if (!nombre) {
+        alert('Escribe el nombre del extra.');
+        nombreEl?.focus();
+        return;
+    }
+
+    window.referenciasExtras = [
+        ...(window.referenciasExtras || []),
+        {
+            id: `extra_carta_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+            nombre,
+            cantidad,
+            unidad,
+            tipo,
+            grupo: tipo === 'postres' ? 'postre' : 'salado',
+            extra_carta: true
+        }
+    ];
+
+    if (nombreEl) nombreEl.value = '';
+    if (cantidadEl) cantidadEl.value = '';
+    renderReferenciasExtras();
+}
+
+function eliminarReferenciaExtraCarta(refId) {
+    window.referenciasExtras = (window.referenciasExtras || []).filter(ref => String(ref.id) !== String(refId));
+    renderReferenciasExtras();
+}
+
+function actualizarCantidadExtraCarta(refId, cantidad) {
+    const ref = (window.referenciasExtras || []).find(item => String(item.id) === String(refId));
+    if (ref) ref.cantidad = Math.max(0.1, parseFloat(cantidad) || 1);
+}
+
+function renderReferenciasExtras() {
+    asegurarReferenciasFueraCartaSection();
+    const list = document.getElementById('referenciasExtrasList');
+    const contador = document.getElementById('contadorExtrasCarta');
+    if (!list) return;
+
+    const items = window.referenciasExtras || [];
+    if (contador) contador.textContent = String(items.length);
+    if (!items.length) {
+        list.innerHTML = '<div class="fuera-carta-empty">Sin extras añadidos.</div>';
+        return;
+    }
+
+    list.innerHTML = items.map(ref => `
+        <div class="fuera-carta-item fuera-carta-item--extra">
+            <div class="fuera-carta-name">
+                <strong>${ref.nombre}</strong>
+                <span>${ref.grupo === 'postre' ? 'Postre extra' : 'Salada extra'}</span>
+            </div>
+            <input type="number" min="0.1" step="0.5" value="${ref.cantidad || 1}"
+                oninput="actualizarCantidadExtraCarta('${String(ref.id).replace(/'/g, "\\'")}', this.value)">
+            <span class="fuera-carta-unit">${ref.unidad || 'uds'}</span>
+            <button type="button" class="fuera-carta-delete"
+                onclick="eliminarReferenciaExtraCarta('${String(ref.id).replace(/'/g, "\\'")}')">×</button>
+        </div>
+    `).join('');
+}
 
 function seleccionarReferenciaPrincipal(refId, refNombre, tipo, element, cantidad, unidad) {
     const max = tipo === 'gris'
@@ -511,7 +974,10 @@ function seleccionarReferenciaPrincipal(refId, refNombre, tipo, element, cantida
         return;
     }
 
-    if (max > 0 && seleccionadas.length >= max) {
+    const totalActual = tipo === 'postres'
+        ? contarReferenciasSeleccionadas('postres')
+        : (tipo === 'rojo' ? seleccionadas.length : contarReferenciasSeleccionadas('saladas'));
+    if (max > 0 && totalActual >= max) {
         const label = tipo === 'gris' ? 'grises' : tipo === 'rojo' ? 'rojas' : 'postres';
         alert(`Solo puedes seleccionar hasta ${max} referencias ${label}`);
         return;
@@ -528,7 +994,7 @@ function actualizarContadoresSeleccion() {
     const rojoMax    = window.menuSeleccionado?.items_rojo_max    || 0;
     const postresMax = window.menuSeleccionado?.items_postres_max || 0;
 
-    const grisCount    = (window.referenciasSeleccionadas?.gris    || []).length;
+    const grisCount    = contarReferenciasSeleccionadas('saladas');
     const rojoCount    = (window.referenciasSeleccionadas?.rojo    || []).length;
     const postresCount = (window.referenciasSeleccionadas?.postres || []).length;
 
@@ -543,7 +1009,10 @@ function actualizarContadoresSeleccion() {
 
 function actualizarCantidadReferencia(refId, tipo, cantidad) {
     const sel = (window.referenciasSeleccionadas[tipo] || []).find(r => String(r.id) === String(refId));
-    if (sel) sel.cantidad = parseFloat(cantidad) || 1;
+    if (sel) {
+        sel.cantidad = parseFloat(cantidad) || 1;
+        sel.cantidad_manual = true;
+    }
 }
 
 // Compatibilidad con código antiguo
@@ -558,14 +1027,28 @@ function actualizarCantidadesReferencias() {
                        : CATALOGO_POSTRES);
 
         (window.referenciasSeleccionadas[tipo] || []).forEach(sel => {
+            if (sel.cantidad_manual || sel._cantidad_guardada_edicion) return;
             const ref = catalogo.find(r => String(r.id) === String(sel.id));
-            if (ref) {
+            if (sel.fuera_carta && !sel.cantidad_manual) {
+                sel.cantidad = calcularCantidad(sel, pax);
+            } else if (ref) {
                 sel.cantidad = calcularCantidad(ref, pax);
             }
         });
 
         renderReferenciasPagina(tipo);
     });
+    renderReferenciasFueraCarta();
+    renderReferenciasExtras();
 }
 
 function actualizarUnidadReferencia() {}  // ya no se usa, unidad viene del catálogo
+
+window.agregarReferenciaFueraCarta = agregarReferenciaFueraCarta;
+window.eliminarReferenciaFueraCarta = eliminarReferenciaFueraCarta;
+window.actualizarCantidadFueraCarta = actualizarCantidadFueraCarta;
+window.agregarReferenciaExtraCarta = agregarReferenciaExtraCarta;
+window.eliminarReferenciaExtraCarta = eliminarReferenciaExtraCarta;
+window.actualizarCantidadExtraCarta = actualizarCantidadExtraCarta;
+window.renderReferenciasExtras = renderReferenciasExtras;
+window.contarReferenciasSeleccionadas = contarReferenciasSeleccionadas;

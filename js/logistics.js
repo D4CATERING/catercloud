@@ -68,8 +68,10 @@
                 const unidadComandaNormalizada = String(unidadComanda).trim().toLowerCase();
                 const requiereUnidadInventarioBase = ['paq', 'paquete', 'pack', 'barca'].includes(unidadComandaNormalizada);
 
-                itemsMap.set(item.id, {
+                itemsMap.set(String(item.id), {
                     ...item,
+                    nombre: item.nombre || item.name || '',
+                    tipo: normalizarTipoLogisticaUnificada(item.tipo, item),
                     unidad: unidadComanda,
                     unidad_comanda: unidadComanda,
                     source_table: 'logistics_materials',
@@ -88,10 +90,10 @@
 
             data.forEach(item => {
                 if (item.parent_id) {
-                    const padre = itemsMap.get(item.parent_id);
-                    if (padre) padre.subitems.push(itemsMap.get(item.id));
+                    const padre = itemsMap.get(String(item.parent_id));
+                    if (padre) padre.subitems.push(itemsMap.get(String(item.id)));
                 } else {
-                    padres.push(itemsMap.get(item.id));
+                    padres.push(itemsMap.get(String(item.id)));
                 }
             });
 
@@ -152,8 +154,16 @@
         }
     }
 
-    function normalizarTipoLogisticaUnificada(tipo) {
-        return tipo === 'material' ? 'extras' : tipo;
+    function normalizarTipoLogisticaUnificada(tipo, item = null) {
+        const tipoNormalizado = normalizarTextoMaterial(tipo);
+        const subcategoria = normalizarTextoMaterial(item?.subcategoria);
+        const nombre = normalizarTextoMaterial(item?.nombre || item?.name);
+
+        if (['bebida', 'bebidas'].includes(tipoNormalizado)) return 'bebidas';
+        if (['menaje', 'vajilla'].includes(tipoNormalizado)) return 'menaje';
+        if (['extra', 'extras', 'material'].includes(tipoNormalizado)) return 'extras';
+        if (!tipoNormalizado && (subcategoria.includes('cafe') || nombre.includes('kit'))) return 'menaje';
+        return tipoNormalizado || 'extras';
     }
 
     function recorrerCatalogoLogistica(items, resultado = []) {
@@ -181,7 +191,7 @@
         return catalogo
             .filter(item => {
                 if (!item || item.parent_id) return false;
-                if (!['bebidas', 'menaje', 'extras', 'material'].includes(String(item.tipo || ''))) return false;
+                if (!['bebidas', 'menaje', 'extras'].includes(normalizarTipoLogisticaUnificada(item.tipo, item))) return false;
                 return esMaterialDeServicios(item);
             })
             .map(item => {
@@ -199,7 +209,7 @@
                     ...item,
                     id: item.id,
                     item_id: item.id,
-                    tipo: normalizarTipoLogisticaUnificada(item.tipo),
+                    tipo: normalizarTipoLogisticaUnificada(item.tipo, item),
                     unidad: unidadServicio,
                     unidad_comanda: unidadServicio,
                     unidad_inventario: item.unidad_inventario || unidadServicio || 'ud',
@@ -248,14 +258,20 @@
         if (!window.supabaseClient) return [];
 
         try {
+            const aliasesPorMenu = {
+                foodbox: ['foodbox', 'emplatado_gourmet', 'emplatado gourmet', 'comida'],
+                lunch: ['lunch', 'foodbox_lunch', 'foodbox lunch'],
+                desayunos: ['desayunos', 'desayuno'],
+                servicios: ['servicios', 'servicio']
+            };
+            const aliases = aliasesPorMenu[menuTipo] || [menuTipo];
             const { data, error } = await window.supabaseClient
                 .from('menu_materials')
                 .select(`
-                    material_id,
-                    cantidad_base,
+                    *,
                     logistics_materials (*)
                 `)
-                .eq('menu_tipo', menuTipo);
+                .in('menu_tipo', aliases);
 
             if (error) throw error;
             return data || [];
@@ -356,7 +372,25 @@
         return String(valor || '')
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function escapeHtmlMaterial(valor) {
+        return String(valor ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function esZumoNaturalLogistica(item) {
+        const nombre = normalizarTextoMaterial(item?.nombre || item?.name);
+        return Boolean(item?._zumoId) ||
+            (nombre.includes('zumo') && (nombre.includes('naranja') || nombre.includes('natural')));
     }
 
     function esKitCafeDesechable(item) {
@@ -388,12 +422,16 @@
         return nombre.includes('copa') && nombre.includes('vino');
     }
 
+    function esWelcomeCoffeeSeleccionado() {
+        return Number(window.menuSeleccionado?.id || 0) === 17;
+    }
+
     function esMaterialIncluidoMenu(item, menuTipo, esLoza, incluidosIds) {
         if (incluidosIds.includes(item.id)) return true;
         if (menuTipo !== 'desayunos') return false;
         if (esServilleta(item)) return true;
         if (esLoza) return esKitCafeLoza(item) || esCopasVino(item);
-        return esKitCafeDesechable(item) || esVasoDesechableZumo(item);
+        return esKitCafeDesechable(item) || (!esWelcomeCoffeeSeleccionado() && esVasoDesechableZumo(item));
     }
 
     function obtenerIncluidosPorMenu(menuTipo, esLoza) {
@@ -402,7 +440,7 @@
         if (menuTipo === 'desayunos') {
             const kitDesechableIndex = incluidos.indexOf(MATERIAL_DESAYUNOS_IDS.kitCafeDesechable);
             if (kitDesechableIndex >= 0) incluidos.splice(kitDesechableIndex, 1);
-            if (!esLoza) incluidos.push(MATERIAL_DESAYUNOS_IDS.vasosZumo);
+            if (!esLoza && !esWelcomeCoffeeSeleccionado()) incluidos.push(MATERIAL_DESAYUNOS_IDS.vasosZumo);
             incluidos.push(esLoza ? MATERIAL_DESAYUNOS_IDS.kitCafeLoza : MATERIAL_DESAYUNOS_IDS.kitCafeDesechable);
         }
 
@@ -422,13 +460,11 @@
         const menuTipo = mapeo[categoriaId];
         if (!menuTipo) return;
 
-        const materialMenu = await cargarMaterialPorMenu(menuTipo);
         const pax = obtenerPaxLogistica();
         const catalogoServicios = menuTipo === 'servicios'
             ? await cargarCatalogoServiciosLogistica()
             : null;
 
-        const materialIds = new Set(materialMenu.map(m => m.material_id));
         const catalogo = catalogoServicios || window.materialLogistica.catalogoCompleto || [];
         const tipoMenaje = document.getElementById('tipo_menaje')?.value || 'desechable';
         const esLoza = tipoMenaje === 'loza';
@@ -436,31 +472,32 @@
 
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             const inyectados = (window.materialLogistica[tipo] || [])
-                .filter(i => i._zumoId || i._menaje_desayuno || i._extras_desayuno);
+                .filter(i => i._zumoId || i._menaje_desayuno || i._extras_desayuno || i._manual_otro);
+            const tieneZumoInyectado = tipo === 'bebidas' && inyectados.some(esZumoNaturalLogistica);
 
             window.materialLogistica[tipo] = [
                 ...inyectados,
                 ...catalogo
                     .filter(item => {
-                        if (item.tipo !== tipo) return false;
+                        if (normalizarTipoLogisticaUnificada(item.tipo, item) !== tipo) return false;
                         if (item.solo_loza && !esLoza) return false;
                         if (item.solo_desechable && esLoza) return false;
-                        if (menuTipo === 'desayunos' && esLoza && esKitCafeDesechable(item)) return false;
                         if (menuTipo === 'desayunos' && !esLoza && esKitCafeLoza(item)) return false;
+                        if (tieneZumoInyectado && esZumoNaturalLogistica(item)) return false;
                         if (item.parent_id) return false;
                         return true;
                     })
                     .map(item => {
                         const incluido = esMaterialIncluidoMenu(item, menuTipo, esLoza, incluidosIds);
-                        const asociado = materialIds.has(item.id);
                         const cantidadServicio = catalogoServicios ? calcularCantidadServicio(item, pax) : 0;
                         const checkedServicio = catalogoServicios ? cantidadServicio > 0 : false;
                         return {
                             ...item,
                             cantidad: catalogoServicios ? cantidadServicio : (incluido ? pax : 0),
                             checked: catalogoServicios ? checkedServicio : incluido,
-                            incluido_en: incluido ? [menuTipo] : (item.incluido_en || []),
-                            asociado_menu: asociado,
+                            incluido_en: incluido ? [menuTipo] : [],
+                            asociado_menu: false,
+                            auto_incluido_menu: false,
                             subitems_expanded: false,
                             subitems_selected: []
                         };
@@ -501,7 +538,7 @@
     /**
      * Obtiene material seleccionado
      */
-    window.obtenerMaterialSeleccionado = function() {
+    window.obtenerMaterialSeleccionado = function(containerId = obtenerContainerMaterialActivo()) {
         const resultado = {
             bebidas: [],
             menaje: [],
@@ -511,24 +548,14 @@
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             window.materialLogistica[tipo].forEach(item => {
                 const tieneSubitemsSeleccionados = item.tiene_subitems && (item.subitems_selected || []).length > 0;
-                if (item.checked || tieneSubitemsSeleccionados) {
+                const ceroManualIncluido = item._cantidad_manual_zero && (item.incluido_en || []).length > 0;
+                if (item.checked || tieneSubitemsSeleccionados || ceroManualIncluido) {
                     if (item.tiene_subitems && item.subitems_selected.length > 0) {
-                        // Agregar solo los subitems seleccionados
-                        resultado[tipo].push(...item.subitems_selected);
+                        resultado[tipo].push(...item.subitems_selected.map(subitem =>
+                            normalizarItemSeleccionadoMaterial(tipo, subitem, containerId)
+                        ));
                     } else if (!item.tiene_subitems) {
-                        // Item simple sin hijos
-                        resultado[tipo].push({
-                            id: item.id,
-                            item_id: item.item_id,
-                            nombre: item.nombre,
-                            descripcion: formatearDetalleDinamicoMaterial(item) ||
-                                (esBebidaServicioSinDescripcion(item) ? '' : item.descripcion || item.presentacion || ''),
-                            cantidad: item.cantidad,
-                            unidad: obtenerUnidadPedidoMaterial(item),
-                            source_table: item.source_table || 'logistics_materials',
-                            unidad_inventario: obtenerUnidadStockMaterial(item),
-                            conversion_a_stock: obtenerConversionMaterial(item)
-                        });
+                        resultado[tipo].push(normalizarItemSeleccionadoMaterial(tipo, item, containerId));
                     }
                 }
             });
@@ -570,37 +597,48 @@
                 return;
             }
 
-            lista.innerHTML = items.map(item => {
+            const itemsHtml = items.map(item => {
                 if (item.tiene_subitems) {
                     return renderizarItemConSubitems(item, tipo, containerId);
                 } else {
                     return renderizarItemSimple(item, tipo, containerId);
                 }
             }).join('');
+
+            lista.innerHTML = itemsHtml;
         });
+
+        const otrosWrap = document.getElementById(`${containerId}_otros_manual`);
+        if (otrosWrap) {
+            otrosWrap.innerHTML = renderizarOtrosLogistica(containerId);
+        }
     }
 
     function renderizarItemSimple(item, tipo, containerId) {
-        const descripcion = item.descripcion || item.presentacion || '';
-        const precio = [
-            descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
-            item.precio > 0
-                ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
-                : item.incluido_en?.length
-                    ? `<span class="dc-material-incluido">incluido</span>`
-                    : descripcion
-                        ? ''
-                        : `<span class="dc-material-precio dc-material-precio--sin-precio">—</span>`
-        ].join('');
+        const ocultarDescripcion = esFormularioLogisticaMenus(containerId) && !permiteDescripcionMaterialMenu(item);
+        const descripcion = ocultarDescripcion ? '' : (item.descripcion || item.presentacion || '');
+        const precio = ocultarDescripcion
+            ? (item.incluido_en?.length ? `<span class="dc-material-incluido">incluido</span>` : '')
+            : [
+                descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
+                item.precio > 0
+                    ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+                    : item.incluido_en?.length
+                        ? `<span class="dc-material-incluido">incluido</span>`
+                        : descripcion
+                            ? ''
+                            : `<span class="dc-material-precio dc-material-precio--sin-precio">—</span>`
+            ].join('');
 
         const cantidad = Number(item.cantidad || 0);
         const activo = item.checked || cantidad > 0;
         const cantidadHtml = activo
-            ? renderizarCantidadConUnidad(cantidad, item.unidad, `onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')"`)
+            ? renderizarCantidadConUnidad(cantidad, obtenerUnidadVisualMaterial(tipo, item, containerId), `onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')"`, containerId, item)
             : `<button type="button" class="dc-material-btn" onclick="toggleMaterialItemNew('${tipo}', '${item.id}', '${containerId}')"><i class="ti ti-plus"></i></button>`;
 
         return `
-            <div class="dc-material-item ${activo ? 'dc-material-item--active' : ''}">
+            <div class="dc-material-item dc-material-item--clickable ${activo ? 'dc-material-item--active' : ''}"
+                onclick="clickMaterialItemFila(event, '${tipo}', '${item.id}', '${containerId}')">
                 <div class="dc-material-item-info">
                     <span class="dc-material-nombre">${item.nombre}</span>
                     ${precio}
@@ -613,23 +651,28 @@
     }
 
     function renderizarItemConSubitems(item, tipo, containerId) {
-        const descripcion = item.descripcion || item.presentacion || '';
-        const precio = [
-            descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
-            item.precio > 0
-                ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
-                : item.incluido_en?.length
-                    ? `<span class="dc-material-incluido">incluido</span>`
-                    : ''
-        ].join('');
+        const ocultarDescripcion = esFormularioLogisticaMenus(containerId) && !permiteDescripcionMaterialMenu(item);
+        const descripcion = ocultarDescripcion ? '' : (item.descripcion || item.presentacion || '');
+        const precio = ocultarDescripcion
+            ? (item.incluido_en?.length ? `<span class="dc-material-incluido">incluido</span>` : '')
+            : [
+                descripcion ? `<span class="dc-material-precio">${descripcion}</span>` : '',
+                item.precio > 0
+                    ? `<span class="dc-material-precio">${parseFloat(item.precio).toFixed(2).replace('.',',')} € / ${item.unidad}</span>`
+                    : item.incluido_en?.length
+                        ? `<span class="dc-material-incluido">incluido</span>`
+                        : ''
+            ].join('');
 
         const subitemsSeleccionados = item.subitems_selected || [];
         const activo = item.checked || subitemsSeleccionados.length > 0;
-        const detalleSubitems = subitemsSeleccionados.map(formatearResumenMaterial).join(', ');
+        const detalleSubitems = subitemsSeleccionados
+            .map(subitem => formatearResumenMaterial(subitem, tipo, containerId))
+            .join(', ');
         const cantidadTotal = subitemsSeleccionados.reduce((total, s) => total + Number(s.cantidad || 0), 0);
-        const unidadResumen = subitemsSeleccionados[0]?.unidad || item.unidad || 'uds';
+        const unidadResumen = obtenerUnidadVisualMaterial(tipo, subitemsSeleccionados[0] || item, containerId);
         const botonHtml = subitemsSeleccionados.length
-            ? renderizarCantidadConUnidad(cantidadTotal, unidadResumen, 'readonly title="Total seleccionado"')
+            ? renderizarCantidadConUnidad(cantidadTotal, unidadResumen, 'readonly title="Total seleccionado"', containerId, subitemsSeleccionados[0] || item)
             : `<button type="button" class="dc-material-btn" onclick="event.stopPropagation(); abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')">+</button>`;
 
         return `
@@ -719,12 +762,36 @@
     }
 
     function obtenerUnidadPedidoMaterial(item) {
-        const unidadBase = String(item?.unidad || item?.unidad_comanda || '').trim();
+        const unidadComanda = String(item?.unidad_comanda || '').trim();
+        if (unidadComanda) return unidadComanda;
+
+        const unidadBase = String(item?.unidad || '').trim();
         if (unidadBase && !['ud', 'uds'].includes(unidadBase.toLowerCase())) return unidadBase;
 
         const presentacion = extraerPresentacionMaterial(item);
         if (presentacion?.unidadPedido) return presentacion.unidadPedido;
         return unidadBase || 'ud';
+    }
+
+    function esContextoLogisticaServicios(containerId) {
+        const container = document.getElementById(containerId);
+        const modo = container?.dataset?.modoLogistica || window.modoMaterialLogisticaInline || '';
+        return containerId === 'materialLogisticaPage' || modo === 'servicios';
+    }
+
+    function obtenerUnidadPedidoMaterialPorContexto(item, containerId) {
+        if (esContextoLogisticaServicios(containerId)) {
+            const unidadServicio = String(item?.unidad_comanda_servicio || '').trim();
+            if (unidadServicio) return unidadServicio;
+        }
+        return obtenerUnidadPedidoMaterial(item);
+    }
+
+    function obtenerConversionMaterialPorContexto(item, containerId) {
+        if (esContextoLogisticaServicios(containerId)) {
+            return obtenerNumeroPositivo(item?.conversion_servicios) || obtenerConversionMaterial(item);
+        }
+        return obtenerConversionMaterial(item);
     }
 
     function obtenerUnidadStockMaterial(item) {
@@ -733,9 +800,18 @@
         return item?.unidad_inventario || 'uds';
     }
 
-    function formatearResumenMaterial(item) {
+    function esUnidadEmpaqueMaterial(unidad) {
+        return ['paq', 'paquete', 'pack', 'barca'].includes(String(unidad || '').trim().toLowerCase());
+    }
+
+    function formatearResumenMaterial(item, tipo = '', containerId = '') {
         const cantidad = Number(item.cantidad || 0);
-        const conversion = obtenerConversionMaterial(item);
+        if (usaUnidadDirectaBebidaMenu(tipo, item, containerId)) {
+            const unidad = obtenerUnidadVisualMaterial(tipo, item, containerId);
+            return `${item.nombre || item.id} - ${formatearCantidadMaterial(cantidad)} ${unidad}`;
+        }
+
+        const conversion = obtenerConversionMaterialPorContexto(item, containerId);
 
         if (conversion > 1) {
             const totalStock = cantidad * conversion;
@@ -748,15 +824,15 @@
         return `${item.nombre || item.id} - ${formatearCantidadMaterial(cantidad)} ${unidad}`;
     }
 
-    function formatearDetalleDinamicoMaterial(item, cantidadBase) {
+    function formatearDetalleDinamicoMaterial(item, cantidadBase, containerId = obtenerContainerMaterialActivo()) {
         if (esBebidaServicioSinDescripcion(item)) return '';
 
-        const conversion = obtenerConversionMaterial(item);
+        const conversion = obtenerConversionMaterialPorContexto(item, containerId);
         if (conversion > 1) {
             const cantidad = Number(cantidadBase ?? item?.cantidad ?? 0);
             const cantidadParaMostrar = cantidad > 0 ? cantidad : 1;
             const totalStock = cantidadParaMostrar * conversion;
-            const unidadPedido = obtenerUnidadPedidoMaterial(item);
+            const unidadPedido = obtenerUnidadPedidoMaterialPorContexto(item, containerId);
             const unidadStock = obtenerUnidadStockMaterial(item);
             return `${unidadPedido} ${formatearCantidadMaterial(totalStock)} ${unidadStock}`;
         }
@@ -764,10 +840,116 @@
         return '';
     }
 
-    function renderizarCantidadConUnidad(cantidad, unidad, attrs = '') {
+    function esFormularioLogisticaMenus(containerId) {
+        const container = document.getElementById(containerId);
+        const modo = container?.dataset?.modoLogistica || window.modoMaterialLogisticaInline || '';
+        return containerId === 'materialLogisticaInline' && modo !== 'servicios';
+    }
+
+    function esKitMaterialLogistica(item) {
+        return /\bkit\b/i.test(String(item?.nombre || ''));
+    }
+
+    function esCristalMaterialLogistica(item) {
+        return /cristal/i.test(String(item?.nombre || item?.descripcion || item?.presentacion || ''));
+    }
+
+    function permiteDescripcionMaterialMenu(item) {
+        return esKitMaterialLogistica(item) || esCristalMaterialLogistica(item);
+    }
+
+    function esBebidaMaterialLogistica(tipo, item) {
+        const tipoNormalizado = normalizarTextoLogistica(tipo || item?.tipo);
+        const subcategoria = normalizarTextoLogistica(item?.subcategoria);
+        return tipoNormalizado === 'bebidas' || subcategoria === 'bebidas' || subcategoria === 'refrescos';
+    }
+
+    function usaUnidadDirectaBebidaMenu(tipo, item, containerId) {
+        return esFormularioLogisticaMenus(containerId) && esBebidaMaterialLogistica(tipo, item);
+    }
+
+    function convierteBebidaMenuAUnidadStock(tipo, item, containerId) {
+        return usaUnidadDirectaBebidaMenu(tipo, item, containerId) &&
+            !item?.unidad_comanda &&
+            esUnidadEmpaqueMaterial(obtenerUnidadPedidoMaterialPorContexto(item, containerId));
+    }
+
+    function obtenerUnidadVisualMaterial(tipo, item, containerId) {
+        if (convierteBebidaMenuAUnidadStock(tipo, item, containerId)) {
+            return obtenerUnidadStockMaterial(item) || 'uds';
+        }
+        return obtenerUnidadPedidoMaterialPorContexto(item, containerId);
+    }
+
+    function obtenerContainerMaterialActivo() {
+        const page = document.getElementById('materialLogisticaPage');
+        const form = document.getElementById('logisticaForm');
+        const pageVisible = form && getComputedStyle(form).display !== 'none' &&
+            page && getComputedStyle(page).display !== 'none';
+        return pageVisible ? 'materialLogisticaPage' : 'materialLogisticaInline';
+    }
+
+    function marcarCambioManualMaterialMenu(containerId) {
+        if (containerId !== 'materialLogisticaInline') return;
+        if (!window._materialMenuResumenEditando) return;
+        window._materialMenuResumenVersion = (window._materialMenuResumenVersion || 0) + 1;
+    }
+
+    function normalizarItemSeleccionadoMaterial(tipo, item, containerId) {
+        const unidadVisual = obtenerUnidadVisualMaterial(tipo, item, containerId);
+        const usaUnidadesMenu = convierteBebidaMenuAUnidadStock(tipo, item, containerId);
+        return {
+            id: item.id,
+            item_id: item.item_id,
+            nombre: item.nombre,
+            tipo,
+            subcategoria: item.subcategoria || (item._manual_otro ? 'otros' : ''),
+            _manual_otro: !!item._manual_otro,
+            descripcion: esFormularioLogisticaMenus(containerId) && !permiteDescripcionMaterialMenu(item)
+                ? ''
+                : usaUnidadesMenu
+                ? ''
+                : (formatearDetalleDinamicoMaterial(item, undefined, containerId) ||
+                    (esBebidaServicioSinDescripcion(item) ? '' : item.descripcion || item.presentacion || '')),
+            cantidad: item.cantidad,
+            checked: item.checked !== false && Number(item.cantidad || 0) > 0,
+            _cantidad_manual_zero: !!item._cantidad_manual_zero,
+            unidad: unidadVisual,
+            unidad_comanda: unidadVisual,
+            redondeo_a: Number(item.redondeo_a || item.incremento_cantidad || item.cantidad_step || item.step_cantidad || 1),
+            source_table: item.source_table || (item._manual_otro ? 'manual' : 'logistics_materials'),
+            unidad_inventario: item._manual_otro ? (item.unidad_inventario || unidadVisual || 'ud') : obtenerUnidadStockMaterial(item),
+            conversion_a_stock: usaUnidadesMenu ? 1 : obtenerConversionMaterialPorContexto(item, containerId)
+        };
+    }
+
+    function obtenerStepCantidadLogistica(containerId, item = null) {
+        const stepSupabase = Number(
+            item?.redondeo_a ||
+            item?.incremento_cantidad ||
+            item?.cantidad_step ||
+            item?.step_cantidad ||
+            0
+        );
+        if (Number.isFinite(stepSupabase) && stepSupabase > 0) {
+            return String(stepSupabase);
+        }
+        return '1';
+    }
+
+    function normalizarCantidadPorModo(cantidad, containerId, item = null) {
+        const valor = parseCantidadMaterial(cantidad);
+        const step = Number(obtenerStepCantidadLogistica(containerId, item));
+        if (!Number.isFinite(step) || step <= 0 || step < 1) return valor;
+        return Math.max(0, Math.round(valor / step) * step);
+    }
+
+    function renderizarCantidadConUnidad(cantidad, unidad, attrs = '', containerId = '', item = null) {
+        const step = obtenerStepCantidadLogistica(containerId, item);
+        const valor = step === '1' ? Math.round(Number(cantidad || 0)) : (cantidad || 0);
         return `
             <div class="dc-material-qty">
-                <input type="number" class="dc-material-cantidad" value="${cantidad || 0}" min="0" step="0.5" ${attrs}>
+                <input type="number" class="dc-material-cantidad" value="${valor}" min="0" step="${step}" onfocus="this.select()" ${attrs}>
                 <span class="dc-material-unit">${unidad || 'uds'}</span>
             </div>
         `;
@@ -830,6 +1012,7 @@
                         </div>
                     </div>
                 </div>
+                <div id="${containerId}_otros_manual" class="logistics-builder-other-wrap"></div>
             </div>
         `;
 
@@ -844,6 +1027,7 @@
             <div class="logistics-builder logistics-builder--inline">
                 ${['bebidas', 'menaje', 'extras'].map(tipo => renderizarCajaCategoriaLogistica(tipo, containerId)).join('')}
             </div>
+            ${renderizarOtrosLogistica(containerId)}
         `;
     }
 
@@ -872,11 +1056,30 @@
         `;
     }
 
+    function renderizarOtrosLogistica(containerId) {
+        return `
+            <div class="logistics-builder-other">
+                <div class="logistics-builder-other-title">Otros</div>
+                <div class="logistics-builder-other-row">
+                    <select id="${containerId}_otro_tipo" class="dc-input" aria-label="Clasificación">
+                        <option value="bebidas">Bebidas</option>
+                        <option value="menaje">Menaje</option>
+                        <option value="extras" selected>Extras</option>
+                    </select>
+                    <input type="text" id="${containerId}_otro_nombre" class="dc-input" placeholder="Referencia fuera de lista">
+                    <input type="number" id="${containerId}_otro_cantidad" class="dc-input" min="1" step="1" value="1" aria-label="Cantidad">
+                    <input type="text" id="${containerId}_otro_unidad" class="dc-input" value="ud" aria-label="Unidad">
+                    <button type="button" class="btn-fuera-carta" onclick="agregarOtroMaterialLogistica('${containerId}')">Añadir</button>
+                </div>
+            </div>
+        `;
+    }
+
     function renderizarOpcionMaterialServicio(item, tipo, containerId) {
         const tieneSubitems = !!item.tiene_subitems;
         const subitemsSeleccionados = item.subitems_selected || [];
         const activo = item.checked || Number(item.cantidad || 0) > 0 || subitemsSeleccionados.length > 0;
-        const unidadPedido = obtenerUnidadPedidoMaterial(item);
+        const unidadPedido = obtenerUnidadPedidoMaterialPorContexto(item, containerId);
         const detalle = formatearDetalleDinamicoMaterial(item);
 
         if (tieneSubitems) {
@@ -893,7 +1096,7 @@
                             ${subitemsSeleccionados.map(subitem => `
                                 <div class="logistics-builder-subselected-row">
                                     <span>${subitem.nombre}</span>
-                                    ${renderizarCantidadConUnidad(subitem.cantidad || 0, subitem.unidad, `onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`) }
+                                    ${renderizarCantidadConUnidad(subitem.cantidad || 0, subitem.unidad, `onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`, containerId, subitem) }
                                     <button type="button" title="Quitar"
                                         onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">&times;</button>
                                 </div>
@@ -905,15 +1108,16 @@
         }
 
         return `
-            <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}">
+            <div class="logistics-builder-pick ${activo ? 'is-selected' : ''}"
+                onclick="clickLogisticsBuilderPick(event, '${tipo}', '${item.id}', '${containerId}')">
                 <label class="logistics-builder-pick-main">
                     <input type="checkbox" ${activo ? 'checked' : ''}
                         onchange="toggleMaterialItemBuilder('${tipo}', '${item.id}', this.checked, '${containerId}')">
-                    <span>${item.nombre}</span>
+                    <span>${escapeHtmlMaterial(item.nombre)}</span>
                 </label>
                 ${detalle ? `<small>${detalle}</small>` : ''}
                 <div class="logistics-builder-qty">
-                    <input type="number" min="0" step="0.5" value="${item.cantidad || 0}"
+                    <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, item)}" value="${item.cantidad || 0}" onfocus="this.select()" onclick="this.select()"
                         onchange="updateMaterialCantidadServicio('${tipo}', '${item.id}', this.value, '${containerId}')">
                     <span>${unidadPedido}</span>
                 </div>
@@ -945,8 +1149,8 @@
             return item.subitems_selected.map(subitem => `
                 <div class="logistics-builder-selected-item">
                     <span>${subitem.nombre}</span>
-                    <input type="number" min="0" step="0.5" value="${subitem.cantidad || 0}" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
-                    <small>${subitem.unidad || 'uds'}</small>
+                <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, subitem)}" value="${subitem.cantidad || 0}" onfocus="this.select()" onclick="this.select()" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
+                    <small>${obtenerUnidadPedidoMaterialPorContexto(subitem, containerId) || subitem.unidad || 'uds'}</small>
                     <button type="button" onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">Quitar</button>
                 </div>
             `).join('');
@@ -955,8 +1159,8 @@
         return `
             <div class="logistics-builder-selected-item">
                 <span>${item.nombre}</span>
-                <input type="number" min="0" step="0.5" value="${item.cantidad || 0}" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value)">
-                <small>${item.unidad || 'uds'}</small>
+                <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, item)}" value="${item.cantidad || 0}" onfocus="this.select()" onclick="this.select()" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')">
+                <small>${obtenerUnidadPedidoMaterialPorContexto(item, containerId) || item.unidad || 'uds'}</small>
                 <button type="button" onclick="toggleMaterialItemBuilder('${tipo}', '${item.id}', false, '${containerId}')">Quitar</button>
             </div>
         `;
@@ -977,13 +1181,13 @@
                 ? item.subitems_selected
                     .map(formatearResumenMaterial)
                     .join(', ')
-                : (item.unidad || '');
+                : (obtenerUnidadPedidoMaterialPorContexto(item, containerId) || item.unidad || '');
             return `
                 <button type="button" class="logistics-selector-option ${activo ? 'is-selected' : ''}"
                     onclick="${item.tiene_subitems
                         ? `abrirModalMaterialSubitems('${tipo}', '${item.id}', '${containerId}')`
                         : `toggleMaterialItemBuilder('${tipo}', '${item.id}', ${!activo}, '${containerId}')`}">
-                    <span>${item.nombre}</span>
+                    <span>${escapeHtmlMaterial(item.nombre)}</span>
                     <small>${detalle || 'Seleccionar'}</small>
                 </button>
             `;
@@ -996,24 +1200,81 @@
         item.checked = checked;
         if (!checked) {
             item.cantidad = 0;
+            item._cantidad_manual_zero = (item.incluido_en || []).length > 0;
             return;
         }
+        item._cantidad_manual_zero = false;
         if (!item.cantidad || item.cantidad === 0) {
             item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
         }
     };
 
     window.toggleMaterialItemNew = function(tipo, itemId, containerId) {
+        marcarCambioManualMaterialMenu(containerId || 'materialLogisticaInline');
         const item = window.materialLogistica[tipo].find(i => i.id == itemId);
         if (!item) return;
         item.checked = !item.checked;
         if (!item.checked) {
             item.cantidad = 0;
+            item._cantidad_manual_zero = (item.incluido_en || []).length > 0;
         } else if (!item.cantidad || item.cantidad === 0) {
+            item._cantidad_manual_zero = false;
             item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
         }
         const cId = containerId || 'materialLogisticaInline';
         renderizarMaterial(cId);
+    };
+
+    window.clickMaterialItemFila = function(event, tipo, itemId, containerId) {
+        const target = event?.target;
+        if (target?.closest?.('input, button, select, textarea')) return;
+
+        const item = window.materialLogistica?.[tipo]?.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+
+        const activo = item.checked || Number(item.cantidad || 0) > 0;
+        if (!activo) {
+            marcarCambioManualMaterialMenu(containerId || 'materialLogisticaInline');
+            item.checked = true;
+            item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
+            renderizarMaterial(containerId || 'materialLogisticaInline');
+        }
+
+        setTimeout(() => {
+            const container = document.getElementById(containerId || 'materialLogisticaInline');
+            const row = Array.from(container?.querySelectorAll('.dc-material-item') || [])
+                .find(node => node.getAttribute('onclick')?.includes(`'${itemId}'`));
+            const input = row?.querySelector('.dc-material-cantidad');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 0);
+    };
+
+    window.clickLogisticsBuilderPick = function(event, tipo, itemId, containerId) {
+        const target = event?.target;
+        if (target?.closest?.('input, button, select, textarea')) return;
+
+        const item = window.materialLogistica?.[tipo]?.find(i => String(i.id) === String(itemId));
+        if (!item || item.tiene_subitems) return;
+
+        if (!item.checked && !(Number(item.cantidad || 0) > 0)) {
+            item.checked = true;
+            item.cantidad = item.incluido_en?.length ? obtenerPaxLogistica() : 1;
+            renderizarMaterial(containerId || 'materialLogisticaPage');
+        }
+
+        setTimeout(() => {
+            const container = document.getElementById(containerId || 'materialLogisticaPage');
+            const row = Array.from(container?.querySelectorAll('.logistics-builder-pick') || [])
+                .find(node => node.getAttribute('onclick')?.includes(`'${itemId}'`));
+            const input = row?.querySelector('input[type="number"]:not([readonly])');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 0);
     };
 
     function clonarEstadoMaterialLogistica() {
@@ -1080,7 +1341,7 @@
     };
 
     window.toggleMaterialItemExpandable = function(tipo, itemId, checked, containerId) {
-        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (item) {
             item.checked = checked;
             if (checked && !item.subitems_expanded) {
@@ -1091,7 +1352,7 @@
     };
 
     window.toggleSubitems = function(tipo, parentId, containerId) {
-        const item = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (item) {
             item.subitems_expanded = !item.subitems_expanded;
             renderizarMaterial(containerId);
@@ -1113,11 +1374,15 @@
                     item_id: subitem.item_id,
                     nombre: subitem.nombre,
                     cantidad: 1,
-                    unidad: subitem.unidad,
+                    unidad: obtenerUnidadVisualMaterial(tipo, subitem, containerId),
+                    unidad_comanda: obtenerUnidadVisualMaterial(tipo, subitem, containerId),
                     descripcion: subitem.descripcion || subitem.presentacion || '',
                     source_table: subitem.source_table || 'logistics_materials',
                     unidad_inventario: subitem.unidad_inventario || subitem.unidad || 'ud',
-                    conversion_a_stock: Number(subitem.conversion_a_stock || subitem.contenido_por_unidad || 1)
+                    redondeo_a: Number(subitem.redondeo_a || subitem.incremento_cantidad || subitem.cantidad_step || subitem.step_cantidad || 1),
+                    conversion_a_stock: convierteBebidaMenuAUnidadStock(tipo, subitem, containerId)
+                        ? 1
+                        : obtenerConversionMaterialPorContexto(subitem, containerId)
                 });
             }
         } else {
@@ -1135,25 +1400,77 @@
     };
 
     window.updateMaterialCantidad = function(tipo, itemId, cantidad, containerId) {
+        marcarCambioManualMaterialMenu(containerId || obtenerContainerMaterialActivo());
         const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (!item) return;
-        const valor = parseCantidadMaterial(cantidad);
+        const valor = normalizarCantidadPorModo(cantidad, containerId, item);
         item.cantidad = valor > 0 ? valor : 0;
         item.checked = item.cantidad > 0;
+        item._cantidad_manual_zero = item.cantidad === 0 && (item.incluido_en || []).length > 0;
         if (containerId) renderizarMaterial(containerId);
     };
 
     window.updateMaterialCantidadServicio = function(tipo, itemId, cantidad, containerId = 'materialLogisticaPage') {
-        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (!item) return;
 
-        const valor = parseCantidadMaterial(cantidad);
+        const valor = normalizarCantidadPorModo(cantidad, containerId, item);
         item.cantidad = valor;
         item.checked = valor > 0;
-        item.unidad = obtenerUnidadPedidoMaterial(item);
+        item.unidad = obtenerUnidadPedidoMaterialPorContexto(item, containerId);
         item.unidad_inventario = obtenerUnidadStockMaterial(item);
-        item.conversion_a_stock = obtenerConversionMaterial(item);
-        item.descripcion = formatearDetalleDinamicoMaterial(item);
+        item.conversion_a_stock = obtenerConversionMaterialPorContexto(item, containerId);
+        item.descripcion = formatearDetalleDinamicoMaterial(item, undefined, containerId);
+        renderizarMaterial(containerId);
+    };
+
+    window.agregarOtroMaterialLogistica = function(containerId = 'materialLogisticaPage') {
+        const tipoInput = document.getElementById(`${containerId}_otro_tipo`);
+        const nombreInput = document.getElementById(`${containerId}_otro_nombre`);
+        const cantidadInput = document.getElementById(`${containerId}_otro_cantidad`);
+        const unidadInput = document.getElementById(`${containerId}_otro_unidad`);
+        const tipo = ['bebidas', 'menaje', 'extras'].includes(tipoInput?.value) ? tipoInput.value : 'extras';
+        const nombre = nombreInput?.value.trim() || '';
+        const cantidad = parseCantidadMaterial(cantidadInput?.value || 0);
+        const unidad = unidadInput?.value.trim() || 'ud';
+
+        if (!nombre) {
+            nombreInput?.focus();
+            return;
+        }
+
+        if (cantidad <= 0) {
+            cantidadInput?.focus();
+            cantidadInput?.select();
+            return;
+        }
+
+        const id = `otro_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        window.materialLogistica[tipo] = window.materialLogistica[tipo] || [];
+        window.materialLogistica[tipo].push({
+            id,
+            item_id: id,
+            nombre,
+            tipo,
+            subcategoria: 'otros',
+            descripcion: '',
+            presentacion: '',
+            cantidad,
+            unidad,
+            unidad_comanda: unidad,
+            unidad_inventario: unidad,
+            conversion_a_stock: 1,
+            source_table: 'manual',
+            checked: true,
+            tiene_subitems: false,
+            subitems: [],
+            subitems_selected: [],
+            _manual_otro: true
+        });
+
+        if (nombreInput) nombreInput.value = '';
+        if (cantidadInput) cantidadInput.value = '1';
+        if (unidadInput) unidadInput.value = 'ud';
         renderizarMaterial(containerId);
     };
 
@@ -1163,7 +1480,7 @@
 
         const selected = (parent.subitems_selected || []).find(s => String(s.id) === String(subitemId));
         if (selected) {
-            selected.cantidad = parseCantidadMaterial(cantidad);
+            selected.cantidad = normalizarCantidadPorModo(cantidad, containerId, selected);
         }
         parent.checked = (parent.subitems_selected || []).length > 0;
 
@@ -1193,7 +1510,7 @@
 
     // ── Modal subitems ───────────────────────────────────
     window.abrirModalMaterialSubitems = function(tipo, itemId, containerId) {
-        const item = window.materialLogistica[tipo]?.find(i => i.id === itemId);
+        const item = window.materialLogistica[tipo]?.find(i => String(i.id) === String(itemId));
         if (!item || !item.subitems?.length) return;
 
         const modal = document.getElementById('modalMaterialSubitems');
@@ -1206,14 +1523,17 @@
         modal.dataset.containerId = containerId || '';
         modal._subitemsSnapshot = JSON.parse(JSON.stringify(item));
         titulo.textContent = item.nombre;
+        const stepCantidad = obtenerStepCantidadLogistica(containerId);
         opciones.innerHTML = item.subitems.map(subitem => {
             const seleccionado = isSubitemSelected(item, subitem.id);
-            const cantidad = getSubitemCantidad(item, subitem.id);
+            const cantidad = stepCantidad === '1'
+                ? Math.round(Number(getSubitemCantidad(item, subitem.id) || 0))
+                : getSubitemCantidad(item, subitem.id);
             return `
                 <div class="dc-material-modal-option ${seleccionado ? 'dc-material-modal-option--active' : ''}">
                     <span class="dc-material-nombre">${subitem.nombre}</span>
                     <div class="dc-material-modal-actions">
-                        ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0" step="0.5"
+                        ${seleccionado ? `<input type="number" class="dc-material-cantidad" value="${cantidad}" min="0" step="${stepCantidad}" onfocus="this.select()"
                             onchange="updateSubitemCantidad('${tipo}','${itemId}','${subitem.id}',this.value,'${containerId}')">` : ''}
                         <button type="button"
                                 class="${seleccionado ? 'dc-material-btn dc-material-btn--active' : 'dc-material-btn'}"

@@ -7,32 +7,48 @@
     };
 
     function normalizeRole(role) {
-        return ['admin', 'editor', 'viewer', 'cocina', 'logistica'].includes(role) ? role : 'viewer';
+        return ['admin', 'editor', 'eventos', 'viewer', 'cocina', 'logistica'].includes(role) ? role : 'viewer';
+    }
+
+    function inferRoleFromUser() {
+        const email = String(window.currentUser?.email || '').toLowerCase();
+        if (email.includes('cocina')) return 'cocina';
+        if (email.includes('logistica') || email.includes('logística')) return 'logistica';
+        if (email.includes('eventos')) return 'eventos';
+        return null;
     }
 
     window.AppPermissions = {
         get role() {
-            return normalizeRole(state.role);
+            return normalizeRole(state.role || inferRoleFromUser());
         },
 
         canRead() {
-            return ['admin', 'editor', 'viewer', 'cocina', 'logistica'].includes(this.role);
+            return ['admin', 'editor', 'eventos', 'viewer', 'cocina', 'logistica'].includes(this.role);
         },
 
         canWrite() {
+            return ['admin', 'editor', 'eventos'].includes(this.role);
+        },
+
+        canCreateOrders() {
             return ['admin', 'editor'].includes(this.role);
         },
 
         canEditOrders() {
-            return ['admin', 'editor'].includes(this.role);
+            return ['admin', 'editor', 'eventos'].includes(this.role);
         },
 
         canEditKitchen() {
-            return ['admin', 'cocina'].includes(this.role);
+            return ['admin', 'editor', 'cocina'].includes(this.role);
         },
 
         canEditLogistics() {
-            return ['admin', 'logistica'].includes(this.role);
+            return ['admin', 'editor', 'logistica'].includes(this.role);
+        },
+
+        canCreateServiceLogistics() {
+            return ['admin', 'editor'].includes(this.role);
         },
 
         canManageLogisticsInventory() {
@@ -63,7 +79,7 @@
                 state.role = normalizeRole(data?.role);
             } catch (error) {
                 console.warn('No se pudo cargar el rol de usuario:', error);
-                state.role = 'editor';
+                state.role = inferRoleFromUser() || 'viewer';
             }
 
             state.loaded = true;
@@ -79,6 +95,10 @@
                 el.style.display = this.canEditOrders() ? '' : 'none';
             });
 
+            document.querySelectorAll('[data-requires-create-order]').forEach(el => {
+                el.style.display = this.canCreateOrders() ? '' : 'none';
+            });
+
             document.querySelectorAll('[data-requires-order-write]').forEach(el => {
                 el.style.display = this.canEditOrders() ? '' : 'none';
             });
@@ -89,6 +109,10 @@
 
             document.querySelectorAll('[data-requires-logistics-write]').forEach(el => {
                 el.style.display = this.canEditLogistics() ? '' : 'none';
+            });
+
+            document.querySelectorAll('[data-requires-service-logistics-create]').forEach(el => {
+                el.style.display = this.canCreateServiceLogistics() ? '' : 'none';
             });
 
             document.querySelectorAll('[data-requires-logistics-inventory]').forEach(el => {
@@ -106,6 +130,12 @@
             return false;
         },
 
+        requireCreateOrders(message = 'Tu usuario no tiene permiso para crear comandas.') {
+            if (this.canCreateOrders()) return true;
+            alert(message);
+            return false;
+        },
+
         requireKitchen(message = 'Tu usuario no tiene permiso para editar cocina.') {
             if (this.canEditKitchen()) return true;
             alert(message);
@@ -114,6 +144,12 @@
 
         requireLogistics(message = 'Tu usuario no tiene permiso para editar logistica.') {
             if (this.canEditLogistics()) return true;
+            alert(message);
+            return false;
+        },
+
+        requireServiceLogisticsCreate(message = 'Tu usuario no tiene permiso para crear comandas de logistica de servicios.') {
+            if (this.canCreateServiceLogistics()) return true;
             alert(message);
             return false;
         }

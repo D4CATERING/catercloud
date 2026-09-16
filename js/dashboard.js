@@ -8,8 +8,26 @@ function getFechaLocalHoyDashboard() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+function sumarDiasFechaLocalDashboard(fechaIso, dias) {
+    const [yyyy, mm, dd] = String(fechaIso || '').split('-').map(Number);
+    const fecha = new Date(yyyy, (mm || 1) - 1, dd || 1);
+    fecha.setDate(fecha.getDate() + Number(dias || 0));
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 window.cocinaFiltroPeriodo = window.cocinaFiltroPeriodo || 'hoy';
 window.logisticaFiltroPeriodo = window.logisticaFiltroPeriodo || 'hoy';
+window.rutasLogisticaState = window.rutasLogisticaState || {
+    vehicles: [],
+    drivers: [],
+    allDrivers: [],
+    routes: [],
+    loading: false,
+    editingRouteId: null
+};
 
 function aplicarFiltroHoySiExiste(inputId) {
     const input = document.getElementById(inputId);
@@ -35,9 +53,8 @@ function getSemanaLocalDashboard() {
 }
 
 function filtrarEventosPorPeriodoDashboard(eventos, getFechaItem, inputId, periodo) {
-    const fechaFiltro = document.getElementById(inputId)?.value || '';
-    if (fechaFiltro) {
-        return (eventos || []).filter(item => getFechaItem(item) === fechaFiltro);
+    if (periodo === 'todo') {
+        return eventos || [];
     }
     if (periodo === 'semana') {
         const { inicio, fin } = getSemanaLocalDashboard();
@@ -46,8 +63,9 @@ function filtrarEventosPorPeriodoDashboard(eventos, getFechaItem, inputId, perio
             return fecha >= inicio && fecha <= fin;
         });
     }
-    if (periodo === 'todo') {
-        return eventos || [];
+    const fechaFiltro = document.getElementById(inputId)?.value || '';
+    if (fechaFiltro) {
+        return (eventos || []).filter(item => getFechaItem(item) === fechaFiltro);
     }
     const hoy = getFechaLocalHoyDashboard();
     return (eventos || []).filter(item => getFechaItem(item) === hoy);
@@ -76,12 +94,40 @@ function requireEditarLogistica() {
     return !window.AppPermissions || AppPermissions.requireLogistics();
 }
 
+function mostrarCodigoComandaAsignado(codigo, estado = '') {
+    const preview = document.getElementById('codigoComandaPreview');
+    const value = document.getElementById('codigoComandaAsignado');
+    if (!preview || !value) return;
+    preview.style.display = '';
+    value.textContent = codigo || estado || 'Asignando...';
+}
+
+window.mostrarCodigoComandaAsignado = mostrarCodigoComandaAsignado;
+
+async function prepararCodigoNuevaComanda() {
+    if (window.comandaEditando) {
+        mostrarCodigoComandaAsignado(window.comandaEditando.codigo || window.comandaEditando.codigo_comanda || '');
+        return;
+    }
+    mostrarCodigoComandaAsignado('', 'Asignando...');
+    if (typeof window.reservarCodigoComanda !== 'function') {
+        mostrarCodigoComandaAsignado('', 'Pendiente');
+        return;
+    }
+    const codigo = await window.reservarCodigoComanda();
+    mostrarCodigoComandaAsignado(codigo);
+}
+
 /**
  * Muestra el formulario de comanda de cocina
  */
-function mostrarComandaCocina() {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear comandas.')) {
+async function mostrarComandaCocina(options = {}) {
+    if (!window.comandaEditando && window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear comandas.')) {
         return;
+    }
+
+    if (!window.comandaEditando && typeof window.liberarCodigoComandaPendiente === 'function') {
+        await window.liberarCodigoComandaPendiente('abrir_nueva_comanda');
     }
 
     window.serviciosMode = false;
@@ -121,7 +167,7 @@ function mostrarComandaCocina() {
     // Limpiar formulario si no estamos editando
     if (!window.comandaEditando) {
         if (typeof limpiarFormularioComanda === 'function') {
-            limpiarFormularioComanda();
+            limpiarFormularioComanda({ liberarReserva: false });
         } else {
             document.getElementById('comandaCocinaForm').reset();
         }
@@ -168,19 +214,24 @@ function mostrarComandaCocina() {
     }
 
     const hoy = new Date().toISOString().split('T')[0];
-    document.getElementById('fecha_evento').value = hoy;
+    const fechaInicial = options.fechaEvento || options.fecha_evento || hoy;
+    document.getElementById('fecha_evento').value = fechaInicial;
+    if (typeof window.actualizarDiaFechaEvento === 'function') {
+        window.actualizarDiaFechaEvento();
+    }
+    prepararCodigoNuevaComanda();
 }
 
 /**
  * Abre el formulario principal con la categoria Servicios seleccionada.
  */
-async function mostrarServicios() {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear servicios.')) {
+async function mostrarServicios(options = {}) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear servicios.')) {
         return;
     }
 
     window.serviciosMode = true;
-    mostrarComandaCocina();
+    await mostrarComandaCocina(options);
     window.serviciosMode = true;
 
     const title = document.getElementById('comandaFormTitle');
@@ -230,7 +281,11 @@ async function mostrarServicios() {
 /**
  * Muestra el módulo de logística
  */
-function mostrarLogistica() {
+async function mostrarLogistica() {
+    if (typeof window.liberarCodigoComandaPendienteSinEsperar === 'function') {
+        window.liberarCodigoComandaPendienteSinEsperar('mostrar_logistica');
+    }
+
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'none';
     const logisticaForm = document.getElementById('logisticaForm');
@@ -249,15 +304,26 @@ function mostrarLogistica() {
 
     if (typeof setNavActive === 'function') setNavActive('nav-logistica');
     aplicarFiltroHoySiExiste('logisticaFiltroFecha');
-    cargarModuloLogistica();
+    await cargarModuloLogistica();
 }
 
 async function cargarModuloLogistica() {
+    if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+        await window.cargarHistorialRemotoSupabase({ render: false });
+    }
     renderizarComandasLogistica();
     await renderizarInventarioLogistica();
+    const rutasPanel = document.getElementById('logisticaRutasPanel');
+    if (rutasPanel && rutasPanel.style.display !== 'none') {
+        await cargarModuloRutasLogistica();
+    }
 }
 
-function mostrarCocina() {
+async function mostrarCocina() {
+    if (typeof window.liberarCodigoComandaPendienteSinEsperar === 'function') {
+        window.liberarCodigoComandaPendienteSinEsperar('mostrar_cocina');
+    }
+
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'none';
     const logisticaForm = document.getElementById('logisticaForm');
@@ -276,12 +342,19 @@ function mostrarCocina() {
 
     if (typeof setNavActive === 'function') setNavActive('nav-cocina');
     aplicarFiltroHoySiExiste('cocinaFiltroFecha');
+    if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+        await window.cargarHistorialRemotoSupabase({ render: false });
+    }
     renderizarComandasCocina();
 }
 
-function refrescarAlertasOperativas() {
+async function refrescarAlertasOperativas() {
     const cocinaPage = document.getElementById('cocinaPage');
     const logisticaPage = document.getElementById('logisticaPage');
+
+    if (!document.hidden && typeof window.cargarHistorialRemotoSupabase === 'function') {
+        await window.cargarHistorialRemotoSupabase({ render: false });
+    }
 
     if (cocinaPage && cocinaPage.style.display !== 'none') {
         renderizarComandasCocina();
@@ -290,10 +363,22 @@ function refrescarAlertasOperativas() {
     if (logisticaPage && logisticaPage.style.display !== 'none') {
         renderizarComandasLogistica();
     }
+
+    refrescarAlertasOperativasGlobales();
 }
 
-if (!window._alertasOperativasTimer) {
-    window._alertasOperativasTimer = setInterval(refrescarAlertasOperativas, 60000);
+if (window._alertasOperativasTimer) {
+    clearInterval(window._alertasOperativasTimer);
+}
+window._alertasOperativasTimer = setInterval(refrescarAlertasOperativas, 3000);
+
+if (!window._alertasOperativasRealtimeBound) {
+    window._alertasOperativasRealtimeBound = true;
+    prepararSonidoAlertasOperativas();
+    window.addEventListener('focus', refrescarAlertasOperativas);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refrescarAlertasOperativas();
+    });
 }
 
 function getHistorialCocinaModulo() {
@@ -305,7 +390,7 @@ function guardarHistorialCocinaModulo(historial) {
 }
 
 async function sincronizarAccionesOperativasSupabase(codigo, patch) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return;
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
 
     try {
         const { data, error: selectError } = await window.supabaseClient
@@ -314,7 +399,9 @@ async function sincronizarAccionesOperativasSupabase(codigo, patch) {
             .eq('codigo', codigo)
             .maybeSingle();
 
-        if (selectError || !data) return;
+        if (selectError || !data) {
+            throw selectError || new Error(`No se encontro la comanda ${codigo} en Supabase.`);
+        }
 
         const payloadActual = data.payload || {};
         const payload = {
@@ -336,8 +423,13 @@ async function sincronizarAccionesOperativasSupabase(codigo, patch) {
             .eq('codigo', codigo);
 
         if (updateError) throw updateError;
+        return true;
     } catch (error) {
         console.warn('No se pudo sincronizar la actividad operativa con Supabase:', error);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje('El cambio quedó en este navegador, pero no se pudo compartir con otros usuarios. Revisa permisos o conexión.', 'warning');
+        }
+        return false;
     }
 }
 
@@ -352,11 +444,55 @@ function getHoraEntregaItem(item) {
         '';
 }
 
+function getHoraSalidaItem(item) {
+    return item?.hora_salida ||
+        item?.salida ||
+        item?.logistica_inline?.hora_salida ||
+        item?.logistica?.hora_salida ||
+        '';
+}
+
+function compararEventosPorSalidaAscendente(a, b, getFechaItem) {
+    const fechaA = getFechaItem(a);
+    const fechaB = getFechaItem(b);
+    if (fechaA !== fechaB) return String(fechaA || '').localeCompare(String(fechaB || ''));
+
+    const minutosA = parseHoraRutaEnMinutos(getHoraSalidaItem(a));
+    const minutosB = parseHoraRutaEnMinutos(getHoraSalidaItem(b));
+    const ordenA = minutosA === null ? Number.MAX_SAFE_INTEGER : minutosA;
+    const ordenB = minutosB === null ? Number.MAX_SAFE_INTEGER : minutosB;
+    if (ordenA !== ordenB) return ordenA - ordenB;
+
+    return String(a?.codigo || a?.codigo_comanda || a?.codigo_cocina || '')
+        .localeCompare(String(b?.codigo || b?.codigo_comanda || b?.codigo_cocina || ''));
+}
+
 function normalizarEstadoCocina(estado) {
     if (estado === 'proceso') return 'en_produccion';
     if (estado === 'completada' || estado === 'listo') return 'listo';
     if (estado === 'creada' || estado === 'sin_preparar') return 'sin_producir';
     return estado || 'sin_producir';
+}
+
+function getEstadoCocinaOperativo(item = {}) {
+    let estadoOperativo = 'sin_producir';
+    if (item.kitchen_status || item.estado_cocina) {
+        estadoOperativo = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina);
+    } else {
+        const estado = String(item.estado || '').trim();
+        if (estado === 'proceso' || estado === 'en_produccion' || estado === 'completada') {
+            estadoOperativo = normalizarEstadoCocina(estado);
+        }
+    }
+
+    const total = getTotalItemsProduccionCocina(item);
+    if (!total) return estadoOperativo;
+
+    const producidos = Math.min(getProducidosCocina(item), total);
+    if (producidos >= total) return 'listo';
+    if (producidos > 0 && estadoOperativo === 'sin_producir') return 'en_produccion';
+    if (estadoOperativo === 'listo') return producidos > 0 ? 'en_produccion' : 'sin_producir';
+    return estadoOperativo;
 }
 
 function getLabelEstadoCocina(estado) {
@@ -373,6 +509,39 @@ function getClaseEstadoCocina(estado) {
     if (normalizado === 'en_produccion') return 'en_preparacion';
     if (normalizado === 'listo') return 'listo';
     return 'sin_preparar';
+}
+
+function getEstadoConfirmacionOperativa(item = {}) {
+    const estado = String(
+        item.estado_confirmacion ||
+        item.confirmation_status ||
+        item.estado_pedido ||
+        ''
+    ).trim();
+    if (estado === 'confirmado' || estado === 'por_confirmar' || estado === 'anulada') return estado;
+    if (item.estado === 'confirmado' || item.estado === 'por_confirmar' || item.estado === 'anulada') return item.estado;
+    return 'confirmado';
+}
+
+function pedidoOperativoConfirmado(item = {}) {
+    return getEstadoConfirmacionOperativa(item) === 'confirmado';
+}
+
+function getConfirmacionOperativaHtml(item = {}, modo = 'pill') {
+    const estado = getEstadoConfirmacionOperativa(item);
+    const label = estado === 'confirmado'
+        ? 'Confirmada'
+        : estado === 'anulada'
+            ? 'Anulada'
+            : 'Por confirmar';
+    if (modo === 'banner' && estado !== 'confirmado') {
+        return `<div class="operative-confirmation-banner operative-confirmation-banner--${estado}">
+            ${estado === 'anulada'
+                ? 'Esta comanda esta anulada. No debe prepararse.'
+                : 'Esta comanda aun esta por confirmar. No iniciar produccion ni logistica hasta confirmacion.'}
+        </div>`;
+    }
+    return `<span class="operative-confirmation-pill operative-confirmation-pill--${estado}">${label}</span>`;
 }
 
 function getMenusCocinaComanda(item) {
@@ -477,8 +646,14 @@ function getItemsProduccionMenu(menu, menuIndex) {
             .filter(item => item.ref && item.ref.cantidad > 0)
             .map(item => ({ ...item.ref, _refKey: item.key }));
 
-        refs.filter(ref => ref.tipo !== 'termo' && ref.tipo !== 'leche_especial').forEach(ref => {
+        refs.forEach(ref => {
             const refKey = ref.id || ref._refKey || '';
+
+            if (ref.tipo === 'termo' || ref.tipo === 'leche_especial') {
+                const tipoTermo = ref.tipoTermo ? ` (${ref.tipoTermo})` : '';
+                agregarItemProduccion(items, menuIndex, 'Termos y bebidas', `${ref.nombre || ref.sabor || refKey}${tipoTermo}`, ref.cantidad, ref.unidad || 'termo');
+                return;
+            }
 
             if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
                 const cantidades = distribuirCantidadCocina(ref.cantidad || pax, ref.opcionesSeleccionadas.length);
@@ -528,8 +703,15 @@ function getItemsProduccionMenu(menu, menuIndex) {
     }
 
     if (menu.referencias) {
-        (menu.referencias.saladas || []).forEach(ref => agregarItemProduccion(items, menuIndex, 'Saladas', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
-        (menu.referencias.postres || []).forEach(ref => agregarItemProduccion(items, menuIndex, 'Postres', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
+        (menu.referencias.saladas || []).forEach(ref => agregarItemProduccion(items, menuIndex, ref.fuera_carta ? 'Fuera de carta' : 'Saladas', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
+        (menu.referencias.postres || []).forEach(ref => agregarItemProduccion(items, menuIndex, ref.fuera_carta ? 'Fuera de carta - postres' : 'Postres', ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds'));
+    }
+
+    if (Array.isArray(menu.referencias_extras)) {
+        menu.referencias_extras.forEach(ref => {
+            const grupo = ref.grupo === 'postre' || ref.tipo === 'postres' ? 'Postres' : 'Saladas';
+            agregarItemProduccion(items, menuIndex, grupo, ref.nombre || ref.id, ref.cantidad, ref.unidad || 'uds');
+        });
     }
 
     if (menu.bandejas) {
@@ -556,12 +738,52 @@ function getItemsProduccionMenu(menu, menuIndex) {
     return items;
 }
 
+function getItemsIntoleranciasProduccionCocina(comanda) {
+    const intolerancias = comanda?.alergias?.intolerancias || {};
+    const items = Array.isArray(intolerancias.items) ? intolerancias.items : [];
+    return items.map((item, index) => {
+        const nombre = String(item.nombre || '').trim();
+        if (!nombre) return null;
+        const iconClass = getClaseIconoIntoleranciaCocina(nombre);
+        const keyBase = `intolerancia:${index}:${nombre}`.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+        return {
+            key: keyBase || `intolerancia-${index}`,
+            grupo: 'Intolerancias / restricciones',
+            nombre,
+            cantidad: item.pax || '',
+            unidad: item.pax ? 'pax' : 'informado',
+            iconClass
+        };
+    }).filter(Boolean);
+}
+
 function getProduccionCocinaDetalle(comanda) {
-    return getMenusProduccionCocina(comanda).map((menu, index) => ({
+    const grupos = getMenusProduccionCocina(comanda).map((menu, index) => ({
         menu,
         menuIndex: index,
         items: getItemsProduccionMenu(menu, index)
     })).filter(grupo => grupo.items.length);
+
+    const keysVistas = new Map();
+    grupos.forEach(grupo => {
+        grupo.items = grupo.items.map(item => {
+            const baseKey = item.key || `${grupo.menuIndex}:${item.grupo}:${item.nombre}`;
+            const repeticion = keysVistas.get(baseKey) || 0;
+            keysVistas.set(baseKey, repeticion + 1);
+            if (!repeticion) return item;
+            return {
+                ...item,
+                key: `${baseKey}__${repeticion + 1}`,
+                base_key: baseKey
+            };
+        });
+    });
+
+    return grupos;
 }
 
 function getTotalItemsProduccionCocina(comanda) {
@@ -573,6 +795,54 @@ function getProducidosCocina(comanda) {
     const state = comanda.kitchen_items_state || {};
     return getProduccionCocinaDetalle(comanda)
         .reduce((total, grupo) => total + grupo.items.filter(item => state[item.key]).length, 0);
+}
+
+function getClaseIconoIntoleranciaCocina(nombre = '') {
+    const limpio = String(nombre || '').toLowerCase();
+    if (limpio.includes('gluten')) return 'gluten';
+    if (limpio.includes('lactosa')) return 'lactosa';
+    if (limpio.includes('frutos')) return 'frutos';
+    if (limpio.includes('huevo')) return 'huevo';
+    if (limpio.includes('marisco')) return 'marisco';
+    if (limpio.includes('vegetariano')) return 'vegetariano';
+    if (limpio.includes('vegano')) return 'vegano';
+    return 'otro';
+}
+
+function getNombreIntoleranciaCocinaDisplay(nombre = '') {
+    const texto = String(nombre || '').trim();
+    if (!texto) return '';
+    return /^foodbox\b/i.test(texto) ? texto.replace(/^foodbox\b/i, 'FOODBOX') : `FOODBOX ${texto}`;
+}
+
+function renderizarIntoleranciasCocinaHtml(comanda) {
+    const intolerancias = comanda?.alergias?.intolerancias || {};
+    const items = Array.isArray(intolerancias.items) ? intolerancias.items : [];
+    const notas = intolerancias.notas || '';
+    if (!items.length && !notas) return '';
+
+    const itemsHtml = items.length
+        ? `<div class="kitchen-intolerances-list">
+            ${items.map(item => `
+                <span class="kitchen-intolerance-chip">
+                    ${escapeLogisticaHtml(getNombreIntoleranciaCocinaDisplay(item.nombre))}
+                    ${item.pax ? ` · ${escapeLogisticaHtml(item.pax)} pax` : ''}
+                </span>
+            `).join('')}
+        </div>`
+        : '';
+
+    const notasHtml = notas
+        ? `<div class="kitchen-intolerances-notes">${escapeLogisticaHtml(notas)}</div>`
+        : '';
+
+    return `
+        <div class="kitchen-intolerances-box">
+            <strong>Intolerancias / restricciones</strong>
+            ${itemsHtml}
+            ${notasHtml}
+        </div>
+    `;
 }
 
 function getOperativeActorName() {
@@ -687,12 +957,12 @@ function renderActividadOperativaHtml(item, area) {
     `;
 }
 
-function getConfirmacionCompletadoHtml(area, index, confirmadoAt, total, completos) {
+function getConfirmacionCompletadoHtml(area, index, confirmadoAt, total, completos, codigoArg = "''") {
     if (!total || completos < total) return '';
     const label = area === 'logistica' ? 'Logistica completada' : 'Cocina completada';
     const onclick = area === 'logistica'
-        ? `confirmarCompletadoLogistica(${index})`
-        : `confirmarCompletadoCocina(${index})`;
+        ? `confirmarCompletadoLogistica(${index}, ${codigoArg})`
+        : `confirmarCompletadoCocina(${index}, ${codigoArg})`;
 
     if (confirmadoAt) {
         return `
@@ -711,28 +981,516 @@ function getConfirmacionCompletadoHtml(area, index, confirmadoAt, total, complet
     `;
 }
 
+function renderRevisionOperativaNotice(item, area) {
+    const notice = area === 'logistica'
+        ? item?.logistics_revision_notice
+        : item?.kitchen_revision_notice;
+    if (!notice) return '';
+    const detalle = getResumenNoticeOperativa(notice);
+    const pax = notice.pax_before !== undefined && notice.pax_after !== undefined && notice.pax_before !== notice.pax_after
+        ? ` Pax ${notice.pax_before} -> ${notice.pax_after}.`
+        : '';
+    return `
+        <div class="operative-revision-notice">
+            <strong>Comanda actualizada</strong>
+            <span>${escapeLogisticaHtml(detalle)}.${escapeLogisticaHtml(pax)} Revisa antes de confirmar el cierre.</span>
+        </div>
+    `;
+}
+
+function getCodigoOperativo(item) {
+    return item?.codigo_cocina || item?.codigo_original || item?.codigo_comanda || item?.codigo || item?.id || '';
+}
+
+function getCodigoOperativoJsArg(item) {
+    return getJsArg(getCodigoOperativo(item));
+}
+
+function getJsArg(value) {
+    return `'${encodeURIComponent(String(value ?? ''))}'`;
+}
+
+function leerJsArgSeguro(value) {
+    const limpio = String(value || '').replace(/^['"]|['"]$/g, '');
+    try {
+        return decodeURIComponent(limpio);
+    } catch (error) {
+        return limpio;
+    }
+}
+
+function getEventoCocinaPorIndiceOCodigo(index, codigo = '') {
+    const listas = [
+        window.cocinaEventosActivos || [],
+        getEventosCocinaActivos()
+    ];
+    const codigoBuscado = String(codigo || '');
+    if (codigoBuscado) {
+        for (const lista of listas) {
+            const encontrado = (lista || []).find(item => String(getCodigoOperativo(item)) === codigoBuscado);
+            if (encontrado) return encontrado;
+        }
+    }
+    return (window.cocinaEventosActivos || getEventosCocinaActivos())[index];
+}
+
+function getEventoLogisticaPorIndiceOCodigo(index, codigo = '') {
+    const listas = [
+        window.logisticaEventosActivos || [],
+        getEventosLogisticaActivos()
+    ];
+    const codigoBuscado = String(codigo || '');
+    if (codigoBuscado) {
+        for (const lista of listas) {
+            const encontrado = (lista || []).find(item => String(getCodigoOperativo(item)) === codigoBuscado);
+            if (encontrado) return encontrado;
+        }
+    }
+    return (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+}
+
+function hashCambioOperativo(value) {
+    const texto = String(value || '');
+    let hash = 0;
+    for (let i = 0; i < texto.length; i++) {
+        hash = ((hash << 5) - hash) + texto.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+}
+
+function getResumenNoticeOperativa(notice) {
+    if (!notice) return 'Comanda actualizada';
+    if (Array.isArray(notice.changes_detail) && notice.changes_detail.length) {
+        return notice.changes_detail
+            .slice(0, 4)
+            .map(cambio => `${cambio.campo || 'Campo'}: ${cambio.antes || 'Vacio'} -> ${cambio.despues || 'Vacio'}`)
+            .join(' · ');
+    }
+    if (Array.isArray(notice.changes) && notice.changes.length) {
+        return notice.changes.join(', ');
+    }
+    return notice.message || 'Comanda actualizada';
+}
+
+function getEtiquetaTipoCambioOperativo(tipo, notice) {
+    const cambios = Array.isArray(notice?.changes) ? notice.changes.join(' ').toLowerCase() : '';
+    const detalle = Array.isArray(notice?.changes_detail)
+        ? notice.changes_detail.map(c => `${c.grupo || ''} ${c.campo || ''}`).join(' ').toLowerCase()
+        : '';
+    if (/hora de salida|fecha del evento|empresa|responsable|pax/.test(detalle)) {
+        return 'Cambio en datos del pedido';
+    }
+    if (tipo === 'logistica') {
+        if (/material/.test(cambios)) return 'Cambio en material (Logistica)';
+        return 'Cambio en datos de logistica';
+    }
+    if (/intolerancias|notas/.test(cambios)) return 'Cambio en cocina';
+    return 'Cambio en menu (Cocina)';
+}
+
+function noticeAfectaMaterialLogistica(notice) {
+    const cambios = Array.isArray(notice?.changes) ? notice.changes.join(' ').toLowerCase() : '';
+    return /material de logistica|datos de entrega|datos generales|pax/.test(cambios);
+}
+
+function getKeyCambioOperativo(areaVista, item, tipo, notice) {
+    const codigo = getCodigoOperativo(item) || 'sin-codigo';
+    return [
+        'catercloudOperationalChange',
+        areaVista,
+        tipo,
+        codigo,
+        hashCambioOperativo(JSON.stringify(notice || {}))
+    ].join(':');
+}
+
+function getUsuarioKeyCambioOperativo() {
+    return String(window.currentUser?.id || window.currentUser?.email || 'usuario-local')
+        .replace(/[^a-z0-9@._-]/gi, '_');
+}
+
+function getStorageKeyCambioOperativo(key) {
+    return `${key}:seen:${getUsuarioKeyCambioOperativo()}`;
+}
+
+function getStorageKeyCambioOperativoGlobal(key) {
+    return `${key}:seen`;
+}
+
+function cambioOperativoYaGestionado(key) {
+    if (!key) return false;
+    try {
+        return !!localStorage.getItem(getStorageKeyCambioOperativo(key)) ||
+            !!localStorage.getItem(getStorageKeyCambioOperativoGlobal(key));
+    } catch (_) {
+        return false;
+    }
+}
+
+function marcarCambioOperativoGestionado(key, action = 'dismissed') {
+    if (!key) return;
+    try {
+        const payload = JSON.stringify({
+            action,
+            by: window.currentUser?.email || null,
+            at: new Date().toISOString()
+        });
+        localStorage.setItem(getStorageKeyCambioOperativoGlobal(key), payload);
+        localStorage.setItem(getStorageKeyCambioOperativo(key), JSON.stringify({
+            action,
+            by: window.currentUser?.email || null,
+            at: new Date().toISOString()
+        }));
+    } catch (_) {
+        sessionStorage.setItem(key, action);
+    }
+}
+
+function esFechaAvisoOperativoInmediata(item) {
+    const fecha = String(item?.fecha_evento || item?.fecha || item?.fecha_creacion || '').split('T')[0];
+    if (!fecha) return false;
+    const hoy = getFechaLocalHoyDashboard();
+    const manana = sumarDiasFechaLocalDashboard(hoy, 1);
+    return fecha === hoy || fecha === manana;
+}
+
+function getCambiosOperativosPendientes(areaVista, eventos) {
+    if (window.AppPermissions) {
+        if (areaVista === 'cocina' && !AppPermissions.canEditKitchen()) return [];
+        if (areaVista === 'logistica' && !AppPermissions.canEditLogistics()) return [];
+    }
+
+    const cambios = [];
+    (eventos || []).forEach((item, index) => {
+        if (!esFechaAvisoOperativoInmediata(item)) return;
+
+        const codigo = getCodigoOperativo(item);
+        const empresa = item.empresa || item.company_name || 'Sin empresa';
+
+        if (areaVista === 'cocina' && item.kitchen_revision_notice) {
+            cambios.push({
+                areaVista,
+                tipo: 'cocina',
+                index,
+                codigo,
+                empresa,
+                label: 'Cocina',
+                notice: item.kitchen_revision_notice,
+                key: getKeyCambioOperativo(areaVista, item, 'cocina', item.kitchen_revision_notice)
+            });
+        }
+
+        if (areaVista === 'logistica') {
+            if (item.kitchen_revision_notice) {
+                cambios.push({
+                    areaVista,
+                    tipo: 'cocina',
+                    index,
+                    codigo,
+                    empresa,
+                    label: 'Cocina',
+                    notice: item.kitchen_revision_notice,
+                    key: getKeyCambioOperativo(areaVista, item, 'cocina', item.kitchen_revision_notice)
+                });
+            }
+            if (item.logistics_revision_notice) {
+                const mismaRevisionCocina = item.kitchen_revision_notice
+                    && JSON.stringify(item.kitchen_revision_notice) === JSON.stringify(item.logistics_revision_notice);
+                if (!mismaRevisionCocina || noticeAfectaMaterialLogistica(item.logistics_revision_notice)) {
+                    cambios.push({
+                        areaVista,
+                        tipo: 'logistica',
+                        index,
+                        codigo,
+                        empresa,
+                        label: 'Logistica',
+                        notice: item.logistics_revision_notice,
+                        key: getKeyCambioOperativo(areaVista, item, 'logistica', item.logistics_revision_notice)
+                    });
+                }
+            }
+        }
+    });
+    return cambios.filter(cambio => !cambioOperativoYaGestionado(cambio.key) && !sessionStorage.getItem(cambio.key));
+}
+
+function getAreasAvisoOperativoPorRol() {
+    const role = window.AppPermissions?.role || 'viewer';
+    if (role === 'admin') return ['cocina', 'logistica'];
+    if (role === 'cocina') return ['cocina'];
+    if (role === 'logistica') return ['logistica'];
+    return [];
+}
+
+function getCambiosOperativosPendientesGlobales() {
+    const areas = getAreasAvisoOperativoPorRol();
+    if (!areas.length) return [];
+
+    return areas.flatMap(areaVista => {
+        const eventos = areaVista === 'cocina'
+            ? getEventosCocinaActivos()
+            : getEventosLogisticaActivos();
+        return getCambiosOperativosPendientes(areaVista, eventos);
+    }).sort((a, b) => {
+        const fechaB = new Date(b.notice?.at || 0).getTime() || 0;
+        const fechaA = new Date(a.notice?.at || 0).getTime() || 0;
+        return fechaB - fechaA;
+    });
+}
+
+function reproducirSonidoCambioOperativo(key) {
+    if (!key || sessionStorage.getItem(`${key}:sound`)) return;
+    const prefs = typeof cargarPreferencias === 'function' ? cargarPreferencias() : { notificaciones: true };
+    if (prefs.notificaciones === false) return;
+
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = window._operationalAlertAudioCtx || new AudioContext();
+        window._operationalAlertAudioCtx = ctx;
+
+        const emitir = () => {
+            const now = ctx.currentTime;
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.62);
+            gain.connect(ctx.destination);
+
+            [740, 980, 740].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + (i * 0.14));
+                osc.connect(gain);
+                osc.start(now + (i * 0.14));
+                osc.stop(now + 0.16 + (i * 0.14));
+            });
+            sessionStorage.setItem(`${key}:sound`, '1');
+        };
+
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(emitir).catch(() => {});
+        } else {
+            emitir();
+        }
+    } catch (error) {
+        console.warn('No se pudo reproducir el sonido de alerta:', error);
+    }
+}
+
+function prepararSonidoAlertasOperativas() {
+    if (window._operationalAlertAudioPrepared) return;
+    window._operationalAlertAudioPrepared = true;
+
+    const activar = () => {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = window._operationalAlertAudioCtx || new AudioContext();
+            window._operationalAlertAudioCtx = ctx;
+            if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+        } catch (error) {
+            console.warn('No se pudo preparar el audio de alertas:', error);
+        }
+    };
+
+    ['pointerdown', 'keydown', 'touchstart'].forEach(evento => {
+        window.addEventListener(evento, activar, { once: true, passive: true });
+    });
+}
+
+function cerrarTarjetaCambioOperativo() {
+    document.getElementById('operationalChangeOverlay')?.remove();
+}
+
+async function abrirCambioOperativoDesdeTarjeta(areaVista, index, key) {
+    marcarCambioOperativoGestionado(key, 'opened');
+    cerrarTarjetaCambioOperativo();
+    const codigo = key ? String(key).split(':')[3] || '' : '';
+    if (areaVista === 'cocina') {
+        if (typeof mostrarCocina === 'function') await mostrarCocina();
+        window.cocinaEventosActivos = getEventosCocinaActivos();
+        abrirProduccionCocina(index, codigo);
+        return;
+    }
+    if (typeof mostrarLogistica === 'function') await mostrarLogistica();
+    window.logisticaEventosActivos = getEventosLogisticaActivos();
+    abrirPreparacionLogistica(index, codigo);
+}
+
+function descartarCambioOperativoDesdeTarjeta(key) {
+    marcarCambioOperativoGestionado(key, 'dismissed');
+    cerrarTarjetaCambioOperativo();
+}
+
+function mostrarTarjetaCambioOperativo(areaVista, eventos) {
+    const cambios = getCambiosOperativosPendientes(areaVista, eventos);
+    if (!cambios.length) {
+        cerrarTarjetaCambioOperativo();
+        return;
+    }
+
+    const cambio = cambios[0];
+    const detalle = getResumenNoticeOperativa(cambio.notice);
+    const tituloArea = areaVista === 'cocina' ? 'Cocina' : 'Logistica';
+    const accion = areaVista === 'cocina' ? 'Abrir comanda de trabajo' : 'Abrir preparacion';
+    const existente = document.getElementById('operationalChangeOverlay');
+    if (existente?.dataset.key === cambio.key) return;
+    cerrarTarjetaCambioOperativo();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'operationalChangeOverlay';
+    overlay.className = 'operational-change-overlay';
+    overlay.dataset.key = cambio.key;
+    overlay.innerHTML = `
+        <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
+            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
+                onclick="descartarCambioOperativoDesdeTarjeta('${cambio.key}')">×</button>
+            <button type="button" class="operational-change-body"
+                onclick="abrirCambioOperativoDesdeTarjeta('${areaVista}', ${cambio.index}, '${cambio.key}')">
+                <span class="operational-change-kicker">Cambio para ${escapeLogisticaHtml(tituloArea)}</span>
+                <strong>Comanda modificada · ${escapeLogisticaHtml(cambio.codigo || 'Sin codigo')}</strong>
+                <span>${escapeLogisticaHtml(cambio.empresa)} · afecta ${escapeLogisticaHtml(cambio.label)}</span>
+                <small>${escapeLogisticaHtml(detalle)}</small>
+                <em>${escapeLogisticaHtml(accion)}</em>
+            </button>
+        </article>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function mostrarTarjetaCambioOperativoGlobal() {
+    const cambios = getCambiosOperativosPendientesGlobales();
+    if (!cambios.length) {
+        cerrarTarjetaCambioOperativo();
+        return;
+    }
+
+    const cambio = cambios[0];
+    const detalle = getResumenNoticeOperativa(cambio.notice);
+    const tituloTipo = getEtiquetaTipoCambioOperativo(cambio.tipo, cambio.notice);
+    const tituloArea = cambio.areaVista === 'cocina' ? 'Cocina' : 'Logistica';
+    const accion = cambio.areaVista === 'cocina' ? 'Abrir produccion' : 'Abrir preparacion';
+    const existente = document.getElementById('operationalChangeOverlay');
+    if (existente?.dataset.key === cambio.key) return;
+    cerrarTarjetaCambioOperativo();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'operationalChangeOverlay';
+    overlay.className = `operational-change-overlay operational-change-overlay--${cambio.tipo}`;
+    overlay.dataset.key = cambio.key;
+    overlay.innerHTML = `
+        <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
+            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
+                onclick="descartarCambioOperativoDesdeTarjeta('${cambio.key}')">×</button>
+            <button type="button" class="operational-change-body"
+                onclick="abrirCambioOperativoDesdeTarjeta('${cambio.areaVista}', ${cambio.index}, '${cambio.key}')">
+                <span class="operational-change-kicker">${escapeLogisticaHtml(tituloTipo)}</span>
+                <strong>${escapeLogisticaHtml(cambio.codigo || 'Sin codigo')}</strong>
+                <span>${escapeLogisticaHtml(cambio.empresa)} · aviso para ${escapeLogisticaHtml(tituloArea)}</span>
+                <small>${escapeLogisticaHtml(detalle)}</small>
+                <em>${escapeLogisticaHtml(accion)}</em>
+            </button>
+        </article>
+    `;
+    document.body.appendChild(overlay);
+    reproducirSonidoCambioOperativo(cambio.key);
+}
+
+function refrescarAlertasOperativasGlobales() {
+    if (document.hidden) return;
+    mostrarTarjetaCambioOperativoGlobal();
+}
+
+window.refrescarAlertasOperativasGlobales = refrescarAlertasOperativasGlobales;
+
+window.verificarNotificacionesOperativas = async function verificarNotificacionesOperativas() {
+    if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+        await window.cargarHistorialRemotoSupabase({ render: false });
+    }
+    const areas = getAreasAvisoOperativoPorRol();
+    const pendientes = getCambiosOperativosPendientesGlobales();
+    return {
+        usuario: window.currentUser?.email || null,
+        rol: window.AppPermissions?.role || null,
+        areas,
+        pendientes: pendientes.length,
+        avisos: pendientes.slice(0, 8).map(item => ({
+            codigo: item.codigo,
+            empresa: item.empresa,
+            tipo: item.tipo,
+            areaVista: item.areaVista,
+            cambios: item.notice?.changes || [],
+            fecha: item.notice?.at || null
+        })),
+        realtime: window._ordersRealtimeStatus || null,
+        ultimaLectura: window._ultimoHistorialRemotoOk || null
+    };
+};
+
 function getEventosCocinaActivos() {
     return getHistorialCocinaModulo()
         .map((item, index) => ({
             ...item,
             _cocinaIndex: index,
-            kitchen_status: normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado),
+            kitchen_status: getEstadoCocinaOperativo(item),
             kitchen_assigned_to: item.kitchen_assigned_to || '',
             kitchen_items_state: item.kitchen_items_state || {},
+            kitchen_items_updates: item.kitchen_items_updates || {},
             kitchen_produced_items: Number(item.kitchen_produced_items || 0)
         }))
         .filter(item => {
             if (item.tipo_registro === 'logistica') return false;
-            if (item.estado === 'anulada' || item.estado_pedido === 'anulada') return false;
+            if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return false;
             return getMenusCocinaComanda(item).length > 0;
         })
         .sort((a, b) => {
-            const fechaA = getFechaCocinaItem(a);
-            const fechaB = getFechaCocinaItem(b);
-            if (fechaA !== fechaB) return fechaB.localeCompare(fechaA);
-            return String(b.hora_salida || '').localeCompare(String(a.hora_salida || ''));
+            return compararEventosPorSalidaAscendente(a, b, getFechaCocinaItem);
         });
 }
+
+window.verificarCocinaCaterCloud = async function verificarCocinaCaterCloud() {
+    if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+        await window.cargarHistorialRemotoSupabase({ render: false });
+    }
+    const historial = getHistorialCocinaModulo();
+    const eventos = getEventosCocinaActivos();
+    const inputFecha = document.getElementById('cocinaFiltroFecha')?.value || '';
+    const fechaFiltro = inputFecha || getFechaLocalHoyDashboard();
+    const periodo = inputFecha ? 'dia' : (window.cocinaFiltroPeriodo || 'hoy');
+    const visiblesFecha = eventos.filter(item => getFechaCocinaItem(item) === fechaFiltro);
+    const visiblesTodo = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', 'todo');
+    const visiblesPeriodoActual = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', periodo);
+    const sinMenuProduccion = historial.filter(item => {
+        if (item.tipo_registro === 'logistica') return false;
+        if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return false;
+        return getMenusCocinaComanda(item).length === 0;
+    });
+
+    return {
+        usuario: window.currentUser?.email || null,
+        lecturaSupabase: window._ultimoHistorialRemotoOk || null,
+        errorSupabase: window._ultimoHistorialRemotoError || null,
+        filtroPeriodoCocina: periodo,
+        filtroFechaCocina: fechaFiltro,
+        historialLocalTotal: historial.length,
+        comandasCocinaActivas: eventos.length,
+        visiblesEnFecha: visiblesFecha.length,
+        visiblesEnTodo: visiblesTodo.length,
+        visiblesPeriodoActual: visiblesPeriodoActual.length,
+        codigosDuplicadosSupabase: window._ultimoHistorialRemotoOk?.codigosDuplicados || [],
+        sinMenuProduccion: sinMenuProduccion.length,
+        ultimasComandas: eventos.slice(0, 8).map(item => ({
+            codigo: item.codigo || item.codigo_comanda || '',
+            empresa: item.empresa || item.company_name || '',
+            fecha_evento: item.fecha_evento || '',
+            hora_salida: item.hora_salida || '',
+            menus: getResumenMenusConPax(item),
+            estado: item.estado || item.estado_cocina || item.kitchen_status || ''
+        }))
+    };
+};
 
 function guardarEventoCocinaActivo(evento) {
     if (!evento) return;
@@ -746,22 +1504,29 @@ function guardarEventoCocinaActivo(evento) {
         estado_cocina: normalizarEstadoCocina(evento.kitchen_status),
         kitchen_assigned_to: evento.kitchen_assigned_to || '',
         kitchen_items_state: evento.kitchen_items_state || {},
+        kitchen_items_updates: evento.kitchen_items_updates || {},
         kitchen_produced_items: getProducidosCocina(evento),
         kitchen_action_log: evento.kitchen_action_log || [],
+        kitchen_revision_notice: Object.prototype.hasOwnProperty.call(evento, 'kitchen_revision_notice') ? evento.kitchen_revision_notice : (historial[index].kitchen_revision_notice || null),
+        operational_revision_log: evento.operational_revision_log || historial[index].operational_revision_log || [],
         kitchen_completed_confirmed_at: evento.kitchen_completed_confirmed_at || null,
         kitchen_completed_confirmed_by: evento.kitchen_completed_confirmed_by || ''
     };
 
     if (evento.kitchen_ready_at) historial[index].kitchen_ready_at = evento.kitchen_ready_at;
     if (evento.kitchen_ready_by) historial[index].kitchen_ready_by = evento.kitchen_ready_by;
+    historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
     guardarHistorialCocinaModulo(historial);
     sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
         kitchen_status: historial[index].kitchen_status,
         estado_cocina: historial[index].estado_cocina,
         kitchen_assigned_to: historial[index].kitchen_assigned_to || '',
         kitchen_items_state: historial[index].kitchen_items_state || {},
+        kitchen_items_updates: historial[index].kitchen_items_updates || {},
         kitchen_produced_items: historial[index].kitchen_produced_items || 0,
         kitchen_action_log: historial[index].kitchen_action_log || [],
+        kitchen_revision_notice: historial[index].kitchen_revision_notice || null,
+        operational_revision_log: historial[index].operational_revision_log || [],
         kitchen_completed_confirmed_at: historial[index].kitchen_completed_confirmed_at || null,
         kitchen_completed_confirmed_by: historial[index].kitchen_completed_confirmed_by || '',
         kitchen_ready_at: historial[index].kitchen_ready_at || null,
@@ -772,7 +1537,7 @@ function guardarEventoCocinaActivo(evento) {
 function actualizarKpisCocina(eventos) {
     const counts = { sin_producir: 0, en_produccion: 0, listo: 0 };
     (eventos || []).forEach(item => {
-        const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+        const estado = getEstadoCocinaOperativo(item);
         if (counts[estado] !== undefined) counts[estado]++;
     });
 
@@ -799,6 +1564,7 @@ function renderizarComandasCocina() {
     window.cocinaEventosActivos = eventosFiltrados;
     actualizarKpisCocina(eventosFiltrados);
     actualizarBotonesPeriodoDashboard('cocina', periodo);
+    refrescarAlertasOperativasGlobales();
 
     if (!eventos.length) {
         cont.innerHTML = '<div class="logistics-empty">Aun no hay comandas activas en cocina.</div>';
@@ -811,35 +1577,42 @@ function renderizarComandasCocina() {
     }
 
     cont.innerHTML = eventosFiltrados.slice(0, 40).map((item, index) => {
+        const codigoArg = getCodigoOperativoJsArg(item);
         const menus = getMenusCocinaComanda(item);
         const totalItems = getTotalItemsProduccionCocina(item);
         const producidos = Math.min(getProducidosCocina(item), totalItems);
-        const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+        const estado = getEstadoCocinaOperativo(item);
         const estadoClase = getClaseEstadoCocina(estado);
         const progreso = totalItems ? Math.min(100, Math.round((producidos / totalItems) * 100)) : 0;
         const responsable = item.kitchen_assigned_to || '';
         const fecha = item.fecha_evento || item.fecha_creacion || '';
-        const horaSalida = item.hora_salida || '';
+        const horaSalida = getHoraSalidaItem(item);
         const menuResumen = getResumenMenusConPax(item);
         const alertaSalida = getAlertaSalidaHtml(item, estado);
+        const confirmado = pedidoOperativoConfirmado(item);
+        const puedeOperar = canEdit && confirmado;
 
         return `
-            <article class="logistics-event-card kitchen-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirProduccionCocina(${index})">
+            <article class="logistics-event-card kitchen-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirProduccionCocina(${index}, ${codigoArg})">
                 <div class="logistics-event-main">
                     <div>
-                        <strong>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || 'Sin codigo')}</strong>
-                        <span>${escapeLogisticaHtml(item.empresa || item.company_name || 'Sin empresa')} · ${menuResumen}</span>
+                        <div class="logistics-event-title-row">
+                            <strong>${escapeLogisticaHtml(item.codigo || item.codigo_comanda || 'Sin codigo')}</strong>
+                            <span>${escapeLogisticaHtml(fecha || 'Sin fecha')}</span>
+                            ${getConfirmacionOperativaHtml(item)}
+                            <span class="logistics-status-pill logistics-status-pill--${estadoClase}">${getLabelEstadoCocina(estado)}</span>
+                        </div>
+                        <div class="logistics-event-detail-row">
+                            <span>${escapeLogisticaHtml(item.empresa || item.company_name || 'Sin empresa')} · ${menuResumen}</span>
+                            <span class="logistics-event-quick-meta">
+                                <b>Salida ${escapeLogisticaHtml(horaSalida || '-')}</b>
+                                <span>${totalItems} items</span>
+                            </span>
+                        </div>
                     </div>
-                    <span class="logistics-status-pill logistics-status-pill--${estadoClase}">${getLabelEstadoCocina(estado)}</span>
                 </div>
 
                 ${alertaSalida}
-
-                <div class="logistics-event-meta">
-                    <span>${escapeLogisticaHtml(fecha || 'Sin fecha')}</span>
-                    <span>Salida ${escapeLogisticaHtml(horaSalida || '-')}</span>
-                    <span>${totalItems} items</span>
-                </div>
 
                 <div class="logistics-progress-row">
                     <span>${producidos} producidos</span>
@@ -851,42 +1624,44 @@ function renderizarComandasCocina() {
                     <label>
                         Responsable
                         <input type="text" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
-                            ${canEdit ? '' : 'disabled'}
+                            ${puedeOperar ? '' : 'disabled'}
                             onclick="event.stopPropagation()"
-                            onchange="actualizarResponsableCocina(${index}, this.value)">
+                            onchange="actualizarResponsableCocina(${index}, this.value, ${codigoArg})">
                     </label>
                     <label>
                         Estado
-                        <select ${canEdit ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoCocina(${index}, this.value)">
+                        <select ${puedeOperar ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoCocina(${index}, this.value, ${codigoArg})">
                             <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
                             <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
                             <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
                         </select>
                     </label>
-                    <button type="button" class="btn-secondary" onclick="event.stopPropagation(); abrirProduccionCocina(${index})">Produccion</button>
+                    <button type="button" class="btn-secondary" onclick="event.stopPropagation(); abrirProduccionCocina(${index}, ${codigoArg})">Produccion</button>
                 </div>
             </article>
         `;
     }).join('');
 }
 
-function abrirProduccionCocina(index) {
-    const item = (window.cocinaEventosActivos || getEventosCocinaActivos())[index];
+function abrirProduccionCocina(index, codigo = '') {
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     const modal = document.getElementById('cocinaProduccionModal');
     const content = document.getElementById('cocinaProduccionContent');
     if (!item || !modal || !content) return;
-    const canEdit = puedeEditarCocina();
+    const canEdit = puedeEditarCocina() && pedidoOperativoConfirmado(item);
+    const codigoArg = getCodigoOperativoJsArg(item);
 
     const grupos = getProduccionCocinaDetalle(item);
     const totalItems = getTotalItemsProduccionCocina(item);
     const producidos = getProducidosCocina(item);
-    const estado = normalizarEstadoCocina(item.kitchen_status || item.estado_cocina || item.estado);
+    const estado = getEstadoCocinaOperativo(item);
     const confirmacionHtml = getConfirmacionCompletadoHtml(
         'cocina',
         index,
         item.kitchen_completed_confirmed_at,
         totalItems,
-        producidos
+        producidos,
+        codigoArg
     );
 
     content.innerHTML = `
@@ -899,12 +1674,14 @@ function abrirProduccionCocina(index) {
 
         <div class="logistics-prep-state">
             <label>Estado general:</label>
-            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoCocina(${index}, this.value); abrirProduccionCocina(${index});">
+            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoCocina(${index}, this.value, ${codigoArg}); abrirProduccionCocina(${index}, ${codigoArg});">
                 <option value="sin_producir" ${estado === 'sin_producir' ? 'selected' : ''}>Sin producir</option>
                 <option value="en_produccion" ${estado === 'en_produccion' ? 'selected' : ''}>En produccion</option>
                 <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para salida</option>
             </select>
         </div>
+
+        ${getConfirmacionOperativaHtml(item, 'banner')}
 
         <div class="logistics-progress-row kitchen-prep-progress">
             <span>${producidos} producidos</span>
@@ -912,22 +1689,26 @@ function abrirProduccionCocina(index) {
             <span>${totalItems} items</span>
         </div>
 
+        ${renderRevisionOperativaNotice(item, 'cocina')}
+
         ${canEdit ? confirmacionHtml : ''}
 
-        ${grupos.map(grupo => renderizarGrupoProduccionCocina(index, grupo, item.kitchen_items_state || {}, canEdit)).join('') || '<div class="logistics-empty">Esta comanda no tiene items de cocina para producir.</div>'}
+        ${renderizarIntoleranciasCocinaHtml(item)}
+
+        ${grupos.map(grupo => renderizarGrupoProduccionCocina(index, grupo, item.kitchen_items_state || {}, canEdit, codigoArg)).join('') || '<div class="logistics-empty">Esta comanda no tiene items de cocina para producir.</div>'}
 
         ${renderActividadOperativaHtml(item, 'cocina')}
 
         <div class="logistics-prep-actions">
             <button type="button" class="btn-secondary" onclick="cerrarProduccionCocina()">Cerrar</button>
-            ${canEdit ? `<button type="button" class="btn-primary" onclick="guardarCambiosProduccionCocina(${index})">Guardar cambios</button>` : ''}
+            ${canEdit ? `<button type="button" class="btn-primary" onclick="guardarCambiosProduccionCocina(${index}, ${codigoArg})">Guardar cambios</button>` : ''}
         </div>
     `;
 
     modal.style.display = 'block';
 }
 
-function renderizarGrupoProduccionCocina(index, grupo, state, canEdit = true) {
+function renderizarGrupoProduccionCocina(index, grupo, state, canEdit = true, codigoArg = "''") {
     const gruposPorTipo = grupo.items.reduce((acc, item) => {
         if (!acc[item.grupo]) acc[item.grupo] = [];
         acc[item.grupo].push(item);
@@ -941,7 +1722,7 @@ function renderizarGrupoProduccionCocina(index, grupo, state, canEdit = true) {
                 <div class="kitchen-prep-subgroup">
                     <strong>${escapeLogisticaHtml(titulo)}</strong>
                     <div class="logistics-prep-list">
-                        ${items.map(item => renderizarItemProduccionCocina(index, item, !!state[item.key], canEdit)).join('')}
+                        ${items.map(item => renderizarItemProduccionCocina(index, item, !!state[item.key], canEdit, codigoArg)).join('')}
                     </div>
                 </div>
             `).join('')}
@@ -949,17 +1730,32 @@ function renderizarGrupoProduccionCocina(index, grupo, state, canEdit = true) {
     `;
 }
 
-function renderizarItemProduccionCocina(index, item, producido, canEdit = true) {
+function renderizarItemProduccionCocina(index, item, producido, canEdit = true, codigoArg = "''") {
+    const evento = getEventoCocinaPorIndiceOCodigo(index, leerJsArgSeguro(codigoArg)) || {};
+    const update = evento.kitchen_items_updates?.[item.key];
+    const keyArg = getJsArg(item.key);
+    const updateHtml = update
+        ? `<small class="operative-quantity-change">${
+            update.tipo === 'nuevo'
+                ? 'Nuevo item'
+                : `Antes: ${update.cantidad_before || 0} ${update.unidad || item.unidad || ''} | Ahora: ${update.cantidad_after || 0} ${update.unidad || item.unidad || ''}`
+        }</small>`
+        : '';
+    const updateButton = update && update.tipo !== 'nuevo' && canEdit
+        ? `<button type="button" class="operative-update-btn" onclick="event.preventDefault(); event.stopPropagation(); actualizarItemCocina(${index}, ${keyArg}, ${codigoArg})">Actualizar</button>`
+        : '';
     return `
         <label class="logistics-prep-item kitchen-prep-item">
             <input type="checkbox" ${producido ? 'checked' : ''}
                 ${canEdit ? '' : 'disabled'}
-                onchange="toggleItemProduccionCocina(${index}, '${escapeLogisticaHtml(item.key)}', this.checked)">
+                onchange="toggleItemProduccionCocina(${index}, ${keyArg}, this.checked, ${codigoArg})">
             <span class="logistics-prep-check">${producido ? '✓' : ''}</span>
             <span class="logistics-prep-name">
-                <strong>${escapeLogisticaHtml(item.nombre)}</strong>
-                <small>${item.cantidad || 0} ${escapeLogisticaHtml(item.unidad || 'uds')}</small>
+                <strong>${item.iconClass ? `<span class="kitchen-intolerance-icon kitchen-intolerance-icon--${item.iconClass}"></span>` : ''}${escapeLogisticaHtml(getNombreIntoleranciaCocinaDisplay(item.nombre))}</strong>
+                <small>${item.cantidad ? `${escapeLogisticaHtml(item.cantidad)} ${escapeLogisticaHtml(item.unidad || 'uds')}` : escapeLogisticaHtml(item.unidad || 'uds')}</small>
+                ${updateHtml}
             </span>
+            ${updateButton}
             <span class="logistics-status-pill logistics-status-pill--${producido ? 'listo' : 'sin_preparar'}">${producido ? 'Producido' : 'Pendiente'}</span>
         </label>
     `;
@@ -970,20 +1766,47 @@ function cerrarProduccionCocina() {
     if (modal) modal.style.display = 'none';
 }
 
-function toggleItemProduccionCocina(index, key, checked) {
+function actualizarItemCocina(index, key, codigo = '') {
     if (!requireEditarCocina()) return;
-    const item = (window.cocinaEventosActivos || [])[index];
+    key = leerJsArgSeguro(key);
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
+    if (!item?.kitchen_items_updates?.[key]) return;
+    const update = item.kitchen_items_updates[key];
+    delete item.kitchen_items_updates[key];
+    registrarAccionOperativa(
+        item,
+        'cocina',
+        'Actualizacion revisada',
+        update.tipo === 'nuevo'
+            ? `${update.nombre || key}: nuevo item revisado`
+            : `${update.nombre || key}: ${update.cantidad_before || 0} -> ${update.cantidad_after || 0} ${update.unidad || ''}`.trim()
+    );
+    guardarEventoCocinaActivo(item);
+    renderizarComandasCocina();
+    abrirProduccionCocina(index, codigo);
+}
+
+function toggleItemProduccionCocina(index, key, checked, codigo = '') {
+    if (!requireEditarCocina()) return;
+    key = leerJsArgSeguro(key);
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     if (!item) return;
 
     item.kitchen_items_state = item.kitchen_items_state || {};
     item.kitchen_items_state[key] = !!checked;
+    const updatePendiente = item.kitchen_items_updates?.[key];
+    if (checked && updatePendiente?.tipo === 'nuevo') {
+        delete item.kitchen_items_updates[key];
+    }
     const produccionItem = getProduccionCocinaDetalle(item)
         .flatMap(grupo => grupo.items)
         .find(detalle => detalle.key === key);
     registrarAccionOperativa(
         item,
         'cocina',
-        checked ? 'Item producido' : 'Item desmarcado',
+        checked && updatePendiente?.tipo === 'nuevo' ? 'Item nuevo producido' : (checked ? 'Item producido' : 'Item desmarcado'),
         produccionItem?.nombre || key
     );
 
@@ -1000,12 +1823,13 @@ function toggleItemProduccionCocina(index, key, checked) {
 
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
-    abrirProduccionCocina(index);
+    abrirProduccionCocina(index, codigo);
 }
 
-function guardarCambiosProduccionCocina(index) {
+function guardarCambiosProduccionCocina(index, codigo = '') {
     if (!requireEditarCocina()) return;
-    const item = (window.cocinaEventosActivos || [])[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.kitchen_items_state = item.kitchen_items_state || {};
 
@@ -1028,9 +1852,10 @@ function guardarCambiosProduccionCocina(index) {
     cerrarProduccionCocina();
 }
 
-function confirmarCompletadoCocina(index) {
+function confirmarCompletadoCocina(index, codigo = '') {
     if (!requireEditarCocina()) return;
-    const item = (window.cocinaEventosActivos || [])[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     if (!item) return;
 
     const total = getTotalItemsProduccionCocina(item);
@@ -1048,10 +1873,11 @@ function confirmarCompletadoCocina(index) {
     item.kitchen_completed_confirmed_by = getOperativeActorName();
     item.kitchen_ready_at = ahora;
     item.kitchen_ready_by = getOperativeActorName();
+    item.kitchen_revision_notice = null;
     registrarAccionOperativa(item, 'cocina', 'Completado confirmado', `${producidos}/${total} items`);
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
-    abrirProduccionCocina(index);
+    abrirProduccionCocina(index, codigo);
 }
 
 function filtrarCocinaHoy() {
@@ -1075,18 +1901,20 @@ function limpiarFiltroFechaCocina() {
     renderizarComandasCocina();
 }
 
-function actualizarResponsableCocina(index, value) {
+function actualizarResponsableCocina(index, value, codigo = '') {
     if (!requireEditarCocina()) return;
-    const item = (window.cocinaEventosActivos || [])[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.kitchen_assigned_to = value || '';
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
 }
 
-function actualizarEstadoCocina(index, value) {
+function actualizarEstadoCocina(index, value, codigo = '') {
     if (!requireEditarCocina()) return;
-    const item = (window.cocinaEventosActivos || [])[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoCocinaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.kitchen_status = normalizarEstadoCocina(value);
     item.kitchen_items_state = item.kitchen_items_state || {};
@@ -1138,15 +1966,1504 @@ function actualizarProducidosCocina(index, value) {
 }
 
 function cambiarTabLogistica(tab) {
+    const logisticaPage = document.getElementById('logisticaPage');
     const eventosPanel = document.getElementById('logisticaEventosPanel');
     const inventarioPanel = document.getElementById('logisticaInventarioPanel');
+    const rutasPanel = document.getElementById('logisticaRutasPanel');
     const tabEventos = document.getElementById('logTabEventos');
     const tabInventario = document.getElementById('logTabInventario');
+    const tabRutas = document.getElementById('logTabRutas');
 
     if (eventosPanel) eventosPanel.style.display = tab === 'eventos' ? '' : 'none';
     if (inventarioPanel) inventarioPanel.style.display = tab === 'inventario' ? '' : 'none';
+    if (rutasPanel) rutasPanel.style.display = tab === 'rutas' ? '' : 'none';
     if (tabEventos) tabEventos.classList.toggle('active', tab === 'eventos');
     if (tabInventario) tabInventario.classList.toggle('active', tab === 'inventario');
+    if (tabRutas) tabRutas.classList.toggle('active', tab === 'rutas');
+    if (logisticaPage) {
+        logisticaPage.classList.toggle('logistica-tab-compact', tab === 'inventario' || tab === 'rutas');
+    }
+
+    if (tab === 'rutas') {
+        const fecha = document.getElementById('rutasFiltroFecha');
+        if (fecha && !fecha.value) fecha.value = document.getElementById('logisticaFiltroFecha')?.value || getFechaLocalHoyDashboard();
+        cargarModuloRutasLogistica();
+    }
+}
+
+function getFechaRutasLogistica() {
+    const input = document.getElementById('rutasFiltroFecha');
+    if (input && input.value) return input.value;
+    const fechaLogistica = document.getElementById('logisticaFiltroFecha')?.value;
+    return fechaLogistica || getFechaLocalHoyDashboard();
+}
+
+function mostrarMensajeRutasLogistica(texto, tipo = 'info') {
+    const box = document.getElementById('rutasMensaje');
+    if (!box) return;
+    box.textContent = texto || '';
+    box.className = `routes-message routes-message--${tipo}`;
+    box.style.display = texto ? '' : 'none';
+}
+
+function getCodigoRutaPedido(item) {
+    return item?.codigo_cocina || item?.codigo || item?.codigo_comanda || item?.id || '';
+}
+
+function getDireccionRutaPedido(item) {
+    const log = item?.logistica || item?.logistica_inline || {};
+    const direccion = log.direccion || item?.direccion || '';
+    return {
+        street: log.calle || item?.calle || direccion,
+        number: log.numero || item?.numero || '',
+        postalCode: log.codigo_postal || item?.codigo_postal || '',
+        city: log.ciudad || item?.ciudad || 'Madrid'
+    };
+}
+
+function getDuracionServicioRuta(item) {
+    const log = item?.logistica || item?.logistica_inline || {};
+    const raw = String(log.duracion_evento || '').toLowerCase();
+    const match = raw.match(/(\d+(?:[.,]\d+)?)/);
+    const horas = match ? Number(match[1].replace(',', '.')) : 0;
+    return Number.isFinite(horas) && horas > 0 ? Math.round(horas * 60) : 0;
+}
+
+function sumarMinutosHora(hora, minutos) {
+    if (!hora || !minutos) return '';
+    const [h, m] = String(hora).split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return '';
+    const base = new Date(2000, 0, 1, h, m);
+    base.setMinutes(base.getMinutes() + minutos);
+    return `${String(base.getHours()).padStart(2, '0')}:${String(base.getMinutes()).padStart(2, '0')}`;
+}
+
+function getHoraRecogidaSugerida(item) {
+    const horaEvento = (item?.logistica || item?.logistica_inline || {}).hora_evento || '';
+    const duracion = getDuracionServicioRuta(item);
+    return duracion ? sumarMinutosHora(horaEvento, duracion) : '';
+}
+
+function parseHoraRutaEnMinutos(hora) {
+    const [h, m] = String(hora || '').split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+}
+
+function formatearMinutosRuta(total) {
+    if (!Number.isFinite(total)) return '-';
+    const normalizado = ((Math.round(total) % 1440) + 1440) % 1440;
+    const h = Math.floor(normalizado / 60);
+    const m = normalizado % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatearDuracionRuta(minutos) {
+    const total = Math.max(0, Math.round(Number(minutos) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (!h) return `${m} min`;
+    if (!m) return `${h} h`;
+    return `${h} h ${m} min`;
+}
+
+function getTiempoTrasladoRutas() {
+    const input = document.getElementById('rutaTiempoTraslado');
+    const saved = Number(localStorage.getItem('catercloudRouteTravelMinutes') || 20);
+    const value = Number(input?.value || saved || 20);
+    return Number.isFinite(value) && value >= 0 ? value : 20;
+}
+
+function guardarTiempoTrasladoRutas() {
+    const input = document.getElementById('rutaTiempoTraslado');
+    const value = Number(input?.value || 20);
+    localStorage.setItem('catercloudRouteTravelMinutes', String(Number.isFinite(value) && value >= 0 ? value : 20));
+    renderizarRutasLogistica();
+}
+
+function aplicarTiempoTrasladoRutas() {
+    const input = document.getElementById('rutaTiempoTraslado');
+    if (input) input.value = String(getTiempoTrasladoRutas());
+}
+
+function getInicioRutaPorConductor(driverId = '') {
+    const driver = (window.rutasLogisticaState.drivers || []).find(item => String(item.id) === String(driverId));
+    return driver?.work_start || '08:00';
+}
+
+function esPedidoServicioRuta(item) {
+    const categoria = item?.categoria_id || item?.categoriaId || item?.categoria;
+    return Number(categoria) === 3
+        || Boolean(item?.servicio_categoria)
+        || /servicio|vino|coctel|c[oó]ctel/i.test(String(item?.menu_categoria_nombre || item?.menu_nombre || item?.tipo || ''));
+}
+
+function calcularTiempoParadaPedidoRuta(item, tipo) {
+    const log = item?.logistica || item?.logistica_inline || {};
+    const pax = Number(item?.pax || item?.total_pax || 0);
+    const montaje = String(log.montaje || '').trim();
+    const camareros = Number(log.cantidad_camareros || 0);
+    const esServicio = esPedidoServicioRuta(item);
+
+    if (tipo === 'pickup') {
+        let minutos = esServicio ? 20 : 10;
+        if (pax >= 80) minutos += 10;
+        return minutos;
+    }
+
+    let minutos = esServicio ? 35 : 15;
+    if (montaje) minutos = Math.max(minutos, 45);
+    if (camareros > 0) minutos = Math.max(minutos, 45);
+    if (pax >= 80) minutos += 15;
+    if (pax >= 150) minutos += 15;
+    return minutos;
+}
+
+function getDuracionParadaRuta(stop) {
+    const minutos = Number(stop?.service_duration_minutes);
+    return Number.isFinite(minutos) && minutos > 0 ? minutos : (stop?.stop_type === 'pickup' ? 10 : 15);
+}
+
+function normalizarEstadoParadaRuta(status) {
+    const value = String(status || 'pending').toLowerCase();
+    if (['in_route', 'en_ruta', 'ruta'].includes(value)) return 'in_route';
+    if (['delivered', 'entregado', 'completed', 'completado'].includes(value)) return 'delivered';
+    return 'pending';
+}
+
+function getLabelEstadoParadaRuta(status) {
+    const estado = normalizarEstadoParadaRuta(status);
+    if (estado === 'in_route') return 'En ruta';
+    if (estado === 'delivered') return 'Entregado';
+    return 'Pendiente';
+}
+
+function calcularTimelineRuta(route) {
+    const stops = getRouteStops(route);
+    const traslado = getTiempoTrasladoRutas();
+    let cursor = parseHoraRutaEnMinutos(route.starts_at || '08:00');
+    if (cursor === null) cursor = parseHoraRutaEnMinutos('08:00');
+
+    let totalServicio = 0;
+    let inicioRuta = null;
+    const timeline = stops.map(stop => {
+        const duracion = getDuracionParadaRuta(stop);
+        const horaSalidaSede = parseHoraRutaEnMinutos(stop.planned_departure || '');
+        const horaObjetivo = parseHoraRutaEnMinutos(stop.planned_arrival || stop.deadline_time || '');
+        const llegada = stop.stop_type === 'delivery'
+            ? (horaObjetivo ?? (horaSalidaSede !== null ? horaSalidaSede + traslado : cursor + traslado))
+            : (horaObjetivo ?? cursor + traslado);
+        const salidaSede = stop.stop_type === 'delivery'
+            ? (horaSalidaSede ?? Math.max(cursor, llegada - traslado))
+            : cursor;
+        const salida = llegada + duracion;
+
+        if (inicioRuta === null) inicioRuta = salidaSede;
+        totalServicio += duracion;
+        cursor = salida;
+        return {
+            stopId: stop.id,
+            salidaSede,
+            llegada,
+            salida: cursor,
+            duracion
+        };
+    });
+
+    const finRuta = timeline.length ? timeline[timeline.length - 1].salida : null;
+    return {
+        timeline,
+        totalTraslado: stops.length * traslado,
+        totalServicio,
+        totalRuta: inicioRuta !== null && finRuta !== null ? Math.max(0, finRuta - inicioRuta) : 0
+    };
+}
+
+function getPrimeraSalidaRuta(route) {
+    const stops = getRouteStops(route);
+    const salidas = stops
+        .map(stop => parseHoraRutaEnMinutos(stop.planned_departure || ''))
+        .filter(min => min !== null)
+        .sort((a, b) => a - b);
+    return salidas.length ? formatearMinutosRuta(salidas[0]) : '';
+}
+
+function getResumenHoraStopRuta(stop, tiempo = {}) {
+    const salida = stop.planned_departure || (tiempo.salidaSede !== undefined ? formatearMinutosRuta(tiempo.salidaSede) : '');
+    const llegada = stop.planned_arrival || stop.deadline_time || (tiempo.llegada !== undefined ? formatearMinutosRuta(tiempo.llegada) : '');
+    const fin = tiempo.salida !== undefined ? formatearMinutosRuta(tiempo.salida) : '';
+
+    if (stop.stop_type === 'pickup') {
+        return `Recogida ${llegada || '-'}${fin ? ` · Fin ${fin}` : ''}`;
+    }
+
+    return `Salida ${salida || '-'} · Entrega ${llegada || '-'}${fin ? ` · Fin ${fin}` : ''}`;
+}
+
+function getPedidosRutasDelDia() {
+    const fecha = getFechaRutasLogistica();
+    return getEventosLogisticaActivos()
+        .filter(item => getTiposParadasRutaDia(item, fecha).length)
+        .sort((a, b) => String(getHoraPrincipalRutaPedidoDia(a, fecha)).localeCompare(String(getHoraPrincipalRutaPedidoDia(b, fecha))));
+}
+
+function getRouteStops(route) {
+    return (route.stops || route.route_stops || [])
+        .slice()
+        .sort((a, b) => Number(a.stop_order || 0) - Number(b.stop_order || 0));
+}
+
+function getStopsAsignadosPorCodigo() {
+    const mapa = {};
+    (window.rutasLogisticaState.routes || []).forEach(route => {
+        getRouteStops(route).forEach(stop => {
+            const codigo = stop.notes?.match(/codigo:([^|]+)/)?.[1]?.trim() || '';
+            if (!codigo) return;
+            if (!mapa[codigo]) mapa[codigo] = { delivery: false, pickup: false };
+            if (stop.stop_type === 'delivery') mapa[codigo].delivery = true;
+            if (stop.stop_type === 'pickup') mapa[codigo].pickup = true;
+        });
+    });
+    return mapa;
+}
+
+function renderSelectRutaDestino(codigo) {
+    const routes = window.rutasLogisticaState.routes || [];
+    if (!routes.length) return '<span class="routes-no-route">Crea una ruta primero</span>';
+    return `
+        <select id="rutaDestino_${escapeLogisticaHtml(codigo)}" class="routes-mini-select">
+            ${routes.map(route => {
+                const vehiculo = route.vehicle?.plate || route.route_vehicles?.plate || 'Furgoneta';
+                const conductor = route.driver?.name || route.route_drivers?.name || 'Conductor';
+                return `<option value="${route.id}">${escapeLogisticaHtml(vehiculo)} · ${escapeLogisticaHtml(conductor)}</option>`;
+            }).join('')}
+        </select>
+    `;
+}
+
+function actualizarKpisRutasLogistica(pedidos) {
+    const routes = window.rutasLogisticaState.routes || [];
+    const paradas = routes.reduce((acc, route) => acc + getRouteStops(route).length, 0);
+    const asignados = getStopsAsignadosPorCodigo();
+    const pendientes = (pedidos || []).filter(item => {
+        const codigo = getCodigoRutaPedido(item);
+        return getTiposParadasRutaDia(item).some(tipo => !asignados[codigo]?.[tipo]);
+    }).length;
+    const set = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = String(value);
+    };
+    set('rutasKpiRutas', routes.length);
+    set('rutasKpiParadas', paradas);
+    set('rutasKpiPendientes', pendientes);
+}
+
+function esRegistroActivoRutasLogistica(item) {
+    const active = item?.active;
+    return active !== false && String(active ?? 'true').toLowerCase() !== 'false';
+}
+
+function getUnavailableDatesDriver(driver = {}) {
+    const raw = driver.unavailable_dates || driver.fechas_no_operativo || [];
+    if (Array.isArray(raw)) return raw.map(String);
+    if (typeof raw === 'string') {
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch (_) {
+            return raw.split(',').map(item => item.trim()).filter(Boolean);
+        }
+    }
+    return [];
+}
+
+function esConductorOperativoFecha(driver = {}, fecha = getFechaRutasLogistica()) {
+    return esRegistroActivoRutasLogistica(driver) && !getUnavailableDatesDriver(driver).includes(fecha);
+}
+
+function normalizarDriverRuta(driver = {}) {
+    return {
+        ...driver,
+        work_start: driver.work_start || driver.jornada_inicio || '08:00',
+        work_end: driver.work_end || driver.jornada_fin || '18:00',
+        unavailable_dates: getUnavailableDatesDriver(driver)
+    };
+}
+
+function getConductoresOperativosRutas(fecha = getFechaRutasLogistica()) {
+    return (window.rutasLogisticaState.allDrivers || window.rutasLogisticaState.drivers || [])
+        .filter(driver => esConductorOperativoFecha(driver, fecha));
+}
+
+async function consultarTablaBaseRutasLogistica(tabla, columnas, columnaOrden) {
+    let query = window.supabaseClient.from(tabla).select(columnas);
+    if (columnaOrden) query = query.order(columnaOrden, { ascending: true });
+    const response = await query;
+
+    if (!response.error) return response.data || [];
+
+    console.warn(`No se pudo consultar ${tabla} con columnas definidas. Reintentando con select *.`, response.error);
+    const fallback = await window.supabaseClient.from(tabla).select('*');
+    if (fallback.error) throw fallback.error;
+    return fallback.data || [];
+}
+
+async function cargarDatosBaseRutasLogistica() {
+    if (!window.supabaseClient) throw new Error('Supabase no esta inicializado.');
+    const [vehiclesData, driversData] = await Promise.all([
+        consultarTablaBaseRutasLogistica('route_vehicles', 'id,name,plate,size,active,created_at', 'created_at'),
+        consultarTablaBaseRutasLogistica('route_drivers', 'id,name,phone,active,work_start,work_end,unavailable_dates,created_at', 'name')
+    ]);
+
+    window.rutasLogisticaState.vehicles = vehiclesData.filter(esRegistroActivoRutasLogistica);
+    window.rutasLogisticaState.allDrivers = driversData.map(normalizarDriverRuta);
+    window.rutasLogisticaState.drivers = getConductoresOperativosRutas();
+}
+
+async function cargarRutasLogisticaDia() {
+    if (!window.supabaseClient) throw new Error('Supabase no esta inicializado.');
+    const fecha = getFechaRutasLogistica();
+    const { data, error } = await window.supabaseClient
+        .from('daily_routes')
+        .select('*, vehicle:route_vehicles(*), driver:route_drivers(*), stops:route_stops(*)')
+        .eq('route_date', fecha)
+        .order('starts_at', { ascending: true });
+    if (error) throw error;
+    window.rutasLogisticaState.routes = data || [];
+}
+
+function renderizarSelectsRutasLogistica() {
+    const vehiculoSelect = document.getElementById('rutaVehiculoSelect');
+    const conductorSelect = document.getElementById('rutaConductorSelect');
+    const vehicles = window.rutasLogisticaState.vehicles || [];
+    const drivers = getConductoresOperativosRutas();
+    window.rutasLogisticaState.drivers = drivers;
+
+    if (vehiculoSelect) {
+        vehiculoSelect.innerHTML = vehicles.length
+            ? vehicles.map(v =>
+                `<option value="${v.id}">${escapeLogisticaHtml(v.name)} ${escapeLogisticaHtml(v.plate)} - ${escapeLogisticaHtml(v.size)}</option>`
+            ).join('')
+            : '<option value="">Sin furgonetas activas</option>';
+        vehiculoSelect.disabled = !vehicles.length;
+    }
+
+    if (conductorSelect) {
+        conductorSelect.innerHTML = drivers.length
+            ? drivers.map(d => `<option value="${d.id}">${escapeLogisticaHtml(d.name)}</option>`).join('')
+            : '<option value="">Sin conductores activos</option>';
+        conductorSelect.disabled = !drivers.length;
+    }
+}
+
+function renderizarConductoresRutasLogistica() {
+    const cont = document.getElementById('rutasConductoresList');
+    if (!cont) return;
+
+    const fecha = getFechaRutasLogistica();
+    const drivers = window.rutasLogisticaState.allDrivers || [];
+    if (!drivers.length) {
+        cont.innerHTML = '<div class="routes-empty routes-empty--small">No hay conductores creados.</div>';
+        return;
+    }
+
+    cont.innerHTML = drivers.map(driver => {
+        const activo = esRegistroActivoRutasLogistica(driver);
+        const noOperativo = getUnavailableDatesDriver(driver).includes(fecha);
+        const operativo = activo && !noOperativo;
+        return `
+            <article class="routes-driver-card ${operativo ? '' : 'routes-driver-card--off'}">
+                <div class="routes-driver-header">
+                    <div>
+                        <strong>${escapeLogisticaHtml(driver.name || 'Sin nombre')}</strong>
+                        <span class="routes-driver-phone">${escapeLogisticaHtml(driver.phone || 'Sin telefono')}</span>
+                    </div>
+                    <span class="routes-driver-status ${operativo ? 'routes-driver-status--on' : 'routes-driver-status--off'}">${operativo ? 'Operativo' : 'No operativo'}</span>
+                </div>
+                <div class="routes-driver-fields">
+                    <label>
+                        Inicio
+                        <input type="time" id="driverStart_${driver.id}" value="${escapeLogisticaHtml(driver.work_start || '08:00')}" onchange="actualizarJornadaConductorRuta('${driver.id}')">
+                    </label>
+                    <label>
+                        Fin
+                        <input type="time" id="driverEnd_${driver.id}" value="${escapeLogisticaHtml(driver.work_end || '18:00')}" onchange="actualizarJornadaConductorRuta('${driver.id}')">
+                    </label>
+                </div>
+                <div class="routes-driver-toggles">
+                    <label class="routes-driver-toggle ${noOperativo ? 'is-checked is-warning' : ''}">
+                        <input type="checkbox" ${noOperativo ? 'checked' : ''} onchange="actualizarNoOperativoConductorRuta('${driver.id}', this.checked)">
+                        <span class="routes-driver-switch" aria-hidden="true"></span>
+                        <span>No operativo hoy</span>
+                    </label>
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+async function agregarConductorRutaLogistica() {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para crear conductores.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const name = (prompt('Nombre del conductor') || '').trim();
+    if (!name) return;
+    const phone = (prompt('Telefono del conductor (opcional)') || '').trim();
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_drivers')
+            .insert({
+                name,
+                phone: phone || null,
+                active: true,
+                work_start: '08:00',
+                work_end: '18:00',
+                unavailable_dates: []
+            });
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Conductor añadido correctamente.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error creando conductor:', error);
+        mostrarMensajeRutasLogistica(`No se pudo crear el conductor: ${error.message || error}`, 'error');
+    }
+}
+
+async function actualizarActivoConductorRuta(driverId, active) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar conductores.')) return;
+    if (!window.supabaseClient) return;
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_drivers')
+            .update({ active: !!active })
+            .eq('id', driverId);
+        if (error) throw error;
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error actualizando conductor:', error);
+        mostrarMensajeRutasLogistica(`No se pudo actualizar el conductor: ${error.message || error}`, 'error');
+    }
+}
+
+async function actualizarNoOperativoConductorRuta(driverId, noOperativo) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar conductores.')) return;
+    if (!window.supabaseClient) return;
+
+    const fecha = getFechaRutasLogistica();
+    const driver = (window.rutasLogisticaState.allDrivers || []).find(item => String(item.id) === String(driverId));
+    if (!driver) return;
+
+    const fechas = new Set(getUnavailableDatesDriver(driver));
+    if (noOperativo) fechas.add(fecha);
+    else fechas.delete(fecha);
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_drivers')
+            .update({ unavailable_dates: Array.from(fechas).sort() })
+            .eq('id', driverId);
+        if (error) throw error;
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error actualizando disponibilidad:', error);
+        mostrarMensajeRutasLogistica(`No se pudo actualizar disponibilidad: ${error.message || error}`, 'error');
+    }
+}
+
+async function actualizarJornadaConductorRuta(driverId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar conductores.')) return;
+    if (!window.supabaseClient) return;
+
+    const workStart = document.getElementById(`driverStart_${driverId}`)?.value || '08:00';
+    const workEnd = document.getElementById(`driverEnd_${driverId}`)?.value || '18:00';
+    if (parseHoraRutaEnMinutos(workStart) === null || parseHoraRutaEnMinutos(workEnd) === null) {
+        mostrarMensajeRutasLogistica('La jornada debe tener horas validas.', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_drivers')
+            .update({ work_start: workStart, work_end: workEnd })
+            .eq('id', driverId);
+        if (error) throw error;
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error guardando jornada:', error);
+        mostrarMensajeRutasLogistica(`No se pudo guardar la jornada: ${error.message || error}`, 'error');
+    }
+}
+
+async function cargarModuloRutasLogistica() {
+    const fechaInput = document.getElementById('rutasFiltroFecha');
+    if (fechaInput && !fechaInput.value) fechaInput.value = getFechaLocalHoyDashboard();
+    try {
+        aplicarTiempoTrasladoRutas();
+        mostrarMensajeRutasLogistica('');
+        await cargarDatosBaseRutasLogistica();
+        renderizarSelectsRutasLogistica();
+        renderizarConductoresRutasLogistica();
+        if (!window.rutasLogisticaState.vehicles.length || !window.rutasLogisticaState.drivers.length) {
+            mostrarMensajeRutasLogistica('Supabase no devolvio furgonetas o conductores activos. Revisa permisos de lectura y que active no este en false.', 'error');
+        }
+        await cargarRutasLogisticaDia();
+        renderizarRutasLogistica();
+    } catch (error) {
+        console.error('Error cargando rutas:', error);
+        mostrarMensajeRutasLogistica(`No se pudo cargar rutas: ${error.message || error}`, 'error');
+        renderizarSelectsRutasLogistica();
+        renderizarConductoresRutasLogistica();
+        renderizarRutasLogistica();
+    }
+}
+
+function renderizarPedidosPendientesRutas(pedidos) {
+    const cont = document.getElementById('rutasPedidosPendientes');
+    if (!cont) return;
+    if (!pedidos.length) {
+        cont.innerHTML = '<div class="routes-empty">No hay pedidos de logistica para esta fecha.</div>';
+        return;
+    }
+
+    const asignados = getStopsAsignadosPorCodigo();
+    const fecha = getFechaRutasLogistica();
+    cont.innerHTML = pedidos.map(item => {
+        const codigo = getCodigoRutaPedido(item);
+        const log = item.logistica || item.logistica_inline || {};
+        const direccion = getDireccionRutaPedido(item);
+        const entrega = getHoraEntregaItem(item) || '';
+        const recogida = getHoraRecogidaClienteRutaItem(item);
+        const fechaRecogida = getFechaRecogidaRutaItem(item);
+        const tiposDia = getTiposParadasRutaDia(item, fecha);
+        const mostrarEntrega = tiposDia.includes('delivery');
+        const mostrarRecogida = tiposDia.includes('pickup');
+        const estado = asignados[codigo] || {};
+        return `
+            <article class="routes-pending-card">
+                <div class="routes-pending-main">
+                    <strong>${escapeLogisticaHtml(item.empresa || item.company_name || 'Sin empresa')}</strong>
+                    <span>${escapeLogisticaHtml(getResumenMenusConPax(item) || item.menu_nombre || 'Pedido')} · ${escapeLogisticaHtml(codigo)}</span>
+                    <small>${escapeLogisticaHtml(direccion.street || '-')} ${escapeLogisticaHtml(direccion.number || '')} · ${escapeLogisticaHtml(direccion.postalCode || '')}</small>
+                </div>
+                <div class="routes-pending-times">
+                    ${mostrarEntrega ? `<span>Salida ${escapeLogisticaHtml(getHoraSalidaItem(item) || '-')}</span>` : ''}
+                    ${mostrarEntrega ? `<span>Entrega ${escapeLogisticaHtml(entrega || '-')}</span>` : ''}
+                    ${mostrarRecogida ? `<span>Recogida ${escapeLogisticaHtml(recogida || '-')}</span>` : ''}
+                    ${fechaRecogida && fechaRecogida !== fecha ? `<span>Recogida ${escapeLogisticaHtml(fechaRecogida)}</span>` : ''}
+                </div>
+                <div class="routes-pending-actions">
+                    ${renderSelectRutaDestino(codigo)}
+                    ${mostrarEntrega ? `
+                        <button type="button" ${estado.delivery || !puedeEditarLogistica() ? 'disabled' : ''} onclick="agregarParadaRutaLogistica('${escapeLogisticaHtml(codigo)}', 'delivery')">
+                            ${estado.delivery ? 'Entrega asignada' : '+ Entrega'}
+                        </button>
+                    ` : ''}
+                    ${mostrarRecogida ? `
+                        <button type="button" ${estado.pickup || !puedeEditarLogistica() ? 'disabled' : ''} onclick="agregarParadaRutaLogistica('${escapeLogisticaHtml(codigo)}', 'pickup')">
+                            ${estado.pickup ? 'Recogida asignada' : '+ Recogida'}
+                        </button>
+                    ` : ''}
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function renderOptionsVehiculosRuta(selectedId) {
+    return (window.rutasLogisticaState.vehicles || []).map(vehicle => `
+        <option value="${vehicle.id}" ${String(vehicle.id) === String(selectedId) ? 'selected' : ''}>
+            ${escapeLogisticaHtml(vehicle.name)} ${escapeLogisticaHtml(vehicle.plate)} - ${escapeLogisticaHtml(vehicle.size)}
+        </option>
+    `).join('');
+}
+
+function renderOptionsConductoresRuta(selectedId) {
+    return (window.rutasLogisticaState.drivers || []).map(driver => `
+        <option value="${driver.id}" ${String(driver.id) === String(selectedId) ? 'selected' : ''}>
+            ${escapeLogisticaHtml(driver.name)}
+        </option>
+    `).join('');
+}
+
+function renderEditorRutaLogistica(route, vehicle, driver) {
+    if (String(window.rutasLogisticaState.editingRouteId || '') !== String(route.id)) return '';
+    return `
+        <div class="routes-route-editor">
+            <label>
+                Furgoneta
+                <select id="editRutaVehiculo_${route.id}">
+                    ${renderOptionsVehiculosRuta(route.vehicle_id || vehicle.id)}
+                </select>
+            </label>
+            <label>
+                Conductor
+                <select id="editRutaConductor_${route.id}">
+                    ${renderOptionsConductoresRuta(route.driver_id || driver.id)}
+                </select>
+            </label>
+            <label>
+                Inicio ruta
+                <input type="time" id="editRutaSalida_${route.id}" value="${escapeLogisticaHtml(route.starts_at || '08:00')}">
+            </label>
+            <div class="routes-route-editor-actions">
+                <button type="button" onclick="guardarEdicionRutaLogistica('${route.id}')">Guardar</button>
+                <button type="button" class="routes-icon-btn routes-icon-btn--muted" onclick="cancelarEdicionRutaLogistica()">Cancelar</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderizarPlanningRutas() {
+    const cont = document.getElementById('rutasPlanningList');
+    if (!cont) return;
+    const routes = window.rutasLogisticaState.routes || [];
+    if (!routes.length) {
+        cont.innerHTML = '<div class="routes-empty">Aun no hay rutas creadas para este dia.</div>';
+        return;
+    }
+
+    cont.innerHTML = routes.map(route => {
+        const vehicle = route.vehicle || route.route_vehicles || {};
+        const driver = route.driver || route.route_drivers || {};
+        const stops = getRouteStops(route);
+        const resumenTiempo = calcularTimelineRuta(route);
+        const timelinePorStop = new Map(resumenTiempo.timeline.map(item => [String(item.stopId), item]));
+        const primeraSalida = getPrimeraSalidaRuta(route);
+        return `
+            <article class="routes-route-card">
+                <header>
+                    <div>
+                        <strong>${escapeLogisticaHtml(route.name || vehicle.plate || 'Ruta')}</strong>
+                        <span>${escapeLogisticaHtml(vehicle.name || 'Furgoneta')} ${escapeLogisticaHtml(vehicle.plate || '')} · ${escapeLogisticaHtml(driver.name || 'Sin conductor')}</span>
+                        <small class="routes-route-time-summary">
+                            Total ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalRuta))}
+                            · Servicio ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalServicio))}
+                        </small>
+                    </div>
+                    <div class="routes-route-header-actions">
+                        <small>${primeraSalida ? `Primera salida ${escapeLogisticaHtml(primeraSalida)}` : `Inicio ruta ${escapeLogisticaHtml(route.starts_at || '-')}`}</small>
+                        <button type="button" class="routes-icon-btn" ${puedeEditarLogistica() ? '' : 'disabled'} title="Editar ruta" onclick="editarRutaLogistica('${route.id}')">✎</button>
+                        <button type="button" class="routes-icon-btn routes-icon-btn--danger" ${puedeEditarLogistica() ? '' : 'disabled'} title="Eliminar ruta" onclick="eliminarRutaLogistica('${route.id}')">🗑</button>
+                    </div>
+                </header>
+                ${renderEditorRutaLogistica(route, vehicle, driver)}
+                <div class="routes-stops-list">
+                    ${stops.length ? stops.map(stop => {
+                        const tiempo = timelinePorStop.get(String(stop.id)) || {};
+                        const estadoParada = normalizarEstadoParadaRuta(stop.status);
+                        return `
+                        <div class="routes-stop-row routes-stop-row--${estadoParada}">
+                            <span class="routes-stop-order">${Number(stop.stop_order || 0)}</span>
+                            <div>
+                                <strong>${stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega'} · ${escapeLogisticaHtml(stop.company_name || 'Sin empresa')}</strong>
+                                <small>${escapeLogisticaHtml(stop.address_street || '')} ${escapeLogisticaHtml(stop.address_number || '')} · ${escapeLogisticaHtml(stop.postal_code || '')}</small>
+                                <small>${escapeLogisticaHtml(getResumenHoraStopRuta(stop, tiempo))}</small>
+                                <span class="routes-stop-status routes-stop-status--${estadoParada}">${getLabelEstadoParadaRuta(estadoParada)}</span>
+                            </div>
+                            <label class="routes-stop-duration">
+                                <input type="number" id="rutaStopDuration_${stop.id}" min="0" step="5" value="${escapeLogisticaHtml(getDuracionParadaRuta(stop))}">
+                                <span>min</span>
+                            </label>
+                            <div class="routes-stop-actions">
+                                <button type="button" ${estadoParada === 'in_route' || estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'in_route')">En ruta</button>
+                                <button type="button" ${estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'delivered')">Entregado</button>
+                                <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="guardarDuracionParadaRuta('${stop.id}')">Guardar</button>
+                                <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="eliminarParadaRutaLogistica('${stop.id}')">×</button>
+                            </div>
+                        </div>
+                    `}).join('') : '<div class="routes-empty routes-empty--small">Sin paradas.</div>'}
+                </div>
+            </article>
+        `;
+    }).join('');
+}
+
+function renderizarRutasLogistica() {
+    const pedidos = getPedidosRutasDelDia();
+    actualizarKpisRutasLogistica(pedidos);
+    renderizarPedidosPendientesRutas(pedidos);
+    renderizarPlanningRutas();
+}
+
+function formatearFechaPlanningWhatsApp(fecha) {
+    if (!fecha) return '';
+    const [year, month, day] = String(fecha).split('-').map(Number);
+    const date = new Date(year, (month || 1) - 1, day || 1);
+    if (Number.isNaN(date.getTime())) return fecha;
+    return date.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+}
+
+function getHoraCompartirStopRuta(stop) {
+    return stop.stop_type === 'pickup'
+        ? (stop.planned_arrival || stop.deadline_time || '')
+        : (stop.planned_departure || stop.planned_arrival || stop.deadline_time || '');
+}
+
+function crearTextoPlanningRutasWhatsApp() {
+    const fecha = getFechaRutasLogistica();
+    const routes = (window.rutasLogisticaState.routes || [])
+        .map(route => ({ route, stops: getRouteStops(route) }))
+        .filter(item => item.stops.length)
+        .sort((a, b) => {
+            const horaA = getHoraCompartirStopRuta(a.stops[0]) || a.route.starts_at || '';
+            const horaB = getHoraCompartirStopRuta(b.stops[0]) || b.route.starts_at || '';
+            return String(horaA).localeCompare(String(horaB));
+        });
+
+    if (!routes.length) return '';
+
+    const lineas = [
+        'Logistica Decuatro Catering',
+        formatearFechaPlanningWhatsApp(fecha),
+        ''
+    ];
+
+    routes.forEach(({ route, stops }, routeIndex) => {
+        const driver = route.driver || route.route_drivers || {};
+        const vehicle = route.vehicle || route.route_vehicles || {};
+        const conductor = driver.name || 'Sin conductor';
+        const vehiculo = vehicle.plate || vehicle.name || 'Ruta';
+        if (routes.length > 1) {
+            lineas.push(`${routeIndex + 1}. ${vehiculo} - ${conductor}`);
+        }
+
+        stops
+            .slice()
+            .sort((a, b) => String(getHoraCompartirStopRuta(a)).localeCompare(String(getHoraCompartirStopRuta(b))))
+            .forEach(stop => {
+                const hora = getHoraCompartirStopRuta(stop) || '--:--';
+                const entrega = stop.planned_arrival || stop.deadline_time || '';
+                const tipo = stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega';
+                const empresa = stop.company_name || 'Sin empresa';
+                const direccion = [stop.address_street, stop.address_number].filter(Boolean).join(' ').trim();
+                const cp = stop.postal_code ? ` ${stop.postal_code}` : '';
+                const entregaTexto = stop.stop_type === 'delivery' && entrega && entrega !== hora ? ` (${entrega})` : '';
+                lineas.push(`${hora} ${tipo} ${empresa}${entregaTexto} @${conductor}`);
+                if (direccion || cp) lineas.push(`   ${direccion}${cp}`.trimEnd());
+            });
+
+        if (routeIndex < routes.length - 1) lineas.push('');
+    });
+
+    return lineas.join('\n').trim();
+}
+
+async function copiarTextoPlanningRutas(texto) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(texto);
+        return true;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = texto;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    const ok = document.execCommand('copy');
+    textarea.remove();
+    return ok;
+}
+
+async function compartirPlanningRutasWhatsApp() {
+    const texto = crearTextoPlanningRutasWhatsApp();
+    if (!texto) {
+        mostrarMensajeRutasLogistica('No hay rutas con paradas para compartir.', 'info');
+        return;
+    }
+
+    try {
+        await copiarTextoPlanningRutas(texto);
+        mostrarMensajeRutasLogistica('Planning copiado. Abriendo WhatsApp para compartirlo.', 'success');
+    } catch (error) {
+        console.warn('No se pudo copiar el planning:', error);
+        mostrarMensajeRutasLogistica('No se pudo copiar automaticamente, pero se abrira WhatsApp con el texto.', 'warning');
+    }
+
+    window.open(`https://web.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+}
+
+function editarRutaLogistica(routeId) {
+    window.rutasLogisticaState.editingRouteId = routeId;
+    renderizarPlanningRutas();
+}
+
+function cancelarEdicionRutaLogistica() {
+    window.rutasLogisticaState.editingRouteId = null;
+    renderizarPlanningRutas();
+}
+
+async function guardarEdicionRutaLogistica(routeId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const vehicleId = document.getElementById(`editRutaVehiculo_${routeId}`)?.value || null;
+    const driverId = document.getElementById(`editRutaConductor_${routeId}`)?.value || null;
+    const startsAt = document.getElementById(`editRutaSalida_${routeId}`)?.value || '08:00';
+    if (!vehicleId || !driverId) {
+        mostrarMensajeRutasLogistica('Selecciona furgoneta y conductor para guardar la ruta.', 'error');
+        return;
+    }
+
+    const vehiculo = (window.rutasLogisticaState.vehicles || []).find(v => String(v.id) === String(vehicleId));
+    const conductor = (window.rutasLogisticaState.drivers || []).find(d => String(d.id) === String(driverId));
+    const payload = {
+        vehicle_id: vehicleId,
+        driver_id: driverId,
+        starts_at: startsAt,
+        name: `${vehiculo?.plate || vehiculo?.name || 'Ruta'} - ${conductor?.name || 'Conductor'}`
+    };
+
+    try {
+        const { error } = await window.supabaseClient.from('daily_routes').update(payload).eq('id', routeId);
+        if (error) throw error;
+        window.rutasLogisticaState.editingRouteId = null;
+        mostrarMensajeRutasLogistica('Ruta actualizada correctamente.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error editando ruta:', error);
+        mostrarMensajeRutasLogistica(`No se pudo editar la ruta: ${error.message || error}`, 'error');
+    }
+}
+
+async function eliminarRutaLogistica(routeId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para eliminar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+    if (!confirm('¿Eliminar esta ruta y sus paradas del planning?')) return;
+
+    try {
+        const { error: stopsError } = await window.supabaseClient.from('route_stops').delete().eq('route_id', routeId);
+        if (stopsError) throw stopsError;
+        const { error } = await window.supabaseClient.from('daily_routes').delete().eq('id', routeId);
+        if (error) throw error;
+        if (String(window.rutasLogisticaState.editingRouteId || '') === String(routeId)) {
+            window.rutasLogisticaState.editingRouteId = null;
+        }
+        mostrarMensajeRutasLogistica('Ruta eliminada del planning.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error eliminando ruta:', error);
+        mostrarMensajeRutasLogistica(`No se pudo eliminar la ruta: ${error.message || error}`, 'error');
+    }
+}
+
+async function limpiarPlanningRutasLogistica() {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para limpiar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const fecha = getFechaRutasLogistica();
+    const routes = window.rutasLogisticaState.routes || [];
+    if (!routes.length) {
+        mostrarMensajeRutasLogistica('No hay planning creado para limpiar en esta fecha.', 'info');
+        return;
+    }
+
+    const confirmar = confirm(`Limpiar todo el planning del ${fecha}? Se eliminaran rutas y paradas, pero no se borraran comandas.`);
+    if (!confirmar) return;
+
+    try {
+        const routeIds = routes.map(route => route.id).filter(Boolean);
+        if (routeIds.length) {
+            const { error: stopsError } = await window.supabaseClient
+                .from('route_stops')
+                .delete()
+                .in('route_id', routeIds);
+            if (stopsError) throw stopsError;
+        }
+
+        const { error } = await window.supabaseClient
+            .from('daily_routes')
+            .delete()
+            .eq('route_date', fecha);
+        if (error) throw error;
+
+        window.rutasLogisticaState.routes = [];
+        window.rutasLogisticaState.editingRouteId = null;
+        mostrarMensajeRutasLogistica('Planning limpiado. Puedes generarlo nuevamente.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error limpiando planning:', error);
+        mostrarMensajeRutasLogistica(`No se pudo limpiar el planning: ${error.message || error}`, 'error');
+    }
+}
+
+async function guardarDuracionParadaRuta(stopId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const input = document.getElementById(`rutaStopDuration_${stopId}`);
+    const minutos = Number(input?.value || 0);
+    if (!Number.isFinite(minutos) || minutos < 0) {
+        mostrarMensajeRutasLogistica('La duracion de la parada debe ser un numero valido.', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_stops')
+            .update({ service_duration_minutes: Math.round(minutos) })
+            .eq('id', stopId);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Tiempo de parada actualizado.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error actualizando duracion de parada:', error);
+        mostrarMensajeRutasLogistica(`No se pudo actualizar la duracion: ${error.message || error}`, 'error');
+    }
+}
+
+async function actualizarEstadoParadaRuta(stopId, status) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para actualizar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const estado = normalizarEstadoParadaRuta(status);
+    const patch = {
+        status: estado,
+        updated_at: new Date().toISOString()
+    };
+
+    if (estado === 'in_route') {
+        patch.actual_departure = new Date().toISOString();
+    }
+    if (estado === 'delivered') {
+        patch.actual_arrival = new Date().toISOString();
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_stops')
+            .update(patch)
+            .eq('id', stopId);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica(`Pedido marcado como ${getLabelEstadoParadaRuta(estado).toLowerCase()}.`, 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error actualizando estado de ruta:', error);
+        mostrarMensajeRutasLogistica(`No se pudo actualizar el estado: ${error.message || error}`, 'error');
+    }
+}
+
+async function crearRutaLogisticaDia() {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para crear rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const vehicleId = document.getElementById('rutaVehiculoSelect')?.value || null;
+    const driverId = document.getElementById('rutaConductorSelect')?.value || null;
+    const startsAt = getInicioRutaPorConductor(driverId);
+    const fecha = getFechaRutasLogistica();
+    if (!vehicleId || !driverId) {
+        mostrarMensajeRutasLogistica('Selecciona furgoneta y conductor.', 'error');
+        return;
+    }
+
+    try {
+        const vehiculo = (window.rutasLogisticaState.vehicles || []).find(v => String(v.id) === String(vehicleId));
+        const conductor = (window.rutasLogisticaState.drivers || []).find(d => String(d.id) === String(driverId));
+        const payload = {
+            route_date: fecha,
+            vehicle_id: vehicleId,
+            driver_id: driverId,
+            starts_at: startsAt,
+            status: 'planned',
+            name: `${vehiculo?.plate || 'Ruta'} - ${conductor?.name || 'Conductor'}`,
+            created_by: window.currentUser?.id || null
+        };
+        const { error } = await window.supabaseClient.from('daily_routes').insert(payload);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Ruta creada correctamente.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error creando ruta:', error);
+        mostrarMensajeRutasLogistica(`No se pudo crear la ruta: ${error.message || error}`, 'error');
+    }
+}
+
+function ordenarVehiculosRutasLogistica(vehicles) {
+    const peso = { grande: 1, mediana: 2, pequeña: 3, pequena: 3 };
+    return (vehicles || []).slice().sort((a, b) => {
+        const pa = peso[String(a.size || '').toLowerCase()] || 9;
+        const pb = peso[String(b.size || '').toLowerCase()] || 9;
+        if (pa !== pb) return pa - pb;
+        return String(a.plate || a.name || '').localeCompare(String(b.plate || b.name || ''));
+    });
+}
+
+function getZonaRutaPedido(item) {
+    const direccion = getDireccionRutaPedido(item);
+    const postal = String(direccion.postalCode || '').replace(/\D/g, '');
+    if (postal.length >= 3) return `cp:${postal.slice(0, 3)}`;
+    const calle = String(direccion.street || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .join('-');
+    return calle ? `calle:${calle}` : 'zona:sin-direccion';
+}
+
+function getHoraObjetivoRutaPedido(item) {
+    return parseHoraRutaEnMinutos(getHoraPrincipalRutaPedidoDia(item) || '12:00') ?? 720;
+}
+
+function getBloqueHoraRutaPedido(item) {
+    return Math.floor(getHoraObjetivoRutaPedido(item) / 30);
+}
+
+function getDriverRuta(route) {
+    const driverId = route.driver_id || route.driver?.id || route.route_drivers?.id || '';
+    return (window.rutasLogisticaState.allDrivers || []).find(driver => String(driver.id) === String(driverId))
+        || route.driver
+        || route.route_drivers
+        || {};
+}
+
+function getCapacidadRuta(route) {
+    const driver = normalizarDriverRuta(getDriverRuta(route));
+    const inicio = parseHoraRutaEnMinutos(driver.work_start || route.starts_at || '08:00') ?? 480;
+    const fin = parseHoraRutaEnMinutos(driver.work_end || '18:00') ?? 1080;
+    return Math.max(0, fin - inicio);
+}
+
+function getJornadaRutaEnMinutos(route) {
+    const driver = normalizarDriverRuta(getDriverRuta(route));
+    const inicio = parseHoraRutaEnMinutos(driver.work_start || route.starts_at || '08:00') ?? 480;
+    const fin = parseHoraRutaEnMinutos(driver.work_end || '18:00') ?? 1080;
+    return { inicio, fin };
+}
+
+function paradasDentroJornadaRuta(route, paradasExtra = []) {
+    const { inicio, fin } = getJornadaRutaEnMinutos(route);
+    if (fin <= inicio) return true;
+
+    return [...getRouteStops(route), ...paradasExtra].every(stop => {
+        const hora = parseHoraRutaEnMinutos(
+            stop.stop_type === 'delivery'
+                ? (stop.planned_departure || stop.planned_arrival || stop.deadline_time || '')
+                : (stop.planned_arrival || stop.deadline_time || '')
+        );
+        if (hora === null) return true;
+        return hora >= inicio && hora <= fin;
+    });
+}
+
+function calcularDuracionRutaConParadas(route, paradasExtra = []) {
+    const stops = [...getRouteStops(route), ...paradasExtra];
+    const traslado = getTiempoTrasladoRutas();
+    const servicio = stops.reduce((acc, stop) => acc + getDuracionParadaRuta(stop), 0);
+    return servicio + (stops.length * traslado);
+}
+
+function puedeRutaRecibirParadas(route, paradasExtra) {
+    const capacidad = getCapacidadRuta(route);
+    if (!paradasDentroJornadaRuta(route, paradasExtra)) return false;
+    if (!capacidad) return true;
+    return calcularDuracionRutaConParadas(route, paradasExtra) <= capacidad;
+}
+
+function seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta) {
+    const zona = getZonaRutaPedido(item);
+    const bloque = getBloqueHoraRutaPedido(item);
+    const fecha = getFechaRutasLogistica();
+    const candidatos = routes.map(route => {
+        const extras = extrasPorRuta.get(String(route.id)) || [];
+        const paradas = [...getRouteStops(route), ...extras];
+        const zonasRuta = paradas.map(stop => {
+            const pseudoItem = {
+                logistica: {
+                    calle: stop.address_street,
+                    numero: stop.address_number,
+                    codigo_postal: stop.postal_code
+                }
+            };
+            return getZonaRutaPedido(pseudoItem);
+        });
+        const bloquesRuta = paradas
+            .map(stop => parseHoraRutaEnMinutos(stop.planned_arrival || stop.deadline_time || ''))
+            .filter(min => min !== null)
+            .map(min => Math.floor(min / 30));
+        const cercaniaZona = zonasRuta.includes(zona) ? 0 : 2;
+        const cercaniaHora = bloquesRuta.length
+            ? Math.min(...bloquesRuta.map(b => Math.abs(b - bloque)))
+            : 1;
+        const carga = calcularDuracionRutaConParadas(route, extras);
+        const capacidad = getCapacidadRuta(route) || 480;
+        const presionCarga = (paradas.length * 180) + ((carga / Math.max(capacidad, 1)) * 240);
+        return { route, score: (cercaniaZona * 80) + (cercaniaHora * 10) + presionCarga };
+    }).sort((a, b) => a.score - b.score);
+
+    return candidatos.find(candidato => {
+        const extras = extrasPorRuta.get(String(candidato.route.id)) || [];
+        const nuevasParadas = crearParadasPedidoRuta(item, candidato.route.id, 0, fecha);
+        return puedeRutaRecibirParadas(candidato.route, [...extras, ...nuevasParadas]);
+    })?.route || null;
+}
+
+function getParadasPlanificadasRuta(route, extrasPorRuta) {
+    return [
+        ...getRouteStops(route),
+        ...(extrasPorRuta.get(String(route.id)) || [])
+    ];
+}
+
+function rutaTieneAfinidadConPedido(item, route, extrasPorRuta) {
+    const zonaPedido = getZonaRutaPedido(item);
+    const horaPedido = getHoraObjetivoRutaPedido(item);
+    const paradas = getParadasPlanificadasRuta(route, extrasPorRuta);
+    if (!paradas.length) return false;
+
+    return paradas.some(stop => {
+        const pseudoItem = {
+            logistica: {
+                calle: stop.address_street,
+                numero: stop.address_number,
+                codigo_postal: stop.postal_code
+            }
+        };
+        const mismaZona = getZonaRutaPedido(pseudoItem) === zonaPedido;
+        const horaStop = parseHoraRutaEnMinutos(stop.planned_arrival || stop.deadline_time || '');
+        const horaCercana = horaStop === null || Math.abs(horaStop - horaPedido) <= 90;
+        return mismaZona && horaCercana;
+    });
+}
+
+function contarRutasConParadas(routes, extrasPorRuta) {
+    return routes.reduce((total, route) => (
+        total + (getParadasPlanificadasRuta(route, extrasPorRuta).length ? 1 : 0)
+    ), 0);
+}
+
+function existeConductorDisponibleCompatibleRuta(item, conductoresDisponibles, fecha) {
+    if (!conductoresDisponibles.length) return false;
+    const paradasPrueba = crearParadasPedidoRuta(item, '__nueva_ruta__', 0, fecha);
+    if (!paradasPrueba.length) return false;
+
+    return conductoresDisponibles.some(driver => {
+        const rutaPrueba = {
+            id: '__nueva_ruta__',
+            starts_at: driver.work_start || '08:00',
+            driver,
+            stops: []
+        };
+        return puedeRutaRecibirParadas(rutaPrueba, paradasPrueba);
+    });
+}
+
+function debeAbrirRutaNuevaParaPedido(item, route, routes, extrasPorRuta, vehiculosDisponibles, conductoresDisponibles, totalPedidos, fecha) {
+    if (!route || !vehiculosDisponibles.length || !conductoresDisponibles.length) return false;
+    if (!getParadasPlanificadasRuta(route, extrasPorRuta).length) return false;
+
+    const maxRutasUtiles = Math.min(
+        (window.rutasLogisticaState.vehicles || []).length,
+        getConductoresOperativosRutas(fecha).length,
+        totalPedidos
+    );
+    const rutasConParadas = contarRutasConParadas(routes, extrasPorRuta);
+    if (rutasConParadas >= maxRutasUtiles) return false;
+
+    const puedeAbrirRutaCompatible = existeConductorDisponibleCompatibleRuta(item, conductoresDisponibles, fecha);
+    if (!puedeAbrirRutaCompatible) return false;
+
+    return true;
+}
+
+function crearParadasPedidoRuta(item, routeId, stopOrderBase = 0, fecha = getFechaRutasLogistica()) {
+    const paradas = [];
+    const entregaOrder = stopOrderBase + 1;
+    if (getFechaLogisticaItem(item) === fecha) {
+        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'delivery', entregaOrder));
+    }
+
+    if (getFechaRecogidaRutaItem(item) === fecha && getHoraRecogidaClienteRutaItem(item)) {
+        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'pickup', stopOrderBase + paradas.length + 1));
+    }
+
+    return paradas;
+}
+
+async function crearRutaAutomaticaLogistica(fecha, vehicle, driver, startsAt = '08:00') {
+    const payload = {
+        route_date: fecha,
+        vehicle_id: vehicle.id,
+        driver_id: driver.id,
+        starts_at: driver.work_start || startsAt,
+        status: 'planned',
+        name: `${vehicle.plate || vehicle.name} - ${driver.name}`,
+        created_by: window.currentUser?.id || null
+    };
+
+    const { data, error } = await window.supabaseClient
+        .from('daily_routes')
+        .insert(payload)
+        .select('*')
+        .single();
+    if (error) throw error;
+
+    return {
+        ...(data || payload),
+        vehicle,
+        driver,
+        stops: []
+    };
+}
+
+async function crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponibles, conductoresDisponibles, paradasPrueba, startsAt = '08:00') {
+    if (!vehiculosDisponibles.length || !conductoresDisponibles.length) return null;
+
+    const horaObjetivo = paradasPrueba
+        .map(stop => parseHoraRutaEnMinutos(stop.planned_departure || stop.planned_arrival || stop.deadline_time || ''))
+        .filter(min => min !== null)
+        .sort((a, b) => a - b)[0] ?? 720;
+
+    const candidatos = conductoresDisponibles.map((driver, index) => {
+        const rutaPrueba = {
+            id: '__nueva_ruta__',
+            starts_at: driver.work_start || startsAt,
+            driver,
+            stops: []
+        };
+
+        if (!puedeRutaRecibirParadas(rutaPrueba, paradasPrueba)) return null;
+
+        const inicio = parseHoraRutaEnMinutos(driver.work_start || startsAt || '08:00') ?? 480;
+        const fin = parseHoraRutaEnMinutos(driver.work_end || '18:00') ?? 1080;
+        return {
+            driver,
+            index,
+            score: Math.abs(inicio - horaObjetivo) + Math.max(0, horaObjetivo - fin) * 10
+        };
+    }).filter(Boolean).sort((a, b) => a.score - b.score);
+
+    if (!candidatos.length) return null;
+
+    const elegido = candidatos[0];
+    const [driver] = conductoresDisponibles.splice(elegido.index, 1);
+    const vehicle = vehiculosDisponibles.shift();
+    return crearRutaAutomaticaLogistica(fecha, vehicle, driver, startsAt);
+}
+
+function crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder) {
+    const codigo = getCodigoRutaPedido(item);
+    const log = item.logistica || item.logistica_inline || {};
+    const direccion = getDireccionRutaPedido(item);
+    const horaEntrega = getHoraEntregaItem(item) || '';
+    const horaSalida = getHoraSalidaItem(item) || '';
+    const horaRecogida = getHoraRecogidaClienteRutaItem(item);
+
+    return {
+        route_id: routeId,
+        order_id: null,
+        stop_type: tipo,
+        stop_order: stopOrder,
+        company_name: item.empresa || item.company_name || '',
+        address_street: direccion.street || '',
+        address_number: direccion.number || '',
+        postal_code: direccion.postalCode || '',
+        city: direccion.city || 'Madrid',
+        planned_arrival: tipo === 'pickup' ? (horaRecogida || null) : (horaEntrega || null),
+        planned_departure: tipo === 'delivery' ? (horaSalida || null) : null,
+        service_duration_minutes: calcularTiempoParadaPedidoRuta(item, tipo),
+        deadline_time: tipo === 'pickup' ? (horaRecogida || null) : (horaEntrega || null),
+        status: 'pending',
+        notes: `codigo:${codigo} | ${tipo === 'pickup' ? 'recogida' : 'entrega'} | contacto:${log.nombre_contacto || ''}`
+    };
+}
+
+async function generarRutasLogisticaDia() {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para crear rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    try {
+        await cargarDatosBaseRutasLogistica();
+        await cargarRutasLogisticaDia();
+
+        const fecha = getFechaRutasLogistica();
+        const vehicles = ordenarVehiculosRutasLogistica(window.rutasLogisticaState.vehicles || []);
+        const drivers = getConductoresOperativosRutas(fecha);
+        const startsAt = drivers[0]?.work_start || '08:00';
+        let routes = window.rutasLogisticaState.routes || [];
+
+        if (!vehicles.length || !drivers.length) {
+            mostrarMensajeRutasLogistica('Faltan furgonetas o conductores operativos para esta fecha.', 'error');
+            return;
+        }
+
+        const asignados = getStopsAsignadosPorCodigo();
+        const pedidosPendientes = getPedidosRutasDelDia().filter(item => {
+            const codigo = getCodigoRutaPedido(item);
+            return codigo && getTiposParadasRutaDia(item, fecha).some(tipo => !asignados[codigo]?.[tipo]);
+        });
+
+        if (!pedidosPendientes.length) {
+            mostrarMensajeRutasLogistica('No hay pedidos pendientes por asignar.', 'info');
+            renderizarRutasLogistica();
+            return;
+        }
+
+        routes = routes.filter(route => {
+            const driver = getDriverRuta(route);
+            return !driver?.id || esConductorOperativoFecha(driver, fecha);
+        });
+
+        const vehiculosYaUsados = new Set(routes.map(route => String(route.vehicle_id || route.vehicle?.id || route.route_vehicles?.id || '')).filter(Boolean));
+        const conductoresYaUsados = new Set(routes.map(route => String(route.driver_id || route.driver?.id || route.route_drivers?.id || '')).filter(Boolean));
+        const vehiculosDisponibles = vehicles.filter(vehicle => !vehiculosYaUsados.has(String(vehicle.id)));
+        const conductoresDisponibles = drivers.filter(driver => !conductoresYaUsados.has(String(driver.id)));
+
+        const stopOrders = new Map(routes.map(route => [String(route.id), getRouteStops(route).length]));
+        const extrasPorRuta = new Map(routes.map(route => [String(route.id), []]));
+        const stopsPayload = [];
+        const pedidosNoAsignados = [];
+
+        const pedidosOrdenados = pedidosPendientes
+            .slice()
+            .sort((a, b) => {
+                const bloqueA = getBloqueHoraRutaPedido(a);
+                const bloqueB = getBloqueHoraRutaPedido(b);
+                if (bloqueA !== bloqueB) return bloqueA - bloqueB;
+                return getZonaRutaPedido(a).localeCompare(getZonaRutaPedido(b));
+            });
+
+        for (const item of pedidosOrdenados) {
+            let route = seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta);
+            if (debeAbrirRutaNuevaParaPedido(
+                item,
+                route,
+                routes,
+                extrasPorRuta,
+                vehiculosDisponibles,
+                conductoresDisponibles,
+                pedidosOrdenados.length,
+                fecha
+            )) {
+                route = null;
+            }
+            let nuevasParadas = route
+                ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0)
+                : crearParadasPedidoRuta(item, '__nueva_ruta__', 0);
+            if (!nuevasParadas.length) continue;
+
+            if (!route) {
+                route = await crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponibles, conductoresDisponibles, nuevasParadas, startsAt);
+                if (!route) {
+                    pedidosNoAsignados.push(item);
+                    continue;
+                }
+                routes.push(route);
+                stopOrders.set(String(route.id), 0);
+                extrasPorRuta.set(String(route.id), []);
+                nuevasParadas = crearParadasPedidoRuta(item, route.id, 0);
+            }
+
+            const routeKey = String(route.id);
+            nuevasParadas.forEach(parada => {
+                const order = (stopOrders.get(routeKey) || 0) + 1;
+                parada.route_id = route.id;
+                parada.stop_order = order;
+                stopOrders.set(routeKey, order);
+                stopsPayload.push(parada);
+                extrasPorRuta.get(routeKey)?.push(parada);
+            });
+        }
+
+        if (!stopsPayload.length) {
+            mostrarMensajeRutasLogistica('No se pudo asignar ningun pedido dentro de la jornada laboral de los conductores.', 'error');
+            await cargarModuloRutasLogistica();
+            return;
+        }
+
+        const { error: stopsError } = await window.supabaseClient.from('route_stops').insert(stopsPayload);
+        if (stopsError) throw stopsError;
+
+        const rutasUsadas = Array.from(new Set(stopsPayload.map(stop => stop.route_id))).length;
+        const noAsignadosTexto = pedidosNoAsignados.length ? ` ${pedidosNoAsignados.length} pedido(s) quedaron sin asignar por jornada laboral.` : '';
+        mostrarMensajeRutasLogistica(`Planning generado: ${rutasUsadas} rutas y ${pedidosPendientes.length - pedidosNoAsignados.length} pedidos asignados.${noAsignadosTexto}`, pedidosNoAsignados.length ? 'warning' : 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error generando rutas:', error);
+        mostrarMensajeRutasLogistica(`No se pudieron generar las rutas: ${error.message || error}`, 'error');
+    }
+}
+
+async function agregarParadaRutaLogistica(codigo, tipo) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
+    const select = document.getElementById(`rutaDestino_${codigo}`);
+    const routeId = select?.value;
+    if (!routeId) {
+        mostrarMensajeRutasLogistica('Crea o selecciona una ruta antes de añadir paradas.', 'error');
+        return;
+    }
+    const item = getPedidosRutasDelDia().find(pedido => String(getCodigoRutaPedido(pedido)) === String(codigo));
+    if (!item) {
+        mostrarMensajeRutasLogistica('No se encontro el pedido seleccionado.', 'error');
+        return;
+    }
+    if (!getTiposParadasRutaDia(item).includes(tipo)) {
+        mostrarMensajeRutasLogistica(tipo === 'pickup'
+            ? 'La recogida de este pedido no corresponde a esta fecha o no tiene hora de recogida.'
+            : 'La entrega de este pedido no corresponde a esta fecha.', 'error');
+        return;
+    }
+
+    const route = (window.rutasLogisticaState.routes || []).find(r => String(r.id) === String(routeId));
+    const stopOrder = getRouteStops(route).length + 1;
+    const payload = crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder);
+
+    try {
+        const { error } = await window.supabaseClient.from('route_stops').insert(payload);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Parada añadida a la ruta.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error agregando parada:', error);
+        mostrarMensajeRutasLogistica(`No se pudo añadir la parada: ${error.message || error}`, 'error');
+    }
+}
+
+async function eliminarParadaRutaLogistica(stopId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
+    if (!confirm('Eliminar esta parada de la ruta?')) return;
+    try {
+        const { error } = await window.supabaseClient.from('route_stops').delete().eq('id', stopId);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Parada eliminada.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error eliminando parada:', error);
+        mostrarMensajeRutasLogistica(`No se pudo eliminar la parada: ${error.message || error}`, 'error');
+    }
 }
 
 function getHistorialLogistica() {
@@ -1167,6 +3484,33 @@ function guardarHistorialCocinaLogistica(historial) {
 
 function getFechaLogisticaItem(item) {
     return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+}
+
+function getLogisticaRutaItem(item) {
+    return item?.logistica || item?.logistica_inline || {};
+}
+
+function getFechaRecogidaRutaItem(item) {
+    const log = getLogisticaRutaItem(item);
+    return String(log.fecha_recogida || item?.fecha_recogida || '').split('T')[0];
+}
+
+function getHoraRecogidaClienteRutaItem(item) {
+    const log = getLogisticaRutaItem(item);
+    return log.hora_recogida || item?.hora_recogida || '';
+}
+
+function getTiposParadasRutaDia(item, fecha = getFechaRutasLogistica()) {
+    const tipos = [];
+    if (getFechaLogisticaItem(item) === fecha) tipos.push('delivery');
+    if (getFechaRecogidaRutaItem(item) === fecha && getHoraRecogidaClienteRutaItem(item)) tipos.push('pickup');
+    return tipos;
+}
+
+function getHoraPrincipalRutaPedidoDia(item, fecha = getFechaRutasLogistica()) {
+    const tipos = getTiposParadasRutaDia(item, fecha);
+    if (tipos.length === 1 && tipos[0] === 'pickup') return getHoraRecogidaClienteRutaItem(item) || '23:59';
+    return getHoraSalidaItem(item) || getHoraEntregaItem(item) || getHoraRecogidaClienteRutaItem(item) || '23:59';
 }
 
 function getMinutosHastaSalida(item) {
@@ -1204,11 +3548,27 @@ function getAlertaSalidaHtml(item, estado) {
 function esPedidoAnulado(item) {
     return item?.estado === 'anulada'
         || item?.estado_pedido === 'anulada'
-        || item?.pedido_estado === 'anulada';
+        || item?.pedido_estado === 'anulada'
+        || item?.estado === 'eliminada'
+        || item?.estado_pedido === 'eliminada'
+        || item?.pedido_estado === 'eliminada';
 }
 
 function materialLogisticaTieneItems(material) {
     return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length);
+}
+
+function comandaTieneEntregaLogistica(item) {
+    const log = item?.logistica || item?.logistica_inline || {};
+    return Boolean(
+        getHoraEntregaItem(item) ||
+        getHoraSalidaItem(item) ||
+        log.nombre_contacto ||
+        log.telefono_contacto ||
+        log.calle ||
+        log.direccion ||
+        log.codigo_postal
+    );
 }
 
 function getEventosLogisticaActivos() {
@@ -1236,7 +3596,7 @@ function getEventosLogisticaActivos() {
         const codigo = item.codigo || item.codigo_comanda || item.id;
         if (esPedidoAnulado(item)) return;
         if (!codigo || codigosConLogistica.has(codigo)) return;
-        if (!materialLogisticaTieneItems(item.material_logistica)) return;
+        if (!materialLogisticaTieneItems(item.material_logistica) && !comandaTieneEntregaLogistica(item)) return;
 
         eventos.push({
             ...item,
@@ -1251,10 +3611,7 @@ function getEventosLogisticaActivos() {
     });
 
     return eventos.sort((a, b) => {
-        const fechaA = getFechaLogisticaItem(a);
-        const fechaB = getFechaLogisticaItem(b);
-        if (fechaA !== fechaB) return fechaB.localeCompare(fechaA);
-        return String(b.hora_salida || '').localeCompare(String(a.hora_salida || ''));
+        return compararEventosPorSalidaAscendente(a, b, getFechaLogisticaItem);
     });
 }
 
@@ -1271,12 +3628,15 @@ function guardarEventoLogisticaActivo(evento) {
         historial[index].logistics_assigned_to = evento.logistics_assigned_to || '';
         historial[index].logistics_prepared_items = evento.logistics_prepared_items || 0;
         historial[index].logistics_action_log = evento.logistics_action_log || [];
+        historial[index].logistics_revision_notice = Object.prototype.hasOwnProperty.call(evento, 'logistics_revision_notice') ? evento.logistics_revision_notice : (historial[index].logistics_revision_notice || null);
+        historial[index].operational_revision_log = evento.operational_revision_log || historial[index].operational_revision_log || [];
         historial[index].logistics_completed_confirmed_at = evento.logistics_completed_confirmed_at || null;
         historial[index].logistics_completed_confirmed_by = evento.logistics_completed_confirmed_by || '';
         historial[index].inventory_deducted_at = evento.inventory_deducted_at || historial[index].inventory_deducted_at || null;
         historial[index].inventory_deducted_by = evento.inventory_deducted_by || historial[index].inventory_deducted_by || '';
         if (evento.logistics_ready_at) historial[index].logistics_ready_at = evento.logistics_ready_at;
         if (evento.logistics_ready_by) historial[index].logistics_ready_by = evento.logistics_ready_by;
+        historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
         guardarHistorialCocinaLogistica(historial);
         sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
             material_logistica: historial[index].material_logistica || {},
@@ -1285,6 +3645,8 @@ function guardarEventoLogisticaActivo(evento) {
             logistics_assigned_to: historial[index].logistics_assigned_to || '',
             logistics_prepared_items: historial[index].logistics_prepared_items || 0,
             logistics_action_log: historial[index].logistics_action_log || [],
+            logistics_revision_notice: historial[index].logistics_revision_notice || null,
+            operational_revision_log: historial[index].operational_revision_log || [],
             logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
             logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
             inventory_deducted_at: historial[index].inventory_deducted_at || null,
@@ -1306,6 +3668,8 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_assigned_to: evento.logistics_assigned_to || '',
         logistics_prepared_items: evento.logistics_prepared_items || 0,
         logistics_action_log: evento.logistics_action_log || [],
+        logistics_revision_notice: Object.prototype.hasOwnProperty.call(evento, 'logistics_revision_notice') ? evento.logistics_revision_notice : (historial[index].logistics_revision_notice || null),
+        operational_revision_log: evento.operational_revision_log || historial[index].operational_revision_log || [],
         logistics_completed_confirmed_at: evento.logistics_completed_confirmed_at || null,
         logistics_completed_confirmed_by: evento.logistics_completed_confirmed_by || '',
         inventory_deducted_at: evento.inventory_deducted_at || historial[index].inventory_deducted_at || null,
@@ -1313,13 +3677,17 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_ready_at: evento.logistics_ready_at || historial[index].logistics_ready_at,
         logistics_ready_by: evento.logistics_ready_by || historial[index].logistics_ready_by
     };
+    historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
     guardarHistorialLogistica(historial);
     sincronizarAccionesOperativasSupabase(historial[index].codigo_cocina || historial[index].codigo_original || historial[index].codigo, {
+        material_logistica: historial[index].material_logistica || {},
         logistics_status: historial[index].logistics_status || historial[index].estado || '',
         estado_logistica: historial[index].logistics_status || historial[index].estado || '',
         logistics_assigned_to: historial[index].logistics_assigned_to || '',
         logistics_prepared_items: historial[index].logistics_prepared_items || 0,
         logistics_action_log: historial[index].logistics_action_log || [],
+        logistics_revision_notice: historial[index].logistics_revision_notice || null,
+        operational_revision_log: historial[index].operational_revision_log || [],
         logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
         logistics_completed_confirmed_by: historial[index].logistics_completed_confirmed_by || '',
         inventory_deducted_at: historial[index].inventory_deducted_at || null,
@@ -1479,6 +3847,7 @@ function renderizarComandasLogistica() {
     actualizarKpisLogistica(eventosFiltrados);
     actualizarBotonesPeriodoDashboard('logistica', periodo);
     renderizarAlertasLogistica(historialLogistica);
+    refrescarAlertasOperativasGlobales();
 
     if (!eventos.length) {
         cont.innerHTML = '<div class="logistics-empty">Aún no hay eventos activos en logística.</div>';
@@ -1491,6 +3860,7 @@ function renderizarComandasLogistica() {
     }
 
     cont.innerHTML = eventosFiltrados.slice(0, 30).map((item, index) => {
+        const codigoArg = getCodigoOperativoJsArg(item);
         const fecha = item.fecha_evento || item.fecha_creacion || '';
         const material = item.material_logistica || {};
         const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
@@ -1498,49 +3868,63 @@ function renderizarComandasLogistica() {
         const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
         const responsable = item.logistics_assigned_to || '';
         const progreso = totalMaterial ? Math.min(100, Math.round((preparados / totalMaterial) * 100)) : 0;
-        const horaSalida = item.hora_salida || '';
+        const horaSalida = getHoraSalidaItem(item);
         const horaEntrega = getHoraEntregaItem(item);
         const menuResumen = getResumenMenusConPax(item);
         const origen = item._logisticaSource === 'cocina' ? 'Material de menú' : 'Comanda logística';
 
         const alertaSalida = getAlertaSalidaHtml(item, estado);
+        const confirmado = pedidoOperativoConfirmado(item);
+        const puedeOperar = canEdit && confirmado;
 
         return `
-            <article class="logistics-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index})">
+            <article class="logistics-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index}, ${codigoArg})">
                 <div class="logistics-event-main">
                     <div>
-                        <strong>${item.codigo_cocina || item.codigo || 'Sin código'}</strong>
-                        <span>${item.empresa || 'Sin empresa'} · ${menuResumen || origen}</span>
+                        <div class="logistics-event-title-row">
+                            <strong>${escapeLogisticaHtml(item.codigo_cocina || item.codigo || 'Sin codigo')}</strong>
+                            <span>${escapeLogisticaHtml(fecha || 'Sin fecha')}</span>
+                            ${getConfirmacionOperativaHtml(item)}
+                            <span class="logistics-status-pill logistics-status-pill--${estado}">${getLabelEstadoLogistica(estado)}</span>
+                        </div>
+                        <div class="logistics-event-detail-row">
+                            <span>${escapeLogisticaHtml(item.empresa || 'Sin empresa')} · ${escapeLogisticaHtml(menuResumen || origen)}</span>
+                            <span class="logistics-event-quick-meta">
+                                <b>Salida ${escapeLogisticaHtml(horaSalida || '-')}</b>
+                                <span>Entrega ${escapeLogisticaHtml(horaEntrega || '-')}</span>
+                                <span>${totalMaterial ? `${totalMaterial} articulos` : 'Solo entrega'}</span>
+                            </span>
+                        </div>
                     </div>
-                    <span class="logistics-status-pill logistics-status-pill--${estado}">${getLabelEstadoLogistica(estado)}</span>
                 </div>
 
                 ${alertaSalida}
 
-                <div class="logistics-event-meta">
-                    <span>📅 ${fecha || 'Sin fecha'}</span>
-                    <span>Salida ${escapeLogisticaHtml(horaSalida || '-')}</span>
-                    <span>Entrega ${escapeLogisticaHtml(horaEntrega || '-')}</span>
-                    <span>${totalMaterial} artículos</span>
-                </div>
-
-                <div class="logistics-progress-row">
-                    <span>${preparados} preparados</span>
-                    <div class="logistics-progress-bar ${progreso >= 100 ? 'is-complete' : ''}"><span style="width:${progreso}%"></span></div>
-                    <span>${progreso}%</span>
-                </div>
+                ${totalMaterial ? `
+                    <div class="logistics-progress-row">
+                        <span>${preparados} preparados</span>
+                        <div class="logistics-progress-bar ${progreso >= 100 ? 'is-complete' : ''}"><span style="width:${progreso}%"></span></div>
+                        <span>${progreso}%</span>
+                    </div>
+                ` : ''}
 
                 <div class="logistics-event-controls">
                     <label>
                         Responsable
-                        <input type="text" value="${responsable}" placeholder="Asignar persona"
-                            ${canEdit ? '' : 'disabled'}
+                        <input type="text" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
+                            ${puedeOperar ? '' : 'disabled'}
+                            onpointerdown="event.stopPropagation()"
+                            onmousedown="event.stopPropagation()"
                             onclick="event.stopPropagation()"
-                            onchange="actualizarResponsableLogistica(${index}, this.value)">
+                            onfocus="event.stopPropagation()"
+                            onkeydown="event.stopPropagation()"
+                            oninput="event.stopPropagation()"
+                            onblur="actualizarResponsableLogistica(${index}, this.value, ${codigoArg})"
+                            onchange="actualizarResponsableLogistica(${index}, this.value, ${codigoArg})">
                     </label>
                     <label>
                         Estado
-                        <select ${canEdit ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoLogistica(${index}, this.value)">
+                        <select ${puedeOperar ? '' : 'disabled'} onclick="event.stopPropagation()" onchange="actualizarEstadoLogistica(${index}, this.value, ${codigoArg})">
                             <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
                             <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
                             <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
@@ -1549,9 +3933,9 @@ function renderizarComandasLogistica() {
                     <label>
                         Preparados
                         <input type="number" min="0" max="${totalMaterial || 0}" value="${preparados}"
-                            ${canEdit ? '' : 'disabled'}
+                            ${puedeOperar && totalMaterial ? '' : 'disabled'}
                             onclick="event.stopPropagation()"
-                            onchange="actualizarPreparadosLogistica(${index}, this.value)">
+                            onchange="actualizarPreparadosLogistica(${index}, this.value, ${codigoArg})">
                     </label>
                 </div>
             </article>
@@ -1712,12 +4096,13 @@ async function eliminarArticuloInventarioLogistica(id) {
     }
 }
 
-function abrirPreparacionLogistica(index) {
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+function abrirPreparacionLogistica(index, codigo = '') {
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     const modal = document.getElementById('logisticaPreparacionModal');
     const content = document.getElementById('logisticaPreparacionContent');
     if (!item || !modal || !content) return;
-    const canEdit = puedeEditarLogistica();
+    const canEdit = puedeEditarLogistica() && pedidoOperativoConfirmado(item);
+    const codigoArg = getCodigoOperativoJsArg(item);
 
     const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
     const material = item.material_logistica || {};
@@ -1728,7 +4113,8 @@ function abrirPreparacionLogistica(index) {
         index,
         item.logistics_completed_confirmed_at,
         totalMaterial,
-        preparados
+        preparados,
+        codigoArg
     );
 
     content.innerHTML = `
@@ -1741,12 +4127,16 @@ function abrirPreparacionLogistica(index) {
 
         <div class="logistics-prep-state">
             <label>Estado general:</label>
-            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoLogistica(${index}, this.value); abrirPreparacionLogistica(${index});">
+            <select ${canEdit ? '' : 'disabled'} onchange="actualizarEstadoLogistica(${index}, this.value, ${codigoArg}); abrirPreparacionLogistica(${index}, ${codigoArg});">
                 <option value="sin_preparar" ${estado === 'sin_preparar' ? 'selected' : ''}>Sin preparar</option>
                 <option value="en_preparacion" ${estado === 'en_preparacion' ? 'selected' : ''}>En preparación</option>
                 <option value="listo" ${estado === 'listo' ? 'selected' : ''}>Listo para evento</option>
             </select>
         </div>
+
+        ${getConfirmacionOperativaHtml(item, 'banner')}
+
+        ${renderRevisionOperativaNotice(item, 'logistica')}
 
         ${canEdit ? confirmacionHtml : ''}
 
@@ -1757,7 +4147,7 @@ function abrirPreparacionLogistica(index) {
                 <section class="logistics-prep-group">
                     <h3>${cat.label.toUpperCase()}</h3>
                     <div class="logistics-prep-list">
-                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex, canEdit)).join('')}
+                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex, canEdit, codigoArg)).join('')}
                     </div>
                 </section>
             `;
@@ -1774,18 +4164,52 @@ function abrirPreparacionLogistica(index) {
     modal.style.display = 'block';
 }
 
-function renderizarItemPreparacionLogistica(index, tipo, item, matIndex, canEdit = true) {
+function getKeyMaterialPreparacionLogistica(tipo, item) {
+    return [
+        tipo,
+        item?.item_id || item?.material_id || item?.id || '',
+        item?.source_table || '',
+        item?.nombre || '',
+        item?.unidad || item?.unidad_comanda || ''
+    ].map(value => String(value || '').trim().toLowerCase())
+        .filter(Boolean)
+        .join('|');
+}
+
+function getMaterialPreparacionLogistica(item, tipo, matIndex, materialKey = '') {
+    const lista = item?.material_logistica?.[tipo] || [];
+    const index = Number(matIndex);
+    const esperado = String(materialKey || '');
+    const directo = Number.isInteger(index) ? lista[index] : null;
+    if (directo && (!esperado || getKeyMaterialPreparacionLogistica(tipo, directo) === esperado)) {
+        return directo;
+    }
+    if (!esperado) return null;
+    return lista.find(material => getKeyMaterialPreparacionLogistica(tipo, material) === esperado) || null;
+}
+
+function renderizarItemPreparacionLogistica(index, tipo, item, matIndex, canEdit = true, codigoArg = "''") {
     const preparado = !!item.preparado;
+    const cantidadActualizada = item.cantidad_actualizada && item.cantidad_anterior !== undefined;
+    const materialNuevo = !!item.material_nuevo;
+    const tipoArg = getJsArg(tipo);
+    const materialKeyArg = getJsArg(getKeyMaterialPreparacionLogistica(tipo, item));
+    const updateButton = cantidadActualizada && canEdit
+        ? `<button type="button" class="operative-update-btn" onclick="event.preventDefault(); event.stopPropagation(); actualizarItemLogistica(${index}, ${tipoArg}, ${matIndex}, ${materialKeyArg}, ${codigoArg})">Actualizar</button>`
+        : '';
     return `
         <label class="logistics-prep-item">
             <input type="checkbox" ${preparado ? 'checked' : ''}
                 ${canEdit ? '' : 'disabled'}
-                onchange="togglePreparadoLogistica(${index}, '${tipo}', ${matIndex}, this.checked)">
+                onchange="togglePreparadoLogistica(${index}, ${tipoArg}, ${matIndex}, ${materialKeyArg}, this.checked, ${codigoArg})">
             <span class="logistics-prep-check">${preparado ? '✓' : ''}</span>
             <span class="logistics-prep-name">
                 <strong>${item.nombre || 'Material'}</strong>
                 <small>${item.cantidad || 0} ${item.unidad || ''}</small>
+                ${cantidadActualizada ? `<small class="operative-quantity-change">Antes: ${item.cantidad_anterior || 0} ${item.unidad || ''} | Ahora: ${item.cantidad || 0} ${item.unidad || ''}</small>` : ''}
+                ${materialNuevo ? `<small class="operative-quantity-change">Nuevo item</small>` : ''}
             </span>
+            ${updateButton}
             <span class="logistics-prep-pill ${preparado ? 'is-ready' : ''}">${preparado ? 'Preparado' : 'Pendiente'}</span>
         </label>
     `;
@@ -1797,9 +4221,32 @@ function cerrarPreparacionLogistica() {
     renderizarComandasLogistica();
 }
 
-async function confirmarCompletadoLogistica(index) {
+function actualizarItemLogistica(index, tipo, matIndex, materialKey = '', codigo = '') {
     if (!requireEditarLogistica()) return;
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    tipo = leerJsArgSeguro(tipo);
+    materialKey = leerJsArgSeguro(materialKey);
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
+    const material = getMaterialPreparacionLogistica(item, tipo, matIndex, materialKey);
+    if (!item || !material) return;
+    const anterior = material.cantidad_anterior;
+    material.cantidad_actualizada = false;
+    delete material.cantidad_anterior;
+    registrarAccionOperativa(
+        item,
+        'logistica',
+        'Actualizacion revisada',
+        `${material.nombre || 'Material'}: ${anterior || 0} -> ${material.cantidad || 0} ${material.unidad || ''}`.trim()
+    );
+    guardarEventoLogisticaActivo(item);
+    renderizarComandasLogistica();
+    abrirPreparacionLogistica(index, codigo);
+}
+
+async function confirmarCompletadoLogistica(index, codigo = '') {
+    if (!requireEditarLogistica()) return;
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     if (!item) return;
 
     const total = getMaterialLogisticaPlano(item.material_logistica || {}).length;
@@ -1825,23 +4272,31 @@ async function confirmarCompletadoLogistica(index) {
     item.logistics_completed_confirmed_by = getOperativeActorName();
     item.logistics_ready_at = ahora;
     item.logistics_ready_by = getOperativeActorName();
+    item.logistics_revision_notice = null;
     registrarAccionOperativa(item, 'logistica', 'Completado confirmado', `${preparados}/${total} materiales`);
     guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
-    abrirPreparacionLogistica(index);
+    abrirPreparacionLogistica(index, codigo);
 }
 
-function togglePreparadoLogistica(index, tipo, matIndex, checked) {
+function togglePreparadoLogistica(index, tipo, matIndex, materialKey = '', checked, codigo = '') {
     if (!requireEditarLogistica()) return;
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
-    if (!item?.material_logistica?.[tipo]?.[matIndex]) return;
+    tipo = leerJsArgSeguro(tipo);
+    materialKey = leerJsArgSeguro(materialKey);
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
+    const materialItem = getMaterialPreparacionLogistica(item, tipo, matIndex, materialKey);
+    if (!item || !materialItem) return;
 
-    item.material_logistica[tipo][matIndex].preparado = checked;
-    const materialItem = item.material_logistica[tipo][matIndex];
+    const eraNuevo = !!materialItem.material_nuevo;
+    materialItem.preparado = checked;
+    if (checked && eraNuevo) {
+        materialItem.material_nuevo = false;
+    }
     registrarAccionOperativa(
         item,
         'logistica',
-        checked ? 'Material preparado' : 'Material desmarcado',
+        checked && eraNuevo ? 'Material nuevo preparado' : (checked ? 'Material preparado' : 'Material desmarcado'),
         materialItem?.nombre || 'Material'
     );
     const total = getMaterialLogisticaPlano(item.material_logistica).length;
@@ -1863,12 +4318,13 @@ function togglePreparadoLogistica(index, tipo, matIndex, checked) {
     }
     item.fecha_modificacion = new Date().toISOString();
     guardarEventoLogisticaActivo(item);
-    abrirPreparacionLogistica(index);
+    abrirPreparacionLogistica(index, codigo);
 }
 
-function actualizarResponsableLogistica(index, value) {
+function actualizarResponsableLogistica(index, value, codigo = '') {
     if (!requireEditarLogistica()) return;
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.logistics_assigned_to = value.trim();
     item.fecha_modificacion = new Date().toISOString();
@@ -1876,9 +4332,10 @@ function actualizarResponsableLogistica(index, value) {
     renderizarComandasLogistica();
 }
 
-function actualizarEstadoLogistica(index, value) {
+function actualizarEstadoLogistica(index, value, codigo = '') {
     if (!requireEditarLogistica()) return;
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.logistics_status = value;
     item.estado = value;
@@ -1895,9 +4352,10 @@ function actualizarEstadoLogistica(index, value) {
     renderizarComandasLogistica();
 }
 
-function actualizarPreparadosLogistica(index, value) {
+function actualizarPreparadosLogistica(index, value, codigo = '') {
     if (!requireEditarLogistica()) return;
-    const item = (window.logisticaEventosActivos || getEventosLogisticaActivos())[index];
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     const material = item.material_logistica || {};
     const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
@@ -2015,6 +4473,10 @@ function pintarInventarioLogistica(filtro = 'todos') {
  * Muestra el historial de comandas
  */
 function mostrarHistorial() {
+    if (typeof window.liberarCodigoComandaPendienteSinEsperar === 'function') {
+        window.liberarCodigoComandaPendienteSinEsperar('mostrar_historial');
+    }
+
     const dashboard = document.getElementById('dashboard');
     const comandaForm = document.getElementById('comandaForm');
     const historialPage = document.getElementById('historialPage');
@@ -2049,6 +4511,10 @@ function mostrarHistorial() {
  * Vuelve al dashboard principal
  */
 function volverAlDashboard() {
+    if (typeof window.liberarCodigoComandaPendienteSinEsperar === 'function') {
+        window.liberarCodigoComandaPendienteSinEsperar('volver_dashboard');
+    }
+
     window.serviciosMode = false;
     const categoriaGroup = document.getElementById('categoriaMenuGroup');
     const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
@@ -2174,6 +4640,10 @@ function volverAlDashboard() {
 
     // Limpiar resumen lateral
     if (typeof window.resetearMenusAcumulados === 'function') window.resetearMenusAcumulados();
+
+    if (typeof window.limpiarSeleccionCalendario === 'function') {
+        window.limpiarSeleccionCalendario();
+    }
 
     if (typeof cargarCalendario === 'function') {
         cargarCalendario();

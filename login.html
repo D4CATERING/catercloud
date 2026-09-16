@@ -15,6 +15,7 @@
     }
   </script>
   <script src="js/auth.js?v=20260605b"></script>
+  <script src="js/activity-log.js?v=20260831d"></script>
 
   <style>
     :root{
@@ -488,7 +489,21 @@
 
     try {
       saveRememberedEmail(email);
-      await Auth.signIn(email, pass);
+      const login = await Auth.signIn(email, pass);
+      if (login?.user) window.currentUser = login.user;
+      if (typeof window.registrarActividadApp === "function") {
+        await window.registrarActividadApp("login", {
+          area: "auth",
+          entityType: "usuario",
+          entityCode: login?.user?.email || email,
+          entityId: login?.user?.id || null,
+          details: {
+            email,
+            metodo: "login_form",
+            at: new Date().toISOString()
+          }
+        });
+      }
       window.location.href = "index.html";
     } catch (e) {
       if (e.message?.includes("Invalid login credentials")) {

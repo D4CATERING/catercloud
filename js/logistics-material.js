@@ -64,15 +64,15 @@
             const padres = [];
 
             data.forEach(item => {
-                itemsMap.set(item.id, { ...item, subitems: [] });
+                itemsMap.set(String(item.id), { ...item, subitems: [] });
             });
 
             data.forEach(item => {
                 if (item.parent_id) {
-                    const padre = itemsMap.get(item.parent_id);
-                    if (padre) padre.subitems.push(itemsMap.get(item.id));
+                    const padre = itemsMap.get(String(item.parent_id));
+                    if (padre) padre.subitems.push(itemsMap.get(String(item.id)));
                 } else {
-                    padres.push(itemsMap.get(item.id));
+                    padres.push(itemsMap.get(String(item.id)));
                 }
             });
 
@@ -357,11 +357,11 @@
     }
 
     function isSubitemSelected(parentItem, subitemId) {
-        return parentItem.subitems_selected.some(s => s.id === subitemId);
+        return parentItem.subitems_selected.some(s => String(s.id) === String(subitemId));
     }
 
     function getSubitemCantidad(parentItem, subitemId) {
-        const selected = parentItem.subitems_selected.find(s => s.id === subitemId);
+        const selected = parentItem.subitems_selected.find(s => String(s.id) === String(subitemId));
         return selected ? selected.cantidad : 0;
     }
 
@@ -388,7 +388,7 @@
     };
 
     window.toggleMaterialItemExpandable = function(tipo, itemId, checked, containerId) {
-        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (item) {
             item.checked = checked;
             if (!checked) {
@@ -402,7 +402,7 @@
     };
 
     window.toggleSubitems = function(tipo, parentId, containerId) {
-        const item = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (item) {
             item.subitems_expanded = !item.subitems_expanded;
             renderizarMaterial(containerId);
@@ -410,14 +410,14 @@
     };
 
     window.toggleSubitem = function(tipo, parentId, subitemId, checked, containerId) {
-        const parent = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const parent = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (!parent) return;
 
-        const subitem = parent.subitems.find(s => s.id === subitemId);
+        const subitem = parent.subitems.find(s => String(s.id) === String(subitemId));
         if (!subitem) return;
 
         if (checked) {
-            if (!parent.subitems_selected.some(s => s.id === subitemId)) {
+            if (!parent.subitems_selected.some(s => String(s.id) === String(subitemId))) {
                 // Subitems de extras arrancan en 0 — el usuario pone la cantidad
                 parent.subitems_selected.push({
                     id: subitem.id,
@@ -428,22 +428,22 @@
                 });
             }
         } else {
-            parent.subitems_selected = parent.subitems_selected.filter(s => s.id !== subitemId);
+            parent.subitems_selected = parent.subitems_selected.filter(s => String(s.id) !== String(subitemId));
         }
 
         renderizarMaterial(containerId);
     };
 
     window.updateMaterialCantidad = function(tipo, itemId, cantidad) {
-        const item = window.materialLogistica[tipo].find(i => i.id === itemId);
+        const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (item) item.cantidad = parseInt(cantidad) || 0;
     };
 
     window.updateSubitemCantidad = function(tipo, parentId, subitemId, cantidad, containerId) {
-        const parent = window.materialLogistica[tipo].find(i => i.id === parentId);
+        const parent = window.materialLogistica[tipo].find(i => String(i.id) === String(parentId));
         if (!parent) return;
 
-        const selected = parent.subitems_selected.find(s => s.id === subitemId);
+        const selected = parent.subitems_selected.find(s => String(s.id) === String(subitemId));
         if (selected) {
             selected.cantidad = parseInt(cantidad) || 0;
         }

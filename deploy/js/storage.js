@@ -3,6 +3,7 @@
 function getAuditActionForUpdate(nuevosDatos = {}) {
     if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'estado')) {
         if (nuevosDatos.estado === 'anulada') return 'pedido_anulado';
+        if (nuevosDatos.estado === 'eliminada') return 'pedido_eliminado';
         if (nuevosDatos.estado === 'confirmado') return 'pedido_confirmado';
         return 'estado_actualizado';
     }
@@ -22,6 +23,27 @@ function logActividadApp(action, codigo, details = {}, area = null) {
     }
 }
 
+function emitirCambioHistorialCompartido(action, codigo, details = {}) {
+    if (!window._ordersRealtimeChannel) return;
+    try {
+        window._ordersRealtimeChannel.send({
+            type: 'broadcast',
+            event: 'orders_changed',
+            payload: {
+                action,
+                codigo: codigo || null,
+                by: window.currentUser?.email || null,
+                at: new Date().toISOString(),
+                details
+            }
+        });
+    } catch (error) {
+        console.warn('No se pudo emitir aviso realtime de comandas:', error);
+    }
+}
+
+window.emitirCambioHistorialCompartido = emitirCambioHistorialCompartido;
+
 function permitirGuardadoSoloLocal() {
   return window.CATER_ALLOW_LOCAL_ONLY === true;
 }
@@ -34,22 +56,278 @@ function crearErrorGuardadoRemoto(mensaje, codigo, causa) {
   return error;
 }
 
+function getPrefijoCodigoComanda(fecha = new Date()) {
+    return `D4${fecha.getFullYear().toString().slice(-2)}`;
+}
+
+function extraerNumeroCodigoComanda(codigo, prefijo = getPrefijoCodigoComanda()) {
+    const texto = String(codigo || '').trim();
+    if (!texto.startsWith(prefijo)) return 0;
+    const numero = Number(texto.slice(prefijo.length));
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function getSiguienteCodigoLocal() {
+    const prefijo = getPrefijoCodigoComanda();
+    const añoCompleto = new Date().getFullYear();
+    const historial = [
+        ...JSON.parse(localStorage.getItem('historialComandas') || '[]'),
+        ...JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+    ];
+    const numerosUsados = historial
+        .map(item => extraerNumeroCodigoComanda(item?.codigo || item?.codigo_cocina || item?.codigo_original, prefijo))
+        .filter(numero => numero > 0);
+    const siguiente = Math.max(0, ...numerosUsados) + 1;
+    localStorage.setItem('contadorComandas', String(siguiente));
+    localStorage.setItem('ultimoAñoComandas', String(añoCompleto));
+    return `${prefijo}${String(siguiente).padStart(4, '0')}`;
+}
+
+function getMayorNumeroComandaLocal(prefijo = getPrefijoCodigoComanda()) {
+    const historial = [
+        ...JSON.parse(localStorage.getItem('historialComandas') || '[]'),
+        ...JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+    ];
+    return historial.reduce((maximo, item) => {
+        const codigos = [
+            item?.codigo,
+            item?.codigo_cocina,
+            item?.codigo_original,
+            item?.codigo_comanda
+        ];
+        const mayorItem = codigos.reduce((mayor, codigo) => {
+            const numero = extraerNumeroCodigoComanda(codigo, prefijo);
+            return numero > mayor ? numero : mayor;
+        }, 0);
+        return mayorItem > maximo ? mayorItem : maximo;
+    }, 0);
+}
+
+async function liberarCodigoComandaReservado(codigo = window.codigoComandaReservado) {
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    try {
+        const { error } = await window.supabaseClient.rpc('release_order_code', { code_to_release: codigo });
+        if (error) throw error;
+        if (String(window.codigoComandaReservado || '') === String(codigo)) {
+            window.codigoComandaReservado = null;
+        }
+        return true;
+    } catch (error) {
+        console.warn('No se pudo liberar la reserva del codigo de comanda:', error);
+        return false;
+    }
+}
+
+window.liberarCodigoComandaReservado = liberarCodigoComandaReservado;
+
+async function codigoComandaExisteEnSupabase(codigo) {
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    const { data, error } = await window.supabaseClient
+        .from('orders')
+        .select('id, codigo, payload')
+        .limit(2000);
+    if (error) throw error;
+    return (data || []).some(row => {
+        const codigoColumna = String(row?.codigo || '').trim();
+        const codigoPayload = String(row?.payload?.codigo || row?.payload?.codigo_comanda || '').trim();
+        return codigoColumna === String(codigo) || codigoPayload === String(codigo);
+    });
+}
+
+async function getMayorNumeroComandaSupabase(prefijo = getPrefijoCodigoComanda()) {
+    if (!window.supabaseClient || !window.currentUser?.id) return 0;
+    const { data, error } = await window.supabaseClient
+        .from('orders')
+        .select('codigo, payload')
+        .limit(2000);
+    if (error) throw error;
+
+    return (data || []).reduce((maximo, row) => {
+        const codigos = [
+            row?.codigo,
+            row?.payload?.codigo,
+            row?.payload?.codigo_comanda
+        ];
+        const mayorFila = codigos.reduce((mayor, codigo) => {
+            const numero = extraerNumeroCodigoComanda(codigo, prefijo);
+            return numero > mayor ? numero : mayor;
+        }, 0);
+        return mayorFila > maximo ? mayorFila : maximo;
+    }, 0);
+}
+
+async function reservarCodigoComanda() {
+    if (window.codigoComandaReservado) {
+        if (window.supabaseClient && window.currentUser?.id) {
+            try {
+                const yaExiste = await codigoComandaExisteEnSupabase(window.codigoComandaReservado);
+                const prefijo = getPrefijoCodigoComanda();
+                const numeroReservado = extraerNumeroCodigoComanda(window.codigoComandaReservado, prefijo);
+                const mayorNumeroUsado = Math.max(
+                    getMayorNumeroComandaLocal(prefijo),
+                    await getMayorNumeroComandaSupabase(prefijo)
+                );
+                if (!yaExiste && (!numeroReservado || !mayorNumeroUsado || numeroReservado > mayorNumeroUsado)) {
+                    return window.codigoComandaReservado;
+                }
+                console.warn(`El codigo reservado ${window.codigoComandaReservado} ya existe en orders. Se descartara esta reserva local.`);
+                window.codigoComandaReservado = null;
+            } catch (error) {
+                console.warn('No se pudo validar el codigo reservado actual:', error);
+                throw error;
+            }
+        } else {
+            return window.codigoComandaReservado;
+        }
+    }
+
+    if (window.supabaseClient && window.currentUser?.id) {
+        let ultimoError = null;
+        for (let intento = 0; intento < 5; intento += 1) {
+            try {
+                const { data, error } = await window.supabaseClient.rpc('next_order_code');
+                if (error) throw error;
+                const codigo = typeof data === 'string' ? data : data?.codigo;
+                if (codigo) {
+                    const yaExiste = await codigoComandaExisteEnSupabase(codigo);
+                    if (yaExiste) {
+                        console.warn(`Supabase devolvio el codigo ${codigo}, pero ya existe en orders. Se pedira otro codigo.`);
+                        await liberarCodigoComandaReservado(codigo);
+                        ultimoError = new Error(`El codigo ${codigo} ya existe en orders.`);
+                        continue;
+                    }
+                    const prefijo = getPrefijoCodigoComanda();
+                    const numeroCodigo = extraerNumeroCodigoComanda(codigo, prefijo);
+                    const mayorNumeroUsado = Math.max(
+                        getMayorNumeroComandaLocal(prefijo),
+                        await getMayorNumeroComandaSupabase(prefijo)
+                    );
+                    if (numeroCodigo > 0 && mayorNumeroUsado > 0 && numeroCodigo <= mayorNumeroUsado) {
+                        console.warn(`Supabase devolvio el codigo ${codigo}, pero el mayor codigo usado es ${prefijo}${String(mayorNumeroUsado).padStart(4, '0')}. Se pedira otro codigo.`);
+                        await liberarCodigoComandaReservado(codigo);
+                        ultimoError = new Error(`El codigo ${codigo} esta por debajo de la secuencia actual.`);
+                        continue;
+                    }
+                    window.codigoComandaReservado = codigo;
+                    return codigo;
+                }
+            } catch (error) {
+                ultimoError = error;
+                console.warn('No se pudo reservar codigo en Supabase:', error);
+                break;
+            }
+        }
+
+        throw new Error(
+            ultimoError?.message
+                ? `No se pudo reservar un codigo disponible en Supabase: ${ultimoError.message}`
+                : 'No se pudo reservar un codigo disponible en Supabase.'
+        );
+    }
+
+    window.codigoComandaReservado = getSiguienteCodigoLocal();
+    return window.codigoComandaReservado;
+}
+
+window.reservarCodigoComanda = reservarCodigoComanda;
+
+async function obtenerCodigoComandaParaGuardar(comandaData = {}) {
+    const codigo = comandaData.codigo || window.codigoComandaReservado || await reservarCodigoComanda();
+    return codigo;
+}
+
+window.obtenerCodigoComandaParaGuardar = obtenerCodigoComandaParaGuardar;
+
+async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistica = {}) {
+  if (!codigoPedido) throw new Error('No se encontro el codigo de cocina para vincular la logistica.');
+  if (!window.supabaseClient || !window.currentUser?.id) {
+    throw new Error('No hay sesion activa de Supabase. La logistica no se puede guardar para el equipo.');
+  }
+
+  const idOrden = datosLogistica.orden_id || datosLogistica.supabase_order_id || null;
+  let query = window.supabaseClient
+    .from('orders')
+    .select('id, payload, version')
+    .limit(1);
+
+  query = idOrden ? query.eq('id', idOrden) : query.eq('codigo', codigoPedido);
+  const { data: existentes, error: selectError } = await query;
+  if (selectError) throw selectError;
+  const order = existentes?.[0];
+  if (!order?.id) {
+    throw new Error(`No se encontro en Supabase la comanda ${codigoPedido} para adjuntar la logistica.`);
+  }
+
+  const version = Number(order.version || order.payload?.version || 1) + 1;
+  const payload = {
+    ...(order.payload || {}),
+    logistica: datosLogistica.logistica || {},
+    logistica_inline: datosLogistica.logistica || {},
+    material_logistica: datosLogistica.material_logistica || {},
+    logistics_status: datosLogistica.logistics_status || datosLogistica.estado || 'sin_preparar',
+    logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
+    logistics_prepared_items: Number(datosLogistica.logistics_prepared_items || 0),
+    tiene_comanda_logistica: true,
+    fecha_modificacion: new Date().toISOString(),
+    version,
+    editado_por_id: window.currentUser.id,
+    editado_por_nombre: getResponsableFromUser(),
+    editado_por_email: window.currentUser.email || ''
+  };
+
+  const { error: updateError } = await window.supabaseClient
+    .from('orders')
+    .update({
+      payload,
+      estado: payload.estado || 'creada',
+      version,
+      updated_by: window.currentUser.id,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', order.id);
+
+  if (updateError) throw updateError;
+
+  logActividadApp('logistica_creada', codigoPedido, {
+    cambios: ['logistica', 'material_logistica'],
+    material: datosLogistica.material_logistica || {},
+    contacto: datosLogistica.logistica?.nombre_contacto || ''
+  }, 'logistica');
+
+  emitirCambioHistorialCompartido('logistica_creada', codigoPedido, {
+    cambios: ['logistica', 'material_logistica'],
+    version
+  });
+
+  return { id: order.id, payload };
+}
+
+window.sincronizarComandaLogisticaEnSupabase = sincronizarComandaLogisticaEnSupabase;
+
 /**
  * Guarda una comanda en Supabase (multiusuario)
  * @param {Object} comandaData - Datos de la comanda
  * @returns {Promise<string>} Código generado
  */
 async function guardarComandaEnHistorial(comandaData) {
-  const codigo = generarCodigoComanda();
+  const codigo = await obtenerCodigoComandaParaGuardar(comandaData);
   const usuarioNombre = getResponsableFromUser();
 
   // Construimos el payload igual que siempre
+  const solicitudOrigen = comandaData.solicitud_origen || null;
   const payload = {
     ...comandaData,
     codigo,
-    fecha_creacion: new Date().toISOString(),
+    tipo_registro: solicitudOrigen ? 'comanda' : (comandaData.tipo_registro || 'comanda'),
+    codigo_solicitud_origen: solicitudOrigen?.codigo || comandaData.codigo_solicitud_origen || '',
+    adjuntos: comandaData.adjuntos || solicitudOrigen?.adjuntos || [],
+    documentos: comandaData.documentos || solicitudOrigen?.documentos || {},
+    fecha_creacion: solicitudOrigen?.fecha_creacion || comandaData.fecha_creacion || new Date().toISOString(),
     fecha_modificacion: new Date().toISOString(),
     estado: 'creada',
+    estado_confirmacion: solicitudOrigen
+      ? (solicitudOrigen.estado === 'confirmado' ? 'confirmado' : 'por_confirmar')
+      : (comandaData.estado_confirmacion || comandaData.confirmation_status || 'por_confirmar'),
     version: 1,
     creado_por_id: window.currentUser?.id || comandaData.creado_por_id || null,
     creado_por_nombre: comandaData.creado_por_nombre || usuarioNombre,
@@ -61,7 +339,11 @@ async function guardarComandaEnHistorial(comandaData) {
 
   // Si NO hay supabase o NO hay login -> guardamos SOLO en local como backup
   if (!window.supabaseClient || !window.currentUser?.id) {
-    guardarComandaEnHistorialLocal(payload);
+    if (solicitudOrigen?.codigo) {
+      reemplazarSolicitudPorComandaLocal(solicitudOrigen.codigo, payload);
+    } else {
+      guardarComandaEnHistorialLocal(payload);
+    }
     logActividadApp('comanda_creada_local', codigo, {
       empresa: payload.empresa || payload.company_name || '',
       motivo: 'sin_supabase_o_sin_login'
@@ -87,6 +369,10 @@ async function guardarComandaEnHistorial(comandaData) {
 
     if (!responsable) throw new Error('No se pudo determinar el Responsable (usuario sin nombre/email)');
 
+    if (await codigoComandaExisteEnSupabase(codigo)) {
+      throw new Error(`El codigo ${codigo} ya existe en Supabase. Ejecuta sql/order_code_sequence.sql y vuelve a intentarlo.`);
+    }
+
     if (typeof window.subirComandasAStorage === 'function') {
       try {
         const documentos = await window.subirComandasAStorage(codigo, payload);
@@ -102,7 +388,67 @@ async function guardarComandaEnHistorial(comandaData) {
 
     const paxTotal = Number(comandaData.pax || comandaData.pax_total || payload.pax || 0) || null;
 
-    const { error } = await window.supabaseClient.from('orders').insert([{
+    if (solicitudOrigen?.codigo || solicitudOrigen?.orden_id || solicitudOrigen?.supabase_order_id) {
+      const idSolicitud = solicitudOrigen.supabase_order_id || solicitudOrigen.orden_id || null;
+      if (idSolicitud) {
+        payload.orden_id = idSolicitud;
+        payload.supabase_order_id = idSolicitud;
+      }
+      const query = window.supabaseClient.from('orders').update({
+        company_id,
+        company_name: company_name || (empresaNombre || null),
+        responsable_name: responsable,
+        codigo,
+        fecha_evento: comandaData.fecha_evento || null,
+        hora_salida: comandaData.hora_salida || null,
+        pax_total: paxTotal,
+        estado: payload.estado,
+        version: payload.version,
+        updated_by: window.currentUser.id,
+        updated_at: new Date().toISOString(),
+        payload
+      }).select('id');
+
+      const { data: updatedRows, error: updateSolicitudError } = idSolicitud
+        ? await query.eq('id', idSolicitud)
+        : await query.eq('codigo', solicitudOrigen.codigo);
+
+      if (updateSolicitudError) throw updateSolicitudError;
+      const updatedOrder = Array.isArray(updatedRows) ? updatedRows[0] : updatedRows;
+      if (!updatedOrder?.id) {
+        throw new Error(`No se encontro la solicitud ${solicitudOrigen.codigo || ''} para convertirla en comanda.`);
+      }
+      if (updatedOrder?.id) {
+        payload.orden_id = updatedOrder.id;
+        payload.supabase_order_id = updatedOrder.id;
+        if (!idSolicitud) {
+          await window.supabaseClient
+            .from('orders')
+            .update({ payload })
+            .eq('id', updatedOrder.id);
+        }
+      }
+
+      if (typeof window.liberarCodigoComandaReservado === 'function') {
+        await window.liberarCodigoComandaReservado(codigo);
+      }
+
+      reemplazarSolicitudPorComandaLocal(solicitudOrigen.codigo, payload);
+      emitirCambioHistorialCompartido('solicitud_convertida_comanda', codigo, {
+        codigo_solicitud_origen: solicitudOrigen.codigo || '',
+        empresa: payload.empresa || payload.company_name || '',
+        fecha_evento: payload.fecha_evento || null
+      });
+      logActividadApp('solicitud_convertida_comanda', codigo, {
+        codigo_solicitud_origen: solicitudOrigen.codigo || '',
+        empresa: payload.empresa || payload.company_name || '',
+        fecha_evento: payload.fecha_evento || null,
+        pax: payload.pax || payload.pax_total || null
+      });
+      return codigo;
+    }
+
+    const { data: insertedOrder, error } = await window.supabaseClient.from('orders').insert([{
       created_by: window.currentUser.id,
       company_id,
       company_name: company_name || (empresaNombre || null),
@@ -115,12 +461,27 @@ async function guardarComandaEnHistorial(comandaData) {
       version: payload.version,
       updated_by: window.currentUser.id,
       payload
-    }]);
+    }]).select('id').single();
 
     if (error) throw error;
+    if (insertedOrder?.id) {
+      payload.orden_id = insertedOrder.id;
+      payload.supabase_order_id = insertedOrder.id;
+    }
+
+    if (typeof window.liberarCodigoComandaReservado === 'function') {
+      await window.liberarCodigoComandaReservado(codigo);
+    }
 
     // ✅ Backup local también (opcional, pero recomendado)
     guardarComandaEnHistorialLocal(payload);
+    emitirCambioHistorialCompartido('comanda_creada', codigo, {
+      empresa: payload.empresa || payload.company_name || '',
+      fecha_evento: payload.fecha_evento || null
+    });
+    if (typeof window.refrescarAlertasOperativasGlobales === 'function') {
+      window.refrescarAlertasOperativasGlobales();
+    }
     logActividadApp('comanda_creada', codigo, {
       empresa: payload.empresa || payload.company_name || '',
       fecha_evento: payload.fecha_evento || null,
@@ -132,7 +493,11 @@ async function guardarComandaEnHistorial(comandaData) {
   } catch (error) {
     // ✅ Si Supabase falla, guardamos en local como respaldo
     console.warn('Supabase falló, guardando backup en localStorage:', error);
-    guardarComandaEnHistorialLocal(payload);
+    if (solicitudOrigen?.codigo) {
+      reemplazarSolicitudPorComandaLocal(solicitudOrigen.codigo, payload);
+    } else {
+      guardarComandaEnHistorialLocal(payload);
+    }
     logActividadApp('comanda_creada_local', codigo, {
       empresa: payload.empresa || payload.company_name || '',
       motivo: 'fallo_supabase'
@@ -168,10 +533,178 @@ function guardarComandaEnHistorialLocal(comandaData) {
         version: comandaData.version || 1
     };
     
-    historial.push(comandaCompleta);
+    const indexExistente = historial.findIndex(item => String(item.codigo || item.codigo_comanda || '') === String(codigo));
+    if (indexExistente >= 0) {
+        historial[indexExistente] = {
+            ...historial[indexExistente],
+            ...comandaCompleta
+        };
+    } else {
+        historial.push(comandaCompleta);
+    }
     localStorage.setItem('historialComandas', JSON.stringify(historial));
     return codigo;
 }
+
+function reemplazarSolicitudPorComandaLocal(codigoSolicitud, comandaData) {
+    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const codigoComanda = comandaData.codigo || comandaData.codigo_comanda || '';
+    const ahora = new Date().toISOString();
+    const solicitudLocal = historial.find(item =>
+        String(item.codigo || item.codigo_comanda || '') === String(codigoSolicitud || '')
+    );
+    const historialSinDuplicados = historial.filter(item => {
+        const codigoItem = String(item.codigo || item.codigo_comanda || '');
+        return codigoItem !== String(codigoSolicitud || '') && codigoItem !== String(codigoComanda || '');
+    });
+
+    const comandaCompleta = {
+        ...(solicitudLocal || {}),
+        ...comandaData,
+        tipo_registro: 'comanda',
+        codigo: codigoComanda,
+        codigo_solicitud_origen: codigoSolicitud || comandaData.codigo_solicitud_origen || '',
+        estado: comandaData.estado || 'creada',
+        fecha_creacion: comandaData.fecha_creacion || solicitudLocal?.fecha_creacion || ahora,
+        fecha_modificacion: ahora
+    };
+
+    historialSinDuplicados.push(comandaCompleta);
+    localStorage.setItem('historialComandas', JSON.stringify(historialSinDuplicados));
+    return codigoComanda;
+}
+
+function buscarComandaLocalPorCodigo(codigoBuscado) {
+    const codigo = String(codigoBuscado || '').trim();
+    if (!codigo) return null;
+
+    const historiales = [
+        JSON.parse(localStorage.getItem('historialComandas') || '[]'),
+        JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+    ];
+
+    return historiales
+        .flat()
+        .find(item => {
+            const codigosItem = [
+                item?.codigo,
+                item?.codigo_comanda,
+                item?.codigo_cocina,
+                item?.codigo_original
+            ].map(valor => String(valor || '').trim());
+            return codigosItem.includes(codigo);
+        }) || null;
+}
+
+async function recuperarComandaLocalEnSupabase(codigoBuscado) {
+    const codigo = String(codigoBuscado || '').trim();
+    if (!codigo) throw new Error('Indica el codigo de la comanda que quieres recuperar.');
+    if (!window.supabaseClient || !window.currentUser?.id) {
+        throw new Error('Necesitas iniciar sesion para recuperar la comanda en Supabase.');
+    }
+    if (window.AppPermissions && !AppPermissions.canCreateOrders()) {
+        throw new Error('Tu usuario no tiene permiso para recuperar comandas en Supabase.');
+    }
+
+    const local = buscarComandaLocalPorCodigo(codigo);
+    if (!local) {
+        throw new Error(`No encontre la comanda ${codigo} en el historial local de este navegador.`);
+    }
+
+    const empresaNombre = (local.empresa || local.empresa_nombre || local.company_name || '').toString().trim();
+    let company_id = local.company_id || null;
+    let company_name = local.company_name || empresaNombre || null;
+    if (empresaNombre && typeof getOrCreateCompanyIdByName === 'function') {
+        const company = await getOrCreateCompanyIdByName(empresaNombre);
+        company_id = company.company_id;
+        company_name = company.company_name || company_name;
+    }
+
+    const responsable = getResponsableFromUser()
+        || (local.responsable || local.responsable_nombre || local.creado_por_nombre || '').toString().trim()
+        || window.currentUser.email
+        || 'Usuario';
+
+    const ahora = new Date().toISOString();
+    const payload = {
+        ...local,
+        codigo,
+        tipo_registro: local.tipo_registro === 'logistica' ? 'logistica' : 'comanda',
+        estado: local.estado && local.estado !== 'eliminada' ? local.estado : 'creada',
+        fecha_creacion: local.fecha_creacion || local.created_at || ahora,
+        fecha_modificacion: ahora,
+        creado_por_id: local.creado_por_id || window.currentUser.id,
+        creado_por_nombre: local.creado_por_nombre || responsable,
+        creado_por_email: local.creado_por_email || window.currentUser.email || '',
+        editado_por_id: window.currentUser.id,
+        editado_por_nombre: responsable,
+        editado_por_email: window.currentUser.email || ''
+    };
+
+    const { data: existente, error: selectError } = await window.supabaseClient
+        .from('orders')
+        .select('id')
+        .eq('codigo', codigo)
+        .maybeSingle();
+
+    if (selectError) throw selectError;
+
+    const datosOrder = {
+        company_id,
+        company_name: company_name || null,
+        responsable_name: responsable,
+        codigo,
+        fecha_evento: payload.fecha_evento || null,
+        hora_salida: payload.hora_salida || null,
+        pax_total: Number(payload.pax || payload.pax_total || 0) || null,
+        estado: payload.estado,
+        version: Number(payload.version || 1) || 1,
+        updated_by: window.currentUser.id,
+        updated_at: ahora,
+        payload
+    };
+
+    let orderId = existente?.id || null;
+    if (orderId) {
+        const { error: updateError } = await window.supabaseClient
+            .from('orders')
+            .update(datosOrder)
+            .eq('id', orderId);
+        if (updateError) throw updateError;
+    } else {
+        const { data: insertada, error: insertError } = await window.supabaseClient
+            .from('orders')
+            .insert([{ ...datosOrder, created_by: window.currentUser.id }])
+            .select('id')
+            .single();
+        if (insertError) throw insertError;
+        orderId = insertada?.id || null;
+    }
+
+    if (orderId) {
+        payload.orden_id = orderId;
+        payload.supabase_order_id = orderId;
+        await window.supabaseClient
+            .from('orders')
+            .update({ payload })
+            .eq('id', orderId);
+    }
+
+    guardarComandaEnHistorialLocal(payload);
+    emitirCambioHistorialCompartido('comanda_recuperada_supabase', codigo, {
+        empresa: payload.empresa || payload.company_name || '',
+        fecha_evento: payload.fecha_evento || null
+    });
+    logActividadApp('comanda_recuperada_supabase', codigo, {
+        empresa: payload.empresa || payload.company_name || '',
+        fecha_evento: payload.fecha_evento || null
+    });
+
+    return { codigo, orderId, estado: payload.estado };
+}
+
+window.buscarComandaLocalPorCodigo = buscarComandaLocalPorCodigo;
+window.recuperarComandaLocalEnSupabase = recuperarComandaLocalEnSupabase;
 
 async function sincronizarSolicitudPedido(solicitud) {
     if (!window.supabaseClient || !window.currentUser?.id) return false;
@@ -211,6 +744,10 @@ async function sincronizarSolicitudPedido(solicitud) {
         }]);
 
         if (error) throw error;
+        emitirCambioHistorialCompartido('solicitud_creada', solicitud.codigo, {
+            empresa: solicitud.empresa || '',
+            fecha_evento: solicitud.fecha_evento || null
+        });
         logActividadApp('solicitud_creada', solicitud.codigo, {
             empresa: solicitud.empresa || '',
             fecha_evento: solicitud.fecha_evento || null,
@@ -231,13 +768,23 @@ async function sincronizarSolicitudPedido(solicitud) {
  */
 async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    const index = historial.findIndex(c => c.codigo === codigo);
+    const idSupabase = nuevosDatos?.supabase_order_id || nuevosDatos?.orden_id || null;
+    const coincidencias = historial
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => {
+            if (idSupabase && (item.supabase_order_id === idSupabase || item.orden_id === idSupabase)) return true;
+            return String(item.codigo || item.codigo_comanda || '') === String(codigo || '');
+        })
+        .sort((a, b) => getFechaModificacionHistorialSync(b.item) - getFechaModificacionHistorialSync(a.item));
+    const index = coincidencias[0]?.index ?? -1;
     
     if (index !== -1) {
+        const idParaActualizar = idSupabase || historial[index].supabase_order_id || historial[index].orden_id || null;
         const versionActual = Number(historial[index].version || 1);
         historial[index] = {
             ...historial[index],
             ...nuevosDatos,
+            ...(idParaActualizar ? { orden_id: idParaActualizar, supabase_order_id: idParaActualizar } : {}),
             fecha_modificacion: new Date().toISOString(),
             version: versionActual + 1,
             editado_por: getResponsableFromUser(),
@@ -256,7 +803,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
 
         if (window.supabaseClient && window.currentUser?.id) {
             try {
-                const { error } = await window.supabaseClient
+                const query = window.supabaseClient
                     .from('orders')
                     .update({
                         payload: historial[index],
@@ -267,10 +814,19 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
                         version: historial[index].version,
                         updated_by: window.currentUser.id,
                         updated_at: new Date().toISOString()
-                    })
-                    .eq('codigo', codigo);
+                    });
+                const { error } = idParaActualizar
+                    ? await query.eq('id', idParaActualizar)
+                    : await query.eq('codigo', codigo);
 
                 if (error) throw error;
+                emitirCambioHistorialCompartido(auditAction, codigo, {
+                    cambios: Object.keys(nuevosDatos || {}),
+                    version: historial[index].version
+                });
+                if (typeof window.refrescarAlertasOperativasGlobales === 'function') {
+                    window.refrescarAlertasOperativasGlobales();
+                }
             } catch (error) {
                 console.warn('No se pudo sincronizar la edición con Supabase:', error);
                 if (!permitirGuardadoSoloLocal()) {
@@ -301,7 +857,13 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
  */
 function obtenerComandaDelHistorial(codigo) {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    return historial.find(c => c.codigo === codigo);
+    const coincidencias = historial.filter(c => String(c.codigo || c.codigo_comanda || '') === String(codigo || ''));
+    if (!coincidencias.length) return null;
+    return coincidencias.sort((a, b) => {
+        const fechaB = new Date(b.fecha_modificacion || b.updated_at || b.fecha_creacion || b.created_at || 0).getTime();
+        const fechaA = new Date(a.fecha_modificacion || a.updated_at || a.fecha_creacion || a.created_at || 0).getTime();
+        return (Number.isFinite(fechaB) ? fechaB : 0) - (Number.isFinite(fechaA) ? fechaA : 0);
+    })[0];
 }
 
 /**
@@ -310,14 +872,57 @@ function obtenerComandaDelHistorial(codigo) {
  */
 function eliminarComandaDelHistorial(codigo) {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    const comanda = historial.find(c => c.codigo === codigo);
-    const nuevoHistorial = historial.filter(c => c.codigo !== codigo);
+    const ahora = new Date().toISOString();
+    const comanda = historial.find(c => String(c.codigo || c.codigo_comanda || '') === String(codigo || ''));
+    const nuevoHistorial = historial.map(c => {
+        if (String(c.codigo || c.codigo_comanda || '') !== String(codigo || '')) return c;
+        return {
+            ...c,
+            estado: 'eliminada',
+            estado_pedido: 'eliminada',
+            fecha_modificacion: ahora,
+            eliminado_en: ahora,
+            eliminado_por_id: window.currentUser?.id || null,
+            eliminado_por_email: window.currentUser?.email || ''
+        };
+    });
     localStorage.setItem('historialComandas', JSON.stringify(nuevoHistorial));
     logActividadApp('pedido_eliminado_local', codigo, {
         empresa: comanda?.empresa || comanda?.company_name || '',
         fecha_evento: comanda?.fecha_evento || null
     });
 }
+
+async function marcarComandaEliminadaEnSupabase(codigo, pedido = null) {
+    if (!window.supabaseClient || !codigo) return false;
+
+    const ahora = new Date().toISOString();
+    const payloadBase = pedido || obtenerComandaDelHistorial(codigo) || {};
+    const payloadEliminado = {
+        ...payloadBase,
+        codigo,
+        estado: 'eliminada',
+        estado_pedido: 'eliminada',
+        fecha_modificacion: ahora,
+        eliminado_en: ahora,
+        eliminado_por_id: window.currentUser?.id || null,
+        eliminado_por_email: window.currentUser?.email || ''
+    };
+
+    const { error } = await window.supabaseClient
+        .from('orders')
+        .update({
+            estado: 'eliminada',
+            updated_by: window.currentUser?.id || null,
+            payload: payloadEliminado
+        })
+        .eq('codigo', codigo);
+
+    if (error) throw error;
+    return true;
+}
+
+window.marcarComandaEliminadaEnSupabase = marcarComandaEliminadaEnSupabase;
 
 /**
  * Obtiene todo el historial de comandas
@@ -327,28 +932,343 @@ function obtenerHistorialCompleto() {
     return JSON.parse(localStorage.getItem('historialComandas') || '[]');
 }
 
+function normalizarComandaRemota(row) {
+    const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+    return {
+        ...payload,
+        orden_id: payload.orden_id || row?.id || null,
+        supabase_order_id: payload.supabase_order_id || row?.id || null,
+        codigo: payload.codigo || row?.codigo || '',
+        fecha_creacion: payload.fecha_creacion || row?.created_at || '',
+        fecha_modificacion: payload.fecha_modificacion || row?.updated_at || payload.fecha_creacion || row?.created_at || '',
+        fecha_evento: payload.fecha_evento || row?.fecha_evento || '',
+        hora_salida: payload.hora_salida || row?.hora_salida || '',
+        pax: payload.pax || payload.pax_total || row?.pax_total || 0,
+        pax_total: payload.pax_total || payload.pax || row?.pax_total || 0,
+        estado: payload.estado || row?.estado || 'creada'
+    };
+}
+
+function getCodigoHistorialSync(item) {
+    return item?.codigo || item?.codigo_cocina || item?.codigo_original || item?.codigo_comanda || '';
+}
+
+function getClaveHistorialSync(item) {
+    return getCodigoHistorialSync(item) || item?.supabase_order_id || item?.orden_id;
+}
+
+function getFechaModificacionHistorialSync(item) {
+    const raw = item?.fecha_modificacion || item?.updated_at || item?.fecha_creacion || item?.created_at || '';
+    const time = raw ? new Date(raw).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+}
+
+function tieneDatosLogisticaSync(item = {}) {
+    const log = item.logistica_inline || item.logistica || {};
+    const material = item.material_logistica || log.material_logistica || {};
+    return Boolean(
+        item.tiene_comanda_logistica ||
+        item.logistica_creada ||
+        item.documentos?.logistica ||
+        item.logistics_status ||
+        item.estado_logistica ||
+        item.estado_confirmacion ||
+        item.confirmation_status ||
+        item.logistics_assigned_to ||
+        item.logistics_prepared_items !== undefined ||
+        item.logistics_ready_at ||
+        item.logistics_completed_confirmed_at ||
+        item.logistics_action_log?.length ||
+        item.logistics_revision_notice ||
+        Object.values(log || {}).some(Boolean) ||
+        ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length)
+    );
+}
+
+function materialLogisticaSyncTieneItems(material = {}) {
+    return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length);
+}
+
+function valorLogisticaSync(baseValor, fuenteValor, preferirFuente = true) {
+    if (preferirFuente) return fuenteValor ?? baseValor;
+    return baseValor ?? fuenteValor;
+}
+
+function textoLogisticaSync(baseValor, fuenteValor, preferirFuente = true) {
+    if (preferirFuente) return fuenteValor || baseValor;
+    return baseValor || fuenteValor;
+}
+
+function fusionarDatosLogisticaSync(base = {}, fuente = {}, options = {}) {
+    if (!tieneDatosLogisticaSync(fuente)) return base;
+    const preferirFuente = options.preferirFuente !== false;
+    const logFuente = fuente.logistica_inline || fuente.logistica || {};
+    const materialFuente = fuente.material_logistica || logFuente.material_logistica || {};
+    const materialBase = base.material_logistica || base.logistica_inline?.material_logistica || base.logistica?.material_logistica || {};
+    const usarMaterialFuente = materialLogisticaSyncTieneItems(materialFuente) &&
+        (preferirFuente || !materialLogisticaSyncTieneItems(materialBase));
+    const logisticaFusionada = preferirFuente
+        ? { ...(base.logistica || {}), ...logFuente }
+        : { ...logFuente, ...(base.logistica || {}) };
+    const logisticaInlineFusionada = preferirFuente
+        ? { ...(base.logistica_inline || {}), ...logFuente }
+        : { ...logFuente, ...(base.logistica_inline || {}) };
+    return {
+        ...base,
+        tiene_comanda_logistica: valorLogisticaSync(base.tiene_comanda_logistica, fuente.tiene_comanda_logistica, preferirFuente),
+        logistica_creada: valorLogisticaSync(base.logistica_creada, fuente.logistica_creada, preferirFuente),
+        documentos: {
+            ...(base.documentos || {}),
+            ...(fuente.documentos || {})
+        },
+        logistica: logisticaFusionada,
+        logistica_inline: logisticaInlineFusionada,
+        material_logistica: usarMaterialFuente ? materialFuente : base.material_logistica,
+        logistics_status: textoLogisticaSync(base.logistics_status, fuente.logistics_status, preferirFuente),
+        estado_logistica: textoLogisticaSync(base.estado_logistica, fuente.estado_logistica || fuente.logistics_status, preferirFuente),
+        estado_confirmacion: textoLogisticaSync(base.estado_confirmacion, fuente.estado_confirmacion || fuente.confirmation_status, preferirFuente),
+        confirmation_status: textoLogisticaSync(base.confirmation_status, fuente.confirmation_status || fuente.estado_confirmacion, preferirFuente),
+        logistics_assigned_to: textoLogisticaSync(base.logistics_assigned_to, fuente.logistics_assigned_to, preferirFuente),
+        logistics_prepared_items: valorLogisticaSync(base.logistics_prepared_items, fuente.logistics_prepared_items, preferirFuente),
+        logistics_action_log: preferirFuente
+            ? (Array.isArray(fuente.logistics_action_log) ? fuente.logistics_action_log : base.logistics_action_log)
+            : (Array.isArray(base.logistics_action_log) ? base.logistics_action_log : fuente.logistics_action_log),
+        logistics_revision_notice: Object.prototype.hasOwnProperty.call(fuente, 'logistics_revision_notice')
+            ? (preferirFuente ? fuente.logistics_revision_notice : base.logistics_revision_notice)
+            : (preferirFuente ? base.logistics_revision_notice : fuente.logistics_revision_notice),
+        logistics_completed_confirmed_at: valorLogisticaSync(base.logistics_completed_confirmed_at, fuente.logistics_completed_confirmed_at, preferirFuente),
+        logistics_completed_confirmed_by: textoLogisticaSync(base.logistics_completed_confirmed_by, fuente.logistics_completed_confirmed_by, preferirFuente),
+        logistics_ready_at: valorLogisticaSync(base.logistics_ready_at, fuente.logistics_ready_at, preferirFuente),
+        logistics_ready_by: textoLogisticaSync(base.logistics_ready_by, fuente.logistics_ready_by, preferirFuente),
+        inventory_deducted_at: valorLogisticaSync(base.inventory_deducted_at, fuente.inventory_deducted_at, preferirFuente),
+        inventory_deducted_by: textoLogisticaSync(base.inventory_deducted_by, fuente.inventory_deducted_by, preferirFuente),
+        operational_revision_log: preferirFuente && Array.isArray(fuente.operational_revision_log)
+            ? fuente.operational_revision_log
+            : base.operational_revision_log
+    };
+}
+
+function fusionarHistorialRemoto(localItems, remoteItems) {
+    const mapa = new Map();
+
+    (remoteItems || []).forEach(item => {
+        const key = getClaveHistorialSync(item);
+        if (key) mapa.set(String(key), item);
+    });
+
+    (localItems || []).forEach(item => {
+        const key = getClaveHistorialSync(item);
+        if (!key) return;
+        const remoto = mapa.get(String(key));
+        if (!remoto || getFechaModificacionHistorialSync(item) > getFechaModificacionHistorialSync(remoto)) {
+            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: false }) : item);
+        } else if (remoto) {
+            mapa.set(String(key), fusionarDatosLogisticaSync(remoto, item, { preferirFuente: false }));
+        }
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => {
+        const fechaB = getFechaModificacionHistorialSync(b);
+        const fechaA = getFechaModificacionHistorialSync(a);
+        if (fechaA !== fechaB) return fechaB - fechaA;
+        return String(getCodigoHistorialSync(b)).localeCompare(String(getCodigoHistorialSync(a)));
+    });
+}
+
+async function cargarHistorialRemotoSupabase(options = {}) {
+    if (!window.supabaseClient || !window.currentUser?.id) return false;
+    if (window._cargandoHistorialRemotoSupabase) {
+        window._historialRemotoPendiente = true;
+        if (window._historialRemotoPromise) {
+            return window._historialRemotoPromise;
+        }
+        return Boolean(window._ultimoHistorialRemotoOk);
+    }
+
+    window._cargandoHistorialRemotoSupabase = true;
+    window._historialRemotoPromise = (async () => {
+
+    try {
+        let data = [];
+        let error = null;
+        const columnasPreferidas = 'id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, updated_at, payload';
+        const columnasBase = 'id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, payload';
+        let respuesta = await window.supabaseClient
+            .from('orders')
+            .select(columnasPreferidas)
+            .order('created_at', { ascending: false })
+            .limit(1000);
+
+        if (respuesta.error && /updated_at/i.test(String(respuesta.error.message || ''))) {
+            respuesta = await window.supabaseClient
+                .from('orders')
+                .select(columnasBase)
+                .order('created_at', { ascending: false })
+                .limit(1000);
+        }
+
+        data = respuesta.data || [];
+        error = respuesta.error;
+
+        if (error) throw error;
+
+        const comandasRemotas = [];
+        const logisticasRemotas = [];
+
+        (data || []).forEach(row => {
+            const item = normalizarComandaRemota(row);
+            if (!getCodigoHistorialSync(item)) return;
+            if (item.tipo_registro === 'logistica') {
+                logisticasRemotas.push(item);
+            } else {
+                comandasRemotas.push(item);
+            }
+        });
+
+        window._ultimoHistorialRemotoOk = {
+            at: new Date().toISOString(),
+            total: data.length,
+            comandas: comandasRemotas.length,
+            logisticas: logisticasRemotas.length,
+            codigosDuplicados: Object.entries((data || []).reduce((acc, row) => {
+                const codigo = row?.payload?.codigo || row?.codigo || '';
+                if (codigo) acc[codigo] = (acc[codigo] || 0) + 1;
+                return acc;
+            }, {})).filter(([, count]) => count > 1).slice(0, 12)
+        };
+
+        const comandasLocales = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+        const logisticasLocales = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+
+        const comandasFusionadas = fusionarHistorialRemoto(comandasLocales, comandasRemotas);
+        const logisticasFusionadas = fusionarHistorialRemoto(logisticasLocales, logisticasRemotas);
+
+        localStorage.setItem('historialComandas', JSON.stringify(comandasFusionadas));
+        localStorage.setItem('historialComandasLogistica', JSON.stringify(logisticasFusionadas));
+
+        window._ultimoHistorialRemotoOk.comandasLocales = comandasFusionadas.length;
+        window._ultimoHistorialRemotoOk.logisticasLocales = logisticasFusionadas.length;
+
+        if (options.render !== false) {
+            if (typeof cargarCalendario === 'function') cargarCalendario();
+            if (typeof renderizarComandasCocina === 'function') renderizarComandasCocina();
+            if (typeof renderizarComandasLogistica === 'function') renderizarComandasLogistica();
+        }
+        if (typeof window.refrescarAlertasOperativasGlobales === 'function') {
+            window.refrescarAlertasOperativasGlobales();
+        }
+
+        return true;
+    } catch (error) {
+        window._ultimoHistorialRemotoError = {
+            at: new Date().toISOString(),
+            message: error?.message || String(error)
+        };
+        console.warn('No se pudo cargar el historial compartido desde Supabase:', error);
+        return false;
+    } finally {
+        window._cargandoHistorialRemotoSupabase = false;
+        window._historialRemotoPromise = null;
+        if (window._historialRemotoPendiente) {
+            window._historialRemotoPendiente = false;
+            setTimeout(() => cargarHistorialRemotoSupabase(options), 120);
+        }
+    }
+    })();
+
+    return window._historialRemotoPromise;
+}
+
+window.cargarHistorialRemotoSupabase = cargarHistorialRemotoSupabase;
+
+function iniciarRealtimeHistorialSupabase() {
+    if (!window.supabaseClient || !window.currentUser?.id || window._ordersRealtimeChannel) return;
+
+    try {
+        window._ordersRealtimeChannel = window.supabaseClient
+            .channel('catercloud-orders-realtime')
+            .on('broadcast', { event: 'orders_changed' }, payload => {
+                window._ultimoBroadcastOrders = {
+                    at: new Date().toISOString(),
+                    payload: payload?.payload || null
+                };
+                if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+                    window.cargarHistorialRemotoSupabase({ render: true });
+                }
+            })
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'orders'
+            }, () => {
+                if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+                    window.cargarHistorialRemotoSupabase({ render: true });
+                }
+            })
+            .subscribe(status => {
+                window._ordersRealtimeStatus = {
+                    status,
+                    at: new Date().toISOString()
+                };
+                if (status === 'SUBSCRIBED') {
+                    window.cargarHistorialRemotoSupabase?.({ render: true });
+                }
+            });
+    } catch (error) {
+        console.warn('No se pudo activar realtime de comandas:', error);
+    }
+}
+
+window.iniciarRealtimeHistorialSupabase = iniciarRealtimeHistorialSupabase;
+
+window.verificarRealtimeCaterCloud = async function verificarRealtimeCaterCloud() {
+    const lecturaOk = await cargarHistorialRemotoSupabase({ render: true });
+    return {
+        usuario: window.currentUser?.email || null,
+        realtime: window._ordersRealtimeStatus || null,
+        ultimoBroadcast: window._ultimoBroadcastOrders || null,
+        lecturaOk,
+        ultimaLectura: window._ultimoHistorialRemotoOk || null,
+        ultimoError: window._ultimoHistorialRemotoError || null,
+        comandasLocales: JSON.parse(localStorage.getItem('historialComandas') || '[]').length,
+        logisticasLocales: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]').length
+    };
+};
+
+function iniciarRefrescoHistorialCompartido() {
+    if (window._historialCompartidoTimer) clearInterval(window._historialCompartidoTimer);
+    window._historialCompartidoTimer = setInterval(() => {
+        if (!document.hidden && window.currentUser?.id && typeof window.cargarHistorialRemotoSupabase === 'function') {
+            window.cargarHistorialRemotoSupabase({ render: true });
+        }
+    }, 3000);
+}
+
+document.addEventListener('user:changed', () => {
+    if (window._ordersRealtimeChannel && window.supabaseClient) {
+        window.supabaseClient.removeChannel(window._ordersRealtimeChannel);
+        window._ordersRealtimeChannel = null;
+    }
+    iniciarRealtimeHistorialSupabase();
+    iniciarRefrescoHistorialCompartido();
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.AuthReady) await window.AuthReady;
+    iniciarRealtimeHistorialSupabase();
+    iniciarRefrescoHistorialCompartido();
+    if (typeof window.cargarHistorialRemotoSupabase === 'function') {
+        window.cargarHistorialRemotoSupabase({ render: true });
+    }
+});
+
 /**
  * Genera un código único para la comanda
  * MODIFICADO: Año de 2 dígitos en lugar de 4
  * @returns {string} Código generado
  */
 function generarCodigoComanda() {
-    const añoCompleto = new Date().getFullYear();
-    const año = añoCompleto.toString().slice(-2); // Obtiene los 2 últimos dígitos
-    const lastCounter = localStorage.getItem('contadorComandas');
-    const lastYear = localStorage.getItem('ultimoAñoComandas');
-    
-    let contador;
-    if (lastYear === añoCompleto.toString()) {
-        contador = parseInt(lastCounter) + 1;
-    } else {
-        contador = 1;
-    }
-    
-    localStorage.setItem('contadorComandas', contador.toString());
-    localStorage.setItem('ultimoAñoComandas', añoCompleto.toString());
-    
-    return `D4${año}${contador.toString().padStart(4, '0')}`;
+    return getSiguienteCodigoLocal();
 }
 
 /**

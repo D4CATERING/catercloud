@@ -2,6 +2,50 @@
 
 // Variable global para comanda en edición
 window.comandaEditando = null;
+window._guardandoComanda = false;
+window._liberandoCodigoComanda = false;
+
+function hayCodigoComandaPendienteSinGuardar() {
+    return !!(
+        window.codigoComandaReservado &&
+        !window.comandaEditando &&
+        !window._guardandoComanda
+    );
+}
+
+async function liberarCodigoComandaPendiente(motivo = 'salida_formulario') {
+    if (!hayCodigoComandaPendienteSinGuardar()) return false;
+    if (window._liberandoCodigoComanda || typeof window.liberarCodigoComandaReservado !== 'function') return false;
+
+    const codigo = window.codigoComandaReservado;
+    window._liberandoCodigoComanda = true;
+
+    try {
+        const liberado = await window.liberarCodigoComandaReservado(codigo);
+        if (liberado) {
+            window.codigoComandaReservado = null;
+            if (typeof window.mostrarCodigoComandaAsignado === 'function') {
+                window.mostrarCodigoComandaAsignado('', 'Asignando...');
+            }
+            console.log(`Codigo de comanda ${codigo} liberado por ${motivo}`);
+        }
+        return liberado;
+    } catch (error) {
+        console.warn(`No se pudo liberar el codigo pendiente ${codigo} por ${motivo}:`, error);
+        return false;
+    } finally {
+        window._liberandoCodigoComanda = false;
+    }
+}
+
+function liberarCodigoComandaPendienteSinEsperar(motivo = 'salida_formulario') {
+    if (!hayCodigoComandaPendienteSinGuardar()) return;
+    liberarCodigoComandaPendiente(motivo);
+}
+
+window.hayCodigoComandaPendienteSinGuardar = hayCodigoComandaPendienteSinGuardar;
+window.liberarCodigoComandaPendiente = liberarCodigoComandaPendiente;
+window.liberarCodigoComandaPendienteSinEsperar = liberarCodigoComandaPendienteSinEsperar;
 
 // Inicialización cuando se carga el documento
 document.addEventListener('DOMContentLoaded', function() {
@@ -56,16 +100,84 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar validaciones en tiempo real
     configurarValidacionesEnTiempoReal();
+    configurarSeleccionAutomaticaDeCeros();
     
     // Inicializar preferencias de usuario
     if (typeof inicializarPreferencias === 'function') {
         inicializarPreferencias();
     }
+
+    window.addEventListener('pagehide', () => {
+        liberarCodigoComandaPendienteSinEsperar('pagehide');
+    });
+
+    window.addEventListener('beforeunload', () => {
+        liberarCodigoComandaPendienteSinEsperar('beforeunload');
+    });
+
+    window.addEventListener('popstate', () => {
+        liberarCodigoComandaPendienteSinEsperar('browser_back');
+    });
     
     console.log('✅ CaterCloud inicializado correctamente');
 });
 
 // ========== VALIDACIONES EN TIEMPO REAL ==========
+
+function formatearFechaEventoConDia(fecha) {
+    if (!fecha) return '';
+    try {
+        const [year, month, day] = String(fecha).split('T')[0].split('-').map(Number);
+        if (!year || !month || !day) return fecha;
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('es-ES', {
+            weekday: 'long',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return fecha;
+    }
+}
+
+window.formatearFechaEventoConDia = formatearFechaEventoConDia;
+
+function actualizarDiaFechaEvento() {
+    const input = document.getElementById('fecha_evento');
+    const label = document.getElementById('fechaEventoDia');
+    if (!input || !label) return;
+    label.textContent = input.value ? formatearFechaEventoConDia(input.value) : '';
+}
+
+window.actualizarDiaFechaEvento = actualizarDiaFechaEvento;
+
+function configurarSeleccionAutomaticaDeCeros() {
+    if (window._seleccionAutomaticaCerosConfigurada) return;
+    window._seleccionAutomaticaCerosConfigurada = true;
+
+    const scopeSelector = [
+        '#comandaCocinaForm',
+        '#modalMenus',
+        '#logisticaForm'
+    ].join(',');
+
+    const debeSeleccionarCero = (input) => {
+        if (!input || input.type !== 'number') return false;
+        if (!input.closest(scopeSelector)) return false;
+        const valor = String(input.value || '').replace(',', '.').trim();
+        return valor !== '' && Number(valor) === 0;
+    };
+
+    const seleccionarSiEsCero = (event) => {
+        const input = event.target;
+        if (!debeSeleccionarCero(input)) return;
+        setTimeout(() => input.select(), 0);
+    };
+
+    document.addEventListener('focusin', seleccionarSiEsCero);
+    document.addEventListener('click', seleccionarSiEsCero);
+}
 
 function configurarValidacionesEnTiempoReal() {
     // Validar empresa (mínimo 2 caracteres)
@@ -92,12 +204,7 @@ function configurarValidacionesEnTiempoReal() {
         paxInput.addEventListener('blur', validarPax);
         paxInput.addEventListener('input', function() {
             limpiarErrorCampo(this);
-            if (typeof actualizarCantidades === 'function') {
-                actualizarCantidades();
-            }
-            if (typeof window.actualizarCantidadesMaterialIncluido === 'function') {
-                window.actualizarCantidadesMaterialIncluido('materialLogisticaInline');
-            }
+            if (typeof window.recalcularCantidadesPorPax === 'function') window.recalcularCantidadesPorPax();
         });
     }
     
@@ -105,6 +212,9 @@ function configurarValidacionesEnTiempoReal() {
     const fechaEventoInput = document.getElementById('fecha_evento');
     if (fechaEventoInput) {
         fechaEventoInput.addEventListener('change', validarFechaEvento);
+        fechaEventoInput.addEventListener('change', actualizarDiaFechaEvento);
+        fechaEventoInput.addEventListener('input', actualizarDiaFechaEvento);
+        actualizarDiaFechaEvento();
     }
     
     // Validar hora de salida (formato correcto)
@@ -153,8 +263,9 @@ function toggleLogisticaInline(categoriaId) {
 function limpiarCamposLogisticaInline() {
     const ids = [
         'log_inline_hora_entrega', 'log_inline_hora_evento',
+        'log_inline_fecha_recogida', 'log_inline_hora_recogida',
         'log_inline_nombre_contacto', 'log_inline_telefono_contacto',
-        'log_inline_montaje',
+        'log_inline_montaje', 'log_inline_duracion_evento', 'log_inline_cantidad_camareros',
         'log_inline_calle', 'log_inline_numero', 'log_inline_codigo_postal', 'log_inline_notas'
     ];
     ids.forEach(id => {
@@ -174,6 +285,8 @@ function minutosHoraLogistica(valor) {
 function componerDireccionLogistica(calle, numero) {
     return [calle, numero].map(v => (v || '').trim()).filter(Boolean).join(', ');
 }
+
+window.componerDireccionLogistica = componerDireccionLogistica;
 
 function separarDireccionLogistica(direccion) {
     const limpia = (direccion || '').trim();
@@ -232,6 +345,24 @@ function validarHorariosLogistica(prefix, horaSalidaValor) {
 /**
  * Valida los campos de logística inline (solo si la sección está visible)
  */
+function validarRecogidaOpcionalLogistica(prefix) {
+    const fecha = document.getElementById(`${prefix}_fecha_recogida`);
+    const hora = document.getElementById(`${prefix}_hora_recogida`);
+    if (!fecha || !hora) return true;
+
+    const fechaErr = document.getElementById(`${prefix}_fecha_recogida_err`);
+    const horaErr = document.getElementById(`${prefix}_hora_recogida_err`);
+    const fechaValue = fecha.value.trim();
+    const horaValue = hora.value.trim();
+    const valido = (!fechaValue && !horaValue) || (fechaValue && horaValue);
+
+    fecha.style.borderColor = valido ? '#cbd5e1' : '#dc2626';
+    hora.style.borderColor = valido ? '#cbd5e1' : '#dc2626';
+    if (fechaErr) fechaErr.textContent = !valido && !fechaValue ? 'Fecha requerida' : '';
+    if (horaErr) horaErr.textContent = !valido && !horaValue ? 'Hora requerida' : '';
+    return valido;
+}
+
 function validarLogisticaInline() {
     const seccion = document.getElementById('logisticaInlineSection');
     if (!seccion || seccion.style.display === 'none') return true;
@@ -242,6 +373,8 @@ function validarLogisticaInline() {
         { id: 'log_inline_hora_evento',        label: 'Hora del evento' },
         { id: 'log_inline_nombre_contacto',    label: 'Nombre de contacto' },
         { id: 'log_inline_telefono_contacto',  label: 'Teléfono de contacto' },
+        { id: 'log_inline_duracion_evento',    label: 'Duración evento' },
+        { id: 'log_inline_cantidad_camareros', label: 'Cantidad camareros' },
         { id: 'log_inline_calle',              label: 'Calle' },
         { id: 'log_inline_numero',             label: 'Número / portal' },
         { id: 'log_inline_codigo_postal',      label: 'Código postal' }
@@ -274,6 +407,8 @@ function validarLogisticaInline() {
         valido = false;
     }
 
+    if (!validarRecogidaOpcionalLogistica('log_inline')) valido = false;
+
     return valido;
 }
 
@@ -288,9 +423,13 @@ function obtenerDatosLogisticaInline() {
     return {
         hora_entrega:      document.getElementById('log_inline_hora_entrega')?.value || '',
         hora_evento:       document.getElementById('log_inline_hora_evento')?.value || '',
+        fecha_recogida:    document.getElementById('log_inline_fecha_recogida')?.value || '',
+        hora_recogida:     document.getElementById('log_inline_hora_recogida')?.value || '',
         nombre_contacto:   document.getElementById('log_inline_nombre_contacto')?.value.trim() || '',
         telefono_contacto: document.getElementById('log_inline_telefono_contacto')?.value.trim() || '',
         montaje:           document.getElementById('log_inline_montaje')?.value.trim() || '',
+        duracion_evento:   document.getElementById('log_inline_duracion_evento')?.value.trim() || '',
+        cantidad_camareros: document.getElementById('log_inline_cantidad_camareros')?.value.trim() || '',
         calle,
         numero,
         direccion:         componerDireccionLogistica(calle, numero),
@@ -303,15 +442,20 @@ function obtenerDatosLogisticaInline() {
 // ========== FUNCIONES DE VALIDACIÓN INDIVIDUALES ==========
 
 const INTOLERANCIAS_CONFIG = [
-    { id: 'int_gluten', qty: 'int_gluten_pax', nombre: 'Sin gluten' },
-    { id: 'int_lactosa', qty: 'int_lactosa_pax', nombre: 'Sin lactosa' },
-    { id: 'int_frutos_secos', qty: 'int_frutos_secos_pax', nombre: 'Sin frutos secos' },
-    { id: 'int_huevo', qty: 'int_huevo_pax', nombre: 'Sin huevo' },
-    { id: 'int_marisco', qty: 'int_marisco_pax', nombre: 'Sin marisco' },
-    { id: 'int_vegetariano', qty: 'int_vegetariano_pax', nombre: 'Vegetariano' },
-    { id: 'int_vegano', qty: 'int_vegano_pax', nombre: 'Vegano' },
-    { id: 'int_otro', qty: 'int_otro_pax', nombre: 'Otro' }
+    { id: 'int_gluten', qty: 'int_gluten_pax', nombre: 'FOODBOX Sin gluten' },
+    { id: 'int_lactosa', qty: 'int_lactosa_pax', nombre: 'FOODBOX Sin lactosa' },
+    { id: 'int_frutos_secos', qty: 'int_frutos_secos_pax', nombre: 'FOODBOX Sin frutos secos' },
+    { id: 'int_huevo', qty: 'int_huevo_pax', nombre: 'FOODBOX Sin huevo' },
+    { id: 'int_marisco', qty: 'int_marisco_pax', nombre: 'FOODBOX Sin marisco' },
+    { id: 'int_vegetariano', qty: 'int_vegetariano_pax', nombre: 'FOODBOX Vegetariano' },
+    { id: 'int_vegano', qty: 'int_vegano_pax', nombre: 'FOODBOX Vegano' },
+    { id: 'int_otro', qty: 'int_otro_pax', nombre: 'FOODBOX Otro' }
 ];
+
+function normalizarNombreIntolerancia(valor) {
+    const texto = String(valor || '').trim();
+    return texto.replace(/^foodbox\s+/i, '').toLowerCase();
+}
 
 function configurarIntolerancias() {
     INTOLERANCIAS_CONFIG.forEach(({ id, qty }) => {
@@ -353,18 +497,450 @@ function obtenerDatosIntolerancias() {
     };
 }
 
+function esReferenciaIntoleranciaCocina(ref) {
+    const texto = String(ref?.nombre || ref?.id || '').toLowerCase();
+    return /^int_/.test(texto)
+        || /foodbox\s+(sin gluten|sin lactosa|sin frutos secos|sin huevo|sin marisco|vegetariano|vegano|otro)/i.test(texto)
+        || /^sin\s+(gluten|lactosa|frutos secos|huevo|marisco)$/i.test(texto)
+        || /^(vegetariano|vegano)$/i.test(texto);
+}
+
+function limpiarIntoleranciasDeReferencias(refs = []) {
+    return (Array.isArray(refs) ? refs : []).filter(ref => !esReferenciaIntoleranciaCocina(ref));
+}
+
+function limpiarIntoleranciasDeMenuComanda(menu) {
+    if (!menu?.referencias) return menu;
+    menu.referencias.saladas = limpiarIntoleranciasDeReferencias(menu.referencias.saladas || []);
+    menu.referencias.postres = limpiarIntoleranciasDeReferencias(menu.referencias.postres || []);
+    return menu;
+}
+
+function getReferenciasExtrasActuales() {
+    return Array.isArray(window.referenciasExtras) ? window.referenciasExtras : [];
+}
+
 function rellenarIntolerancias(datos = {}) {
     const items = Array.isArray(datos.items) ? datos.items : [];
     INTOLERANCIAS_CONFIG.forEach(({ id, qty, nombre }) => {
         const check = document.getElementById(id);
         const cantidad = document.getElementById(qty);
-        const item = items.find(i => i.nombre === nombre);
+        const item = items.find(i => normalizarNombreIntolerancia(i.nombre) === normalizarNombreIntolerancia(nombre));
         if (check) check.checked = !!item;
         if (cantidad) cantidad.value = item?.pax || '';
     });
 
     const notas = document.getElementById('intolerancias_notas');
     if (notas) notas.value = datos.notas || '';
+}
+
+function normalizarClaveOperacion(valor) {
+    return String(valor || '').trim().toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+}
+
+function normalizarValorRevision(valor) {
+    if (valor === null || valor === undefined) return '';
+    if (typeof valor === 'number') return Number.isFinite(valor) ? String(valor) : '';
+    if (typeof valor === 'boolean') return valor ? 'si' : 'no';
+    return String(valor).trim();
+}
+
+function simplificarMenuRevision(menu = {}) {
+    return {
+        nombre: normalizarValorRevision(menu.nombre || menu.menu_nombre || menu.menu_principal?.nombre),
+        pax: Number(menu.pax || menu.pax_adicional || 0) || 0,
+        referencias_desayuno: menu.referencias_desayuno || null,
+        referencias: menu.referencias || null,
+        bandejas: menu.bandejas || null,
+        foodbox_lunch: menu.foodbox_lunch || null,
+        tipo_menaje: menu.tipo_menaje || null
+    };
+}
+
+function simplificarMaterialRevision(material = {}) {
+    const salida = {};
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        salida[tipo] = (material?.[tipo] || []).map(item => ({
+            nombre: normalizarValorRevision(item.nombre),
+            cantidad: Number(item.cantidad || 0) || 0,
+            unidad: normalizarValorRevision(item.unidad || item.unidad_comanda),
+            subitems: (item.subitems_selected || []).map(sub => ({
+                nombre: normalizarValorRevision(sub.nombre),
+                cantidad: Number(sub.cantidad || 0) || 0,
+                unidad: normalizarValorRevision(sub.unidad || sub.unidad_comanda)
+            }))
+        }));
+    });
+    return salida;
+}
+
+function crearResumenRevisionComanda(comanda = {}) {
+    return {
+        empresa: normalizarValorRevision(comanda.empresa || comanda.company_name),
+        responsable: normalizarValorRevision(comanda.responsable),
+        pax: Number(comanda.pax || comanda.pax_total || 0) || 0,
+        fecha_evento: normalizarValorRevision(comanda.fecha_evento),
+        hora_salida: normalizarValorRevision(comanda.hora_salida),
+        categoria: normalizarValorRevision(comanda.categoria_id || comanda.categoria || comanda.menu_categoria_nombre),
+        menu_principal: simplificarMenuRevision(comanda.menu_principal || {}),
+        menus_adicionales: (comanda.menus_adicionales || []).map(simplificarMenuRevision),
+        alergias: {
+            notas: normalizarValorRevision(comanda.alergias?.notas),
+            intolerancias: comanda.alergias?.intolerancias || null
+        },
+        logistica: {
+            nombre_contacto: normalizarValorRevision(comanda.logistica_inline?.nombre_contacto || comanda.logistica?.nombre_contacto),
+            telefono_contacto: normalizarValorRevision(comanda.logistica_inline?.telefono_contacto || comanda.logistica?.telefono_contacto),
+            direccion: normalizarValorRevision(comanda.logistica_inline?.direccion || comanda.logistica?.direccion),
+            codigo_postal: normalizarValorRevision(comanda.logistica_inline?.codigo_postal || comanda.logistica?.codigo_postal),
+            montaje: normalizarValorRevision(comanda.logistica_inline?.montaje || comanda.logistica?.montaje),
+            duracion_evento: normalizarValorRevision(comanda.logistica_inline?.duracion_evento || comanda.logistica?.duracion_evento),
+            cantidad_camareros: normalizarValorRevision(comanda.logistica_inline?.cantidad_camareros || comanda.logistica?.cantidad_camareros),
+            hora_entrega: normalizarValorRevision(comanda.logistica_inline?.hora_entrega || comanda.logistica?.hora_entrega),
+            hora_evento: normalizarValorRevision(comanda.logistica_inline?.hora_evento || comanda.logistica?.hora_evento),
+            notas_logistica: normalizarValorRevision(comanda.logistica_inline?.notas_logistica || comanda.logistica?.notas_logistica)
+        },
+        material_logistica: simplificarMaterialRevision(comanda.material_logistica || {})
+    };
+}
+
+function crearDetalleRevisionComanda(anterior, nueva) {
+    const antes = crearResumenRevisionComanda(anterior);
+    const despues = crearResumenRevisionComanda(nueva);
+    const cambios = [];
+    const cambiosDetalle = [];
+
+    const comparar = (label, a, b) => {
+        if (JSON.stringify(a) !== JSON.stringify(b)) cambios.push(label);
+    };
+    const compararCampo = (grupo, label, a, b) => {
+        const antesValor = normalizarValorRevision(a);
+        const despuesValor = normalizarValorRevision(b);
+        if (antesValor === despuesValor) return;
+        if (!cambios.includes(grupo)) cambios.push(grupo);
+        cambiosDetalle.push({
+            grupo,
+            campo: label,
+            antes: antesValor || 'Vacio',
+            despues: despuesValor || 'Vacio'
+        });
+    };
+
+    compararCampo('datos generales', 'Empresa', antes.empresa, despues.empresa);
+    compararCampo('datos generales', 'Responsable', antes.responsable, despues.responsable);
+    compararCampo('datos generales', 'Fecha del evento', antes.fecha_evento, despues.fecha_evento);
+    compararCampo('datos generales', 'Hora de salida', antes.hora_salida, despues.hora_salida);
+    compararCampo('datos generales', 'Categoria', antes.categoria, despues.categoria);
+    compararCampo('pax', 'Pax', antes.pax, despues.pax);
+
+    comparar('menus y cantidades de cocina', {
+        menu_principal: antes.menu_principal,
+        menus_adicionales: antes.menus_adicionales
+    }, {
+        menu_principal: despues.menu_principal,
+        menus_adicionales: despues.menus_adicionales
+    });
+    comparar('intolerancias/notas de cocina', antes.alergias, despues.alergias);
+    compararCampo('datos de entrega', 'Contacto', antes.logistica.nombre_contacto, despues.logistica.nombre_contacto);
+    compararCampo('datos de entrega', 'Telefono', antes.logistica.telefono_contacto, despues.logistica.telefono_contacto);
+    compararCampo('datos de entrega', 'Direccion', antes.logistica.direccion, despues.logistica.direccion);
+    compararCampo('datos de entrega', 'Codigo postal', antes.logistica.codigo_postal, despues.logistica.codigo_postal);
+    compararCampo('datos de entrega', 'Montaje', antes.logistica.montaje, despues.logistica.montaje);
+    compararCampo('datos de entrega', 'Hora de entrega', antes.logistica.hora_entrega, despues.logistica.hora_entrega);
+    compararCampo('datos de entrega', 'Hora del evento', antes.logistica.hora_evento, despues.logistica.hora_evento);
+    compararCampo('datos de entrega', 'Notas logistica', antes.logistica.notas_logistica, despues.logistica.notas_logistica);
+    comparar('material de logistica', antes.material_logistica, despues.material_logistica);
+
+    return {
+        cambios,
+        cambiosDetalle,
+        paxAnterior: antes.pax,
+        paxNuevo: despues.pax
+    };
+}
+
+function crearRegistroRevisionOperativa(anterior, nueva) {
+    const detalle = crearDetalleRevisionComanda(anterior, nueva);
+    if (!detalle.cambios.length) return null;
+
+    const paxCambio = detalle.paxAnterior !== detalle.paxNuevo
+        ? ` Pax ${detalle.paxAnterior} -> ${detalle.paxNuevo}.`
+        : '';
+
+    return {
+        at: new Date().toISOString(),
+        by: window.currentUser?.user_metadata?.full_name || window.currentUser?.email || 'Usuario local',
+        type: 'order_changed',
+        changes: detalle.cambios,
+        changes_detail: detalle.cambiosDetalle,
+        pax_before: detalle.paxAnterior,
+        pax_after: detalle.paxNuevo,
+        message: `Comanda editada: ${detalle.cambiosDetalle.length ? detalle.cambiosDetalle.map(c => `${c.campo}: ${c.antes} -> ${c.despues}`).join(', ') : detalle.cambios.join(', ')}.${paxCambio}`.trim()
+    };
+}
+
+function aplicarRevisionCocinaEnEdicion(anterior, nueva, revision) {
+    const tieneAvance = anterior?.kitchen_items_state && Object.values(anterior.kitchen_items_state).some(Boolean);
+
+    nueva.kitchen_status = anterior.kitchen_status || anterior.estado_cocina || nueva.kitchen_status || 'sin_producir';
+    nueva.estado_cocina = anterior.estado_cocina || nueva.kitchen_status;
+    nueva.kitchen_assigned_to = anterior.kitchen_assigned_to || '';
+    nueva.kitchen_items_state = { ...(anterior.kitchen_items_state || {}) };
+    nueva.kitchen_action_log = [...(anterior.kitchen_action_log || [])];
+    nueva.kitchen_ready_at = anterior.kitchen_ready_at || null;
+    nueva.kitchen_ready_by = anterior.kitchen_ready_by || '';
+
+    if (revision) {
+        const itemsAntes = typeof getProduccionCocinaDetalle === 'function'
+            ? getProduccionCocinaDetalle(anterior).flatMap(grupo => grupo.items)
+            : [];
+        const itemsDespues = typeof getProduccionCocinaDetalle === 'function'
+            ? getProduccionCocinaDetalle(nueva).flatMap(grupo => grupo.items)
+            : [];
+        const mapaAntes = new Map(itemsAntes.map(item => [item.key, item]));
+        nueva.kitchen_items_updates = { ...(anterior.kitchen_items_updates || {}) };
+        itemsDespues.forEach(item => {
+            const itemAnterior = mapaAntes.get(item.key);
+            if (!itemAnterior) {
+                nueva.kitchen_items_updates[item.key] = {
+                    tipo: 'nuevo',
+                    nombre: item.nombre,
+                    cantidad_after: item.cantidad,
+                    unidad: item.unidad || 'uds'
+                };
+                return;
+            }
+            if (Number(itemAnterior.cantidad || 0) !== Number(item.cantidad || 0) || (itemAnterior.unidad || '') !== (item.unidad || '')) {
+                nueva.kitchen_items_updates[item.key] = {
+                    tipo: 'cantidad',
+                    nombre: item.nombre,
+                    cantidad_before: itemAnterior.cantidad,
+                    cantidad_after: item.cantidad,
+                    unidad: item.unidad || itemAnterior.unidad || 'uds'
+                };
+            }
+        });
+
+        nueva.kitchen_action_log.push({
+            at: revision.at,
+            by: revision.by,
+            action: 'Comanda editada',
+            detail: revision.message
+        });
+        nueva.kitchen_revision_notice = revision;
+        nueva.kitchen_completed_confirmed_at = null;
+        nueva.kitchen_completed_confirmed_by = '';
+    } else {
+        nueva.kitchen_completed_confirmed_at = anterior.kitchen_completed_confirmed_at || null;
+        nueva.kitchen_completed_confirmed_by = anterior.kitchen_completed_confirmed_by || '';
+    }
+
+    if (typeof getProducidosCocina === 'function') {
+        nueva.kitchen_produced_items = getProducidosCocina(nueva);
+    } else {
+        nueva.kitchen_produced_items = anterior.kitchen_produced_items || 0;
+    }
+}
+
+function getClaveMaterialOperacion(tipo, item) {
+    return [
+        tipo,
+        item?.item_id || item?.material_id || item?.id || '',
+        item?.nombre || '',
+        item?.unidad || item?.unidad_comanda || ''
+    ].map(normalizarClaveOperacion).filter(Boolean).join(':');
+}
+
+function mapearMaterialPreparado(material) {
+    const mapa = new Map();
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        (material?.[tipo] || []).forEach(item => {
+            const key = getClaveMaterialOperacion(tipo, item);
+            if (key) mapa.set(key, item);
+            (item.subitems_selected || []).forEach(subitem => {
+                const subKey = getClaveMaterialOperacion(`${tipo}:sub`, subitem);
+                if (subKey) mapa.set(subKey, subitem);
+            });
+        });
+    });
+    return mapa;
+}
+
+function aplicarRevisionLogisticaEnEdicion(anterior, nueva, revision) {
+    const materialAnterior = anterior?.material_logistica || {};
+    const materialNuevo = nueva?.material_logistica || {};
+    const mapaAnterior = mapearMaterialPreparado(materialAnterior);
+    const habiaAvance = Array.from(mapaAnterior.values()).some(item => item.preparado);
+
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        (materialNuevo?.[tipo] || []).forEach(item => {
+            const anteriorItem = mapaAnterior.get(getClaveMaterialOperacion(tipo, item));
+            if (!anteriorItem) {
+                item.preparado = false;
+                item.material_nuevo = true;
+                item.cantidad_actualizada = false;
+                delete item.cantidad_anterior;
+            }
+            if (anteriorItem?.preparado) item.preparado = true;
+            if (anteriorItem && Number(anteriorItem.cantidad || 0) !== Number(item.cantidad || 0)) {
+                item.cantidad_anterior = anteriorItem.cantidad;
+                item.cantidad_actualizada = true;
+                item.material_nuevo = false;
+            }
+            (item.subitems_selected || []).forEach(subitem => {
+                const anteriorSubitem = mapaAnterior.get(getClaveMaterialOperacion(`${tipo}:sub`, subitem));
+                if (!anteriorSubitem) {
+                    subitem.preparado = false;
+                    subitem.material_nuevo = true;
+                    subitem.cantidad_actualizada = false;
+                    delete subitem.cantidad_anterior;
+                }
+                if (anteriorSubitem?.preparado) subitem.preparado = true;
+                if (anteriorSubitem && Number(anteriorSubitem.cantidad || 0) !== Number(subitem.cantidad || 0)) {
+                    subitem.cantidad_anterior = anteriorSubitem.cantidad;
+                    subitem.cantidad_actualizada = true;
+                    subitem.material_nuevo = false;
+                }
+            });
+        });
+    });
+
+    nueva.logistics_status = anterior.logistics_status || anterior.estado_logistica || nueva.logistics_status || 'sin_preparar';
+    nueva.estado_logistica = anterior.estado_logistica || nueva.logistics_status;
+    nueva.logistics_assigned_to = anterior.logistics_assigned_to || '';
+    nueva.logistics_action_log = [...(anterior.logistics_action_log || [])];
+    nueva.logistics_ready_at = anterior.logistics_ready_at || null;
+    nueva.logistics_ready_by = anterior.logistics_ready_by || '';
+    nueva.inventory_deducted_at = anterior.inventory_deducted_at || null;
+    nueva.inventory_deducted_by = anterior.inventory_deducted_by || '';
+
+    if (revision) {
+        nueva.logistics_action_log.push({
+            at: revision.at,
+            by: revision.by,
+            action: 'Comanda editada',
+            detail: revision.message
+        });
+        nueva.logistics_revision_notice = revision;
+        nueva.logistics_completed_confirmed_at = null;
+        nueva.logistics_completed_confirmed_by = '';
+    } else {
+        nueva.logistics_completed_confirmed_at = anterior.logistics_completed_confirmed_at || null;
+        nueva.logistics_completed_confirmed_by = anterior.logistics_completed_confirmed_by || '';
+    }
+
+    const materiales = typeof getMaterialLogisticaPlano === 'function'
+        ? getMaterialLogisticaPlano(materialNuevo)
+        : ['bebidas', 'menaje', 'extras'].flatMap(tipo => materialNuevo?.[tipo] || []);
+    nueva.logistics_prepared_items = materiales.filter(item => item.preparado).length;
+}
+
+function conservarAvanceOperativoEnEdicion(anterior, nueva) {
+    if (!anterior || !nueva) return nueva;
+    const revision = crearRegistroRevisionOperativa(anterior, nueva);
+    nueva.operational_revision_log = [...(anterior.operational_revision_log || [])];
+    if (revision) nueva.operational_revision_log.push(revision);
+    aplicarRevisionCocinaEnEdicion(anterior, nueva, revision);
+    aplicarRevisionLogisticaEnEdicion(anterior, nueva, revision);
+    return nueva;
+}
+
+function clonarDatoEdicion(valor) {
+    try {
+        return JSON.parse(JSON.stringify(valor || null));
+    } catch (error) {
+        return valor;
+    }
+}
+
+function escalarCantidadLogisticaPorPax(cantidad, paxAnterior, paxNuevo) {
+    const base = Number(cantidad || 0);
+    const antes = Number(paxAnterior || 0);
+    const despues = Number(paxNuevo || 0);
+    if (!base || !antes || !despues || antes === despues) return base;
+    const escalado = base * (despues / antes);
+    return Math.round(escalado * 100) / 100;
+}
+
+function ajustarMaterialLogisticaPorPax(material = {}, paxAnterior = 0, paxNuevo = 0) {
+    const copia = clonarDatoEdicion(material) || {};
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        copia[tipo] = (copia[tipo] || []).map(item => {
+            const actualizado = { ...item };
+            actualizado.cantidad = escalarCantidadLogisticaPorPax(actualizado.cantidad, paxAnterior, paxNuevo);
+            actualizado.cantidad_actualizada = Number(paxAnterior || 0) !== Number(paxNuevo || 0);
+            if (actualizado.cantidad_actualizada) actualizado.cantidad_anterior = Number(item.cantidad || 0);
+            actualizado.subitems_selected = (actualizado.subitems_selected || []).map(subitem => ({
+                ...subitem,
+                cantidad_anterior: Number(paxAnterior || 0) !== Number(paxNuevo || 0) ? Number(subitem.cantidad || 0) : subitem.cantidad_anterior,
+                cantidad_actualizada: Number(paxAnterior || 0) !== Number(paxNuevo || 0),
+                cantidad: escalarCantidadLogisticaPorPax(subitem.cantidad, paxAnterior, paxNuevo)
+            }));
+            return actualizado;
+        });
+    });
+    return copia;
+}
+
+function conservarLogisticaSeparadaEnEdicionServicios(anterior, nueva) {
+    const paxAnterior = Number(anterior?.pax || anterior?.pax_total || 0);
+    const paxNuevo = Number(nueva?.pax || nueva?.pax_total || 0);
+    const materialAnterior = anterior?.material_logistica || {};
+    const materialActualizado = ajustarMaterialLogisticaPorPax(materialAnterior, paxAnterior, paxNuevo);
+
+    nueva.logistica = clonarDatoEdicion(anterior?.logistica || anterior?.logistica_inline || {}) || {};
+    nueva.logistica_inline = clonarDatoEdicion(anterior?.logistica_inline || anterior?.logistica || {}) || {};
+    nueva.material_logistica = materialActualizado;
+    nueva.tiene_comanda_logistica = anterior?.tiene_comanda_logistica || anterior?.logistica_creada || Boolean(anterior?.documentos?.logistica);
+    nueva.logistica_creada = anterior?.logistica_creada || nueva.tiene_comanda_logistica;
+    nueva.documentos = {
+        ...(nueva.documentos || {}),
+        ...(anterior?.documentos || {})
+    };
+    return nueva;
+}
+
+async function sincronizarLogisticaSeparadaTrasEdicionCocina(anterior, nueva) {
+    if (!anterior || !nueva || !nueva.tiene_comanda_logistica) return;
+    if (typeof window.sincronizarComandaLogisticaEnSupabase !== 'function') return;
+
+    const datosLogistica = {
+        tipo_registro: 'logistica',
+        codigo_original: anterior?.documentos?.logistica?.codigo || anterior.codigo || '',
+        codigo_cocina: nueva.codigo || anterior.codigo || '',
+        orden_id: nueva.orden_id || nueva.supabase_order_id || anterior.orden_id || anterior.supabase_order_id || null,
+        empresa: nueva.empresa || anterior.empresa || '',
+        responsable: nueva.responsable || anterior.responsable || '',
+        pax: Number(nueva.pax || nueva.pax_total || 0),
+        fecha_evento: nueva.fecha_evento || anterior.fecha_evento || '',
+        hora_salida: nueva.hora_salida || anterior.hora_salida || '',
+        menu_principal: nueva.menu_principal || null,
+        menus_adicionales: nueva.menus_adicionales || [],
+        menu_nombre: nueva.menu_principal?.nombre || anterior.menu_principal?.nombre || '',
+        logistica: nueva.logistica || nueva.logistica_inline || {},
+        material_logistica: nueva.material_logistica || {},
+        logistics_status: anterior.logistics_status || anterior.estado_logistica || 'sin_preparar',
+        logistics_assigned_to: anterior.logistics_assigned_to || '',
+        logistics_prepared_items: anterior.logistics_prepared_items || 0,
+        estado: anterior.logistics_status || anterior.estado_logistica || 'sin_preparar',
+        fecha_creacion: anterior.fecha_creacion || new Date().toISOString()
+    };
+
+    try {
+        await window.sincronizarComandaLogisticaEnSupabase(datosLogistica.codigo_cocina, datosLogistica);
+        if (typeof guardarComandaLogisticaEnHistorial === 'function') {
+            guardarComandaLogisticaEnHistorial(datosLogistica);
+        }
+    } catch (error) {
+        console.warn('No se pudo actualizar automaticamente la comanda de logistica vinculada:', error);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje('La cocina se guardo, pero no se pudo actualizar automaticamente la logistica vinculada.', 'warning');
+        }
+    }
 }
 
 function validarEmpresa() {
@@ -557,6 +1133,37 @@ function limpiarErrorCampo(input) {
 
 // ========== MANEJO DEL ENVÍO DEL FORMULARIO ==========
 
+function esMenuServicioParaLogistica(menu) {
+    if (!menu) return false;
+    const categoria = Number(menu.categoriaOriginalId || menu.categoriaId || menu._cat || menu.category_id || 0);
+    if (categoria === 3) return true;
+    if ([1, 2, 4, 5, 6].includes(categoria)) return false;
+    if (menu.referencias_desayuno || menu.foodbox_lunch || menu.bandejas || menu.referencias) return false;
+    if ((menu.servicio_categoria || menu.service_category) && !categoria) return true;
+
+    const texto = [
+        menu.categoria,
+        menu.categoria_nombre,
+        menu.menu_categoria_nombre,
+        menu.category_name
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    return texto.includes('servicio') || texto.includes('catering evento');
+}
+
+function esComandaServicioParaLogistica({ categoriaId, catPrincipal, menuPrincipal, menusAcumulados }) {
+    const categorias = [
+        Number(categoriaId || 0),
+        Number(catPrincipal || 0),
+        Number(menuPrincipal?.categoriaOriginalId || menuPrincipal?.categoriaId || menuPrincipal?._cat || 0),
+        ...(menusAcumulados || []).map(menu => Number(menu?.categoriaOriginalId || menu?.categoriaId || menu?._cat || 0))
+    ].filter(Boolean);
+
+    if (categorias.includes(3)) return true;
+    if (window.serviciosMode && !categorias.length) return true;
+    return [menuPrincipal, ...(menusAcumulados || [])].some(esMenuServicioParaLogistica);
+}
+
 /**
  * Maneja el envío del formulario de comanda
  * MODIFICADO: Incluye referencias de desayuno
@@ -564,7 +1171,11 @@ function limpiarErrorCampo(input) {
 async function manejarEnvioFormulario(e) {
     e.preventDefault();
 
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede guardar comandas.')) {
+    if (window.AppPermissions && window.comandaEditando && !AppPermissions.requireWrite('Tu usuario no tiene permiso para editar comandas.')) {
+        return;
+    }
+
+    if (window.AppPermissions && !window.comandaEditando && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear comandas.')) {
         return;
     }
     
@@ -594,11 +1205,12 @@ async function manejarEnvioFormulario(e) {
     
     // Validaciones específicas por categoría
     if (!hayMenusAgregados && !editandoConMenusGuardados && (categoriaId == 2 || categoriaId == 3) && window.menuSeleccionado) { // FOODBOX/COMIDA o SERVICIOS
-        const seleccionadasSaladas = [
-            ...(window.referenciasSeleccionadas?.saladas || []),
-            ...(window.referenciasSeleccionadas?.gris || []),
-            ...(window.referenciasSeleccionadas?.rojo || [])
-        ].length;
+        const seleccionadasSaladas = typeof window.contarReferenciasSeleccionadas === 'function'
+            ? window.contarReferenciasSeleccionadas('saladas')
+            : [
+                ...(window.referenciasSeleccionadas?.gris || []),
+                ...(window.referenciasSeleccionadas?.rojo || [])
+            ].length;
         
         if (seleccionadasSaladas < window.menuSeleccionado.items_salados_min) {
             mostrarMensaje(`❌ Debes seleccionar al menos ${window.menuSeleccionado.items_salados_min} referencias saladas`, 'error');
@@ -624,8 +1236,27 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
     submitBtn.disabled = true;
     
     // ── Recoger menús acumulados ──────────────────────────────────────────────
-    const _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+    let _menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
         ? window.obtenerMenusAcumulados() : [];
+    if (window.comandaEditando && Array.isArray(window._menusEliminadosEdicion) && window._menusEliminadosEdicion.length) {
+        const coincideMenuEliminado = (menu, eliminado) => {
+            const uidMenu = String(menu?._edicion_uid || '');
+            return !!eliminado.uid && uidMenu === String(eliminado.uid || '');
+        };
+        _menusAcumulados = _menusAcumulados.filter(menu =>
+            !window._menusEliminadosEdicion.some(eliminado => coincideMenuEliminado(menu, eliminado))
+        );
+        if (window.MenusAdicionalesState?.menusAdicionales) {
+            window.MenusAdicionalesState.menusAdicionales = _menusAcumulados;
+            window.menusAdicionales = _menusAcumulados;
+        }
+    }
+    if (window.comandaEditando && !_menusAcumulados.length) {
+        mostrarMensaje('❌ Añade al menos un menú antes de guardar la edición.', 'error');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+        return;
+    }
 
     if (window.comandaEditando && window.referenciasDesayuno && _menusAcumulados.length) {
         const _categoriaActual = Number(window.menuSeleccionado?._cat || window.menuSeleccionado?.categoriaId || document.getElementById('categoria')?.value || 0);
@@ -687,9 +1318,9 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         window._materialAcumulado.menaje?.length ||
         window._materialAcumulado.extras?.length
     );
-    const materialParaGuardar = window.comandaEditando && materialSeleccionadoTieneItems
-        ? materialSeleccionadoActual
-        : (materialAcumuladoTieneItems ? window._materialAcumulado : materialSeleccionadoActual);
+    const materialParaGuardar = _menusAcumulados.length && materialAcumuladoTieneItems
+        ? window._materialAcumulado
+        : (materialSeleccionadoTieneItems ? materialSeleccionadoActual : (window._materialAcumulado || { bebidas: [], menaje: [], extras: [] }));
 
     const comandaData = {
         empresa:      document.getElementById('empresa').value,
@@ -715,12 +1346,13 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         ...([2, 3].includes(_catPrincipal) ? {
             multiplicadores: _menuPrincipal.multiplicadores || window.multiplicadores || { saladas: 1, postres: 1 },
             referencias:     _menuPrincipal.referencias     || {
-                saladas: [
+                saladas: limpiarIntoleranciasDeReferencias([
                     ...(window.referenciasSeleccionadas?.gris  || []),
                     ...(window.referenciasSeleccionadas?.rojo  || [])
-                ],
-                postres: window.referenciasSeleccionadas?.postres || []
-            }
+                ]),
+                postres: limpiarIntoleranciasDeReferencias(window.referenciasSeleccionadas?.postres || [])
+            },
+            referencias_extras: _menuPrincipal.referencias_extras || getReferenciasExtrasActuales()
         } : { multiplicadores: null, referencias: null }),
 
         // DIY Desayunos (cat 5)
@@ -764,30 +1396,92 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         estado: 'creada',
         version: '1.0'
     };
+    if (_catPrincipal !== 1) comandaData.referencias_desayuno = null;
+    if (_catPrincipal !== 2 && _catPrincipal !== 3) {
+        comandaData.referencias = null;
+        comandaData.referencias_extras = [];
+        comandaData.multiplicadores = null;
+    }
+    if (_catPrincipal !== 4) comandaData.foodbox_lunch = null;
+    if (_catPrincipal !== 5 && _catPrincipal !== 6) comandaData.bandejas = null;
     comandaData.logistica_inline = comandaData.logistica;
+    if (window.solicitudConvirtiendo) {
+        comandaData.solicitud_origen = {
+            codigo: window.solicitudConvirtiendo.codigo_solicitud || window.solicitudConvirtiendo.codigo || '',
+            estado: window.solicitudConvirtiendo.estado || '',
+            orden_id: window.solicitudConvirtiendo.orden_id || window.solicitudConvirtiendo.supabase_order_id || null,
+            supabase_order_id: window.solicitudConvirtiendo.supabase_order_id || window.solicitudConvirtiendo.orden_id || null,
+            adjuntos: window.solicitudConvirtiendo.adjuntos || [],
+            documentos: window.solicitudConvirtiendo.documentos || {},
+            fecha_creacion: window.solicitudConvirtiendo.fecha_creacion || null
+        };
+    }
+    if (comandaData.referencias) {
+        comandaData.referencias.saladas = limpiarIntoleranciasDeReferencias(comandaData.referencias.saladas || []);
+        comandaData.referencias.postres = limpiarIntoleranciasDeReferencias(comandaData.referencias.postres || []);
+    }
+    limpiarIntoleranciasDeMenuComanda(comandaData.menu_principal);
+    (comandaData.menus_adicionales || []).forEach(limpiarIntoleranciasDeMenuComanda);
     
+    window._guardandoComanda = true;
+
     try {
         let codigo;
         
         if (window.comandaEditando) {
             const codigoEditando = window.comandaEditando.codigo;
+            const editandoServiciosSeparados = esComandaServicioParaLogistica({
+                categoriaId,
+                catPrincipal: _catPrincipal,
+                menuPrincipal: _menuPrincipal,
+                menusAcumulados: _menusAcumulados
+            });
             comandaData.fecha_creacion = window.comandaEditando.fecha_creacion || comandaData.fecha_creacion;
             comandaData.creado_por_id = window.comandaEditando.creado_por_id || comandaData.creado_por_id;
             comandaData.creado_por_nombre = window.comandaEditando.creado_por_nombre || comandaData.creado_por_nombre;
             comandaData.creado_por_email = window.comandaEditando.creado_por_email || comandaData.creado_por_email;
             comandaData.adjuntos = window.comandaEditando.adjuntos || comandaData.adjuntos || [];
             comandaData.documentos = window.comandaEditando.documentos || comandaData.documentos || {};
+            comandaData.orden_id = window.comandaEditando.orden_id || window.comandaEditando.supabase_order_id || null;
+            comandaData.supabase_order_id = window.comandaEditando.supabase_order_id || window.comandaEditando.orden_id || null;
             comandaData.codigo = codigoEditando;
+            if (editandoServiciosSeparados) {
+                conservarLogisticaSeparadaEnEdicionServicios(window.comandaEditando, comandaData);
+            }
+            conservarAvanceOperativoEnEdicion(window.comandaEditando, comandaData);
 
             // Actualizar comanda existente
             const resultado = await actualizarComandaEnHistorial(codigoEditando, comandaData);
             
             if (resultado) {
+                if (editandoServiciosSeparados) {
+                    await sincronizarLogisticaSeparadaTrasEdicionCocina(window.comandaEditando, comandaData);
+                }
+
                 mostrarMensaje(`✅ Comanda ${window.comandaEditando.codigo} actualizada exitosamente`, 'success');
+
+                const abrirLogistica = editandoServiciosSeparados &&
+                    comandaData.tiene_comanda_logistica &&
+                    confirm('La comanda de cocina se actualizo. ¿Quieres modificar tambien la comanda de logistica?');
+
+                if (abrirLogistica) {
+                    window.detalleDocumentoActivo = {
+                        ...(window.detalleDocumentoActivo || {}),
+                        tipo: 'logistica',
+                        codigo: codigoEditando,
+                        codigoCocina: codigoEditando
+                    };
+                    window.comandaEditando = null;
+                    if (typeof editarComandaLogistica === 'function') {
+                        await editarComandaLogistica();
+                    }
+                    return;
+                }
                 
                 if (typeof agregarAlCalendario === 'function') {
                     agregarAlCalendario(comandaData);
                 }
+                window._menusEliminadosEdicion = [];
                 
                 // Volver al dashboard después de actualizar
                 setTimeout(() => {
@@ -929,6 +1623,10 @@ if (!comandaData.tipo_menaje) {
 
 // Crear nueva comanda
 codigo = await guardarComandaEnHistorial(comandaData);
+        window._menusEliminadosEdicion = [];
+comandaData.codigo = codigo;
+window.codigoComandaReservado = null;
+window.solicitudConvirtiendo = null;
 
 // DEBUG: Verificar el código generado
 console.log('Código generado:', codigo);
@@ -958,13 +1656,18 @@ window.ultimaComandaCocinaData = {
     pax: Number(comandaData.pax || 0),
     hora_salida: comandaData.hora_salida || '',
     fecha_evento: comandaData.fecha_evento || '',
-    notas: comandaData.alergias?.notas || ''
+    notas: comandaData.alergias?.notas || '',
+    menu_principal: comandaData.menu_principal || null,
+    menus_adicionales: comandaData.menus_adicionales || [],
+    menu_nombre: comandaData.menu_principal?.nombre || ''
 };
 
-const requiereLogisticaSeparada = _menusAcumulados.some(menu =>
-    Number(menu.categoriaOriginalId || menu.categoriaId) === 3 ||
-    Boolean(menu.servicio_categoria)
-) || Number(categoriaId) === 3 || Number(_catPrincipal) === 3;
+const requiereLogisticaSeparada = esComandaServicioParaLogistica({
+    categoriaId,
+    catPrincipal: _catPrincipal,
+    menuPrincipal: _menuPrincipal,
+    menusAcumulados: _menusAcumulados
+});
 
 if (requiereLogisticaSeparada) {
     // Cocteles/Celebraciones → página separada de logística
@@ -1008,6 +1711,7 @@ if (requiereLogisticaSeparada) {
         console.error('Error en manejarEnvioFormulario:', error);
         
     } finally {
+        window._guardandoComanda = false;
         // Restaurar botón solo si no es edición
         if (!window.comandaEditando) {
             submitBtn.innerHTML = originalText;
@@ -1140,11 +1844,15 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
     setValue('log_nombre_contacto', logisticaGuardada.nombre_contacto || document.getElementById('log_inline_nombre_contacto')?.value || '');
     setValue('log_telefono_contacto', logisticaGuardada.telefono_contacto || document.getElementById('log_inline_telefono_contacto')?.value || '');
     setValue('log_montaje', logisticaGuardada.montaje || document.getElementById('log_inline_montaje')?.value || '');
+    setValue('log_duracion_evento', logisticaGuardada.duracion_evento || '');
+    setValue('log_cantidad_camareros', logisticaGuardada.cantidad_camareros || '');
     setValue('log_calle', logisticaGuardada.calle || direccionGuardada.calle || document.getElementById('log_inline_calle')?.value || '');
     setValue('log_numero', logisticaGuardada.numero || direccionGuardada.numero || document.getElementById('log_inline_numero')?.value || '');
     setValue('log_codigo_postal', logisticaGuardada.codigo_postal || document.getElementById('log_inline_codigo_postal')?.value || '');
     setValue('log_hora_entrega', logisticaGuardada.hora_entrega || document.getElementById('log_inline_hora_entrega')?.value || '');
     setValue('log_hora_evento', logisticaGuardada.hora_evento || document.getElementById('log_inline_hora_evento')?.value || '');
+    setValue('log_fecha_recogida', logisticaGuardada.fecha_recogida || document.getElementById('log_inline_fecha_recogida')?.value || '');
+    setValue('log_hora_recogida', logisticaGuardada.hora_recogida || document.getElementById('log_inline_hora_recogida')?.value || '');
     setValue('log_page_notas', logisticaGuardada.notas_logistica || document.getElementById('log_inline_notas')?.value || '');
     if (typeof window.actualizarSelectoresContactosCliente === 'function') {
         await window.actualizarSelectoresContactosCliente(datosBase.empresa || document.getElementById('empresa')?.value || '');
@@ -1175,6 +1883,8 @@ function validarComandaLogisticaPage() {
     const requeridos = [
         { id: 'log_nombre_contacto', label: 'Nombre de contacto' },
         { id: 'log_telefono_contacto', label: 'Telefono de contacto' },
+        { id: 'log_duracion_evento', label: 'Duracion evento' },
+        { id: 'log_cantidad_camareros', label: 'Cantidad camareros' },
         { id: 'log_hora_entrega', label: 'Hora de entrega' },
         { id: 'log_hora_evento', label: 'Hora del evento' },
         { id: 'log_calle', label: 'Calle' },
@@ -1214,11 +1924,23 @@ function validarComandaLogisticaPage() {
         valido = false;
     }
 
+    if (!validarRecogidaOpcionalLogistica('log')) valido = false;
+
     return valido;
 }
 
-function guardarComandaLogistica() {
-    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para guardar comandas de logistica.')) {
+async function guardarComandaLogistica() {
+    const editandoLogisticaExistente = !!window._logisticaEditando;
+    const puedeGuardar = !window.AppPermissions ||
+        (editandoLogisticaExistente
+            ? AppPermissions.canEditLogistics()
+            : AppPermissions.canCreateServiceLogistics());
+
+    if (!puedeGuardar) {
+        const mensaje = editandoLogisticaExistente
+            ? 'Tu usuario no tiene permiso para editar comandas de logistica.'
+            : 'Tu usuario no tiene permiso para crear comandas de logistica de servicios.';
+        alert(mensaje);
         return;
     }
 
@@ -1228,7 +1950,7 @@ function guardarComandaLogistica() {
     const calle = document.getElementById('log_calle')?.value.trim() || '';
     const numero = document.getElementById('log_numero')?.value.trim() || '';
     const materialSeleccionado = typeof obtenerMaterialSeleccionado === 'function'
-        ? obtenerMaterialSeleccionado()
+        ? obtenerMaterialSeleccionado('materialLogisticaPage')
         : null;
     const estadoPrevio = window._logisticaEditando || {};
     const datosLogistica = {
@@ -1248,8 +1970,12 @@ function guardarComandaLogistica() {
             nombre_contacto: document.getElementById('log_nombre_contacto')?.value.trim() || '',
             telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',
             montaje: document.getElementById('log_montaje')?.value.trim() || '',
+            duracion_evento: document.getElementById('log_duracion_evento')?.value.trim() || '',
+            cantidad_camareros: document.getElementById('log_cantidad_camareros')?.value || '',
             hora_entrega: document.getElementById('log_hora_entrega')?.value || '',
             hora_evento: document.getElementById('log_hora_evento')?.value || '',
+            fecha_recogida: document.getElementById('log_fecha_recogida')?.value || '',
+            hora_recogida: document.getElementById('log_hora_recogida')?.value || '',
             calle,
             numero,
             direccion: componerDireccionLogistica(calle, numero),
@@ -1265,9 +1991,16 @@ function guardarComandaLogistica() {
     };
 
     try {
-        const codigo = guardarComandaLogisticaEnHistorial(datosLogistica);
+        const codigo = datosLogistica.codigo_original || datosLogistica.codigo_cocina;
+        if (typeof window.sincronizarComandaLogisticaEnSupabase !== 'function') {
+            throw new Error('No esta disponible la sincronizacion remota de logistica.');
+        }
+        const sync = await window.sincronizarComandaLogisticaEnSupabase(datosLogistica.codigo_cocina || codigo, datosLogistica);
+        datosLogistica.orden_id = sync.id || datosLogistica.orden_id || null;
+        datosLogistica.supabase_order_id = sync.id || datosLogistica.supabase_order_id || null;
+        const codigoLocal = guardarComandaLogisticaEnHistorial(datosLogistica);
         if (typeof mostrarMensaje === 'function') {
-            mostrarMensaje(`Comanda de logística ${codigo} creada`, 'success');
+            mostrarMensaje(`Comanda de logística ${codigoLocal} creada`, 'success');
         }
         if (typeof cargarCalendario === 'function') {
             cargarCalendario();
@@ -1275,7 +2008,7 @@ function guardarComandaLogistica() {
         const comandaGuardada = {
             ...estadoPrevio,
             ...datosLogistica,
-            codigo,
+            codigo: codigoLocal,
             fecha_creacion: estadoPrevio.fecha_creacion || datosLogistica.fecha_creacion,
             fecha_modificacion: new Date().toISOString()
         };
@@ -1355,6 +2088,13 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
         historialPrincipal[index] = {
             ...comanda,
             documentos,
+            logistica: comandaLogistica.logistica || comanda.logistica || {},
+            logistica_inline: comandaLogistica.logistica || comanda.logistica_inline || comanda.logistica || {},
+            material_logistica: comandaLogistica.material_logistica || comanda.material_logistica || {},
+            tiene_comanda_logistica: true,
+            logistics_status: comandaLogistica.logistics_status || comandaLogistica.estado || comanda.logistics_status || 'sin_preparar',
+            logistics_assigned_to: comandaLogistica.logistics_assigned_to || comanda.logistics_assigned_to || '',
+            logistics_prepared_items: comandaLogistica.logistics_prepared_items ?? comanda.logistics_prepared_items ?? 0,
             logistica_creada: true,
             fecha_modificacion: new Date().toISOString()
         };
@@ -1368,18 +2108,39 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
 /**
  * Limpia el formulario de comanda
  */
-function limpiarFormularioComanda() {
+function limpiarFormularioComanda(options = {}) {
+    const liberarReserva = options.liberarReserva !== false;
     const formulario = document.getElementById('comandaCocinaForm');
     if (formulario) {
         formulario.reset();
     }
+    if (liberarReserva && typeof window.liberarCodigoComandaPendienteSinEsperar === 'function') {
+        window.liberarCodigoComandaPendienteSinEsperar('limpiar_formulario');
+    }
+    window.codigoComandaReservado = null;
+    if (typeof window.mostrarCodigoComandaAsignado === 'function') {
+        window.mostrarCodigoComandaAsignado('', 'Asignando...');
+    }
     
     // Limpiar variables globales
+    window.solicitudConvirtiendo = null;
     window.menuSeleccionado = null;
     window.menusAdicionales = [];
     window.multiplicadores = { saladas: 1, postres: 1 };
-    window.referenciasSeleccionadas = { saladas: [], postres: [] };
+    window.referenciasSeleccionadas = { gris: [], rojo: [], saladas: [], postres: [] };
+    window.referenciasExtras = [];
     window.referenciasDesayuno = {};
+    window.pax = 0;
+    window.serviciosMode = false;
+    window.modoMaterialLogisticaInline = '';
+    window._materialAcumulado = { bebidas: [], menaje: [], extras: [] };
+    window._menusEliminadosEdicion = [];
+    window._indiceMenuResumenEditando = -1;
+    window._materialMenuResumenEditando = null;
+    clearTimeout(window._restoreMaterialEdicionTimer);
+    clearTimeout(window._restoreMaterialResumenTimer1);
+    clearTimeout(window._restoreMaterialResumenTimer2);
+    clearTimeout(window._abrirMaterialEdicionResumenTimer);
 
     // Resetear menús acumulados y material acumulado
     if (typeof window.resetearMenusAcumulados === 'function') {
@@ -1440,8 +2201,28 @@ function limpiarFormularioComanda() {
     });
     
     // Restablecer valores por defecto
-    document.getElementById('categoria').value = '';
-    document.getElementById('menu_id').value = '';
+    const categoriaInput = document.getElementById('categoria');
+    const menuInput = document.getElementById('menu_id');
+    const paxInput = document.getElementById('pax');
+    const tipoMenajeInput = document.getElementById('tipo_menaje');
+    const serviciosCategoriaInput = document.getElementById('serviciosCategoria');
+    if (categoriaInput) categoriaInput.value = '';
+    if (menuInput) menuInput.value = '';
+    if (paxInput) paxInput.value = '';
+    if (tipoMenajeInput) tipoMenajeInput.value = '';
+    if (serviciosCategoriaInput) serviciosCategoriaInput.value = '';
+    document.querySelectorAll('#paxValue, #paxValue2, #paxTotalValor').forEach(span => {
+        span.textContent = '0';
+    });
+
+    const comandaFormEl = document.getElementById('comandaForm');
+    if (comandaFormEl) comandaFormEl.classList.remove('servicios-mode');
+    const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
+    const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
+    if (serviciosGroup) serviciosGroup.style.display = 'none';
+    if (tipoMenajeGroup) tipoMenajeGroup.style.display = '';
+    const btnWrap = document.getElementById('btnAnadirMenuWrap');
+    if (btnWrap) btnWrap.style.display = 'none';
 
     // Volver a poner el nombre del responsable tras el reset
     const responsableInput = document.getElementById('responsable');
@@ -1460,8 +2241,83 @@ function limpiarFormularioComanda() {
     if (matInline) {
         matInline.style.display = 'none';
         matInline.innerHTML = '';
+        delete matInline.dataset.modoLogistica;
     }
+    const logisticaInline = document.getElementById('logisticaInlineSection');
+    const notasLogisticaInline = document.getElementById('logisticaInlineNotasSection');
+    if (logisticaInline) logisticaInline.style.display = 'none';
+    if (notasLogisticaInline) notasLogisticaInline.style.display = 'none';
 }
+
+async function cancelarFormularioComanda() {
+    const editando = window.comandaEditando;
+    const codigoEditando = editando?.codigo || editando?.codigo_comanda || '';
+
+    if (!editando && typeof window.liberarCodigoComandaPendiente === 'function') {
+        await window.liberarCodigoComandaPendiente('cancelar_formulario');
+    }
+
+    if (editando && codigoEditando) {
+        const form = document.getElementById('comandaForm');
+        const detalle = document.getElementById('detalleComanda');
+        const dashboard = document.getElementById('dashboard');
+        const historial = document.getElementById('historialPage');
+        const expediente = document.getElementById('expedientePedido');
+
+        if (form) form.style.display = 'none';
+        if (dashboard) dashboard.style.display = 'none';
+        if (historial) historial.style.display = 'none';
+        if (expediente) expediente.style.display = 'none';
+        if (detalle) detalle.style.display = 'block';
+
+        if (typeof _renderDetalleComanda === 'function') {
+            _renderDetalleComanda(editando);
+        } else if (typeof verDetalleComanda === 'function') {
+            verDetalleComanda(codigoEditando);
+        }
+
+        window.comandaEditando = null;
+        if (typeof limpiarFormularioComanda === 'function') limpiarFormularioComanda({ liberarReserva: false });
+        return;
+    }
+
+    if (typeof limpiarFormularioComanda === 'function') limpiarFormularioComanda({ liberarReserva: false });
+    if (typeof volverAlDashboard === 'function') volverAlDashboard();
+}
+
+function volverDesdeDetalleComanda() {
+    const activo = window.detalleDocumentoActivo || {};
+    const codigo = activo.codigoCocina || activo.codigo || (document.getElementById('detalleCodigo')?.textContent || '').replace(/^.*-\s*/, '').trim();
+
+    if (codigo && typeof verExpedientePedido === 'function') {
+        verExpedientePedido(codigo);
+        return;
+    }
+
+    if (typeof volverAlDashboard === 'function') volverAlDashboard();
+}
+
+(function activarSeleccionAutomaticaCantidades() {
+    if (window._cantidadInputsAutoSelectBound) return;
+    window._cantidadInputsAutoSelectBound = true;
+
+    const seleccionarCantidad = (input) => {
+        if (!input || input.type !== 'number' || input.readOnly || input.disabled) return;
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 0);
+    };
+
+    document.addEventListener('focusin', (event) => {
+        seleccionarCantidad(event.target);
+    });
+
+    document.addEventListener('click', (event) => {
+        const input = event.target?.closest?.('input[type="number"]');
+        if (input) seleccionarCantidad(input);
+    });
+})();
 
 // ========== FUNCIONES UTILITARIAS ==========
 
@@ -1575,6 +2431,7 @@ window.actualizarTipoMenajeGlobal = function() {
     // 3. Relanzar material para aplicar filtros solo_loza / solo_desechable
     const categoriaId = window.menuSeleccionado?._cat
         || parseInt(document.getElementById('categoria')?.value);
+    if (window.serviciosMode || Number(categoriaId || 0) === 3) return;
     if (categoriaId && !window.menuSeleccionado?.omitir_material_menu && typeof window.autocompletarMaterialPorCategoria === 'function') {
         window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
     }

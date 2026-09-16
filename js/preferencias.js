@@ -96,46 +96,9 @@ function guardarEmpresaFrecuente(empresa, responsable) {
 
 // Autocompletar formulario con empresa frecuente
 function autocompletarConEmpresaFrecuente() {
-    const preferencias = cargarPreferencias();
-    if (!preferencias.recordarEmpresa) return;
-    
-    const empresas = cargarPreferenciasEmpresa();
-    if (empresas.length === 0) return;
-    
-    // Crear datalist para autocompletar
-    let datalist = document.getElementById('empresas-frecuentes-datalist');
-    if (!datalist) {
-        datalist = document.createElement('datalist');
-        datalist.id = 'empresas-frecuentes-datalist';
-        document.body.appendChild(datalist);
-    }
-    
-    datalist.innerHTML = '';
-    empresas.forEach((emp, index) => {
-        const option = document.createElement('option');
-        option.value = emp.empresa;
-        option.dataset.responsable = emp.responsable;
-        option.dataset.index = index;
-        datalist.appendChild(option);
-    });
-    
     const empresaInput = document.getElementById('empresa');
-    const responsableInput = document.getElementById('responsable');
-    
-    if (empresaInput && !empresaInput.list) {
-        empresaInput.setAttribute('list', 'empresas-frecuentes-datalist');
-        
-        // Cuando se selecciona una empresa del datalist
-        empresaInput.addEventListener('input', function() {
-            const selectedOption = Array.from(datalist.options).find(
-                opt => opt.value === this.value
-            );
-            
-            if (selectedOption && responsableInput) {
-                responsableInput.value = selectedOption.dataset.responsable || '';
-            }
-        });
-    }
+    if (empresaInput) empresaInput.removeAttribute('list');
+    document.getElementById('empresas-frecuentes-datalist')?.remove();
 }
 
 // Inicializar preferencias al cargar la página

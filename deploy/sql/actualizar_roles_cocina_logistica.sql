@@ -6,7 +6,7 @@ alter table public.app_user_roles
 
 alter table public.app_user_roles
   add constraint app_user_roles_role_check
-  check (role in ('admin', 'editor', 'viewer', 'cocina', 'logistica'));
+  check (role in ('admin', 'editor', 'eventos', 'viewer', 'cocina', 'logistica'));
 
 create or replace function public.app_can_read()
 returns boolean
@@ -15,7 +15,27 @@ security definer
 set search_path = public
 stable
 as $$
-  select public.app_current_role() in ('admin', 'editor', 'viewer', 'cocina', 'logistica')
+  select public.app_current_role() in ('admin', 'editor', 'eventos', 'viewer', 'cocina', 'logistica')
+$$;
+
+create or replace function public.app_can_write()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.app_current_role() in ('admin', 'editor', 'eventos')
+$$;
+
+create or replace function public.app_can_create_orders()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select public.app_current_role() in ('admin', 'editor')
 $$;
 
 create or replace function public.app_can_edit_kitchen()
@@ -39,8 +59,17 @@ as $$
 $$;
 
 grant execute on function public.app_can_read() to authenticated;
+grant execute on function public.app_can_write() to authenticated;
+grant execute on function public.app_can_create_orders() to authenticated;
 grant execute on function public.app_can_edit_kitchen() to authenticated;
 grant execute on function public.app_can_edit_logistics() to authenticated;
+
+drop policy if exists "orders_insert_editor" on public.orders;
+create policy "orders_insert_editor"
+on public.orders
+for insert
+to authenticated
+with check (public.app_can_create_orders());
 
 drop policy if exists "orders_update_team" on public.orders;
 create policy "orders_update_team"

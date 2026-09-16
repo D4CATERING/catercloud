@@ -70,6 +70,7 @@ async function cargarOpcionesDesdeSupabase() {
 
 function cargarOpcionesFoodboxLunch() {
     console.log('📦 Iniciando Foodbox Lunch');
+    const editandoDesdeResumen = !!window._editandoMenuDesdeResumen;
     
     const categoriaId = parseInt(document.getElementById('categoria').value);
     if (categoriaId !== 4) return;
@@ -114,12 +115,17 @@ function cargarOpcionesFoodboxLunch() {
         </div>
     `);
     
-    setTimeout(async () => {
+    clearTimeout(window._foodboxLunchCargaTimer);
+    window._foodboxLunchCargaPromise = new Promise(resolve => {
+    window._foodboxLunchCargaTimer = setTimeout(async () => {
         const eg = document.getElementById('foodboxEnsaladasGrid');
         const sg = document.getElementById('foodboxSandwichesGrid');
         const pg = document.getElementById('foodboxPostresGrid');
         
-        if (!eg) return;
+        if (!eg) {
+            resolve(false);
+            return;
+        }
         
         window.foodboxSelecciones = { ensaladas: [], sandwiches: [], postres: [] };
         
@@ -128,6 +134,10 @@ function cargarOpcionesFoodboxLunch() {
         renderFB(eg, opciones.ensaladas, 'ensaladas');
         renderFB(sg, opciones.sandwiches, 'sandwiches');
         renderFB(pg, opciones.postres, 'postres');
+        if (window._foodboxLunchSeleccionesPendientes) {
+            aplicarSeleccionesFoodboxLunch(window._foodboxLunchSeleccionesPendientes);
+            window._foodboxLunchSeleccionesPendientes = null;
+        }
 
         // Forzar 2 columnas después de renderizar
         [eg, sg, pg].forEach(g => {
@@ -140,43 +150,65 @@ function cargarOpcionesFoodboxLunch() {
             opciones.sandwiches.length, 'sandwiches,',
             opciones.postres.length, 'postres');
 
-        // ── Mostrar solo el material (logística siempre visible) ──
-        const matInline = document.getElementById('materialLogisticaInline');
-        if (matInline) matInline.style.display = 'block';
+        if (!window._cargandoComandaEnFormulario && !editandoDesdeResumen) {
+            // ── Mostrar solo el material (logística siempre visible) ──
+            const matInline = document.getElementById('materialLogisticaInline');
+            if (matInline) matInline.style.display = 'block';
 
-        if (typeof window.inicializarMaterialLogistica === 'function') {
-            await window.inicializarMaterialLogistica('materialLogisticaInline');
-            console.log('✅ Material logística inicializado para Lunch');
-        } else {
-            console.warn('⚠️ inicializarMaterialLogistica no está disponible');
+            if (typeof window.inicializarMaterialLogistica === 'function') {
+                await window.inicializarMaterialLogistica('materialLogisticaInline');
+                console.log('✅ Material logística inicializado para Lunch');
+            } else {
+                console.warn('⚠️ inicializarMaterialLogistica no está disponible');
+            }
+
+            if (typeof window.autocompletarMaterialPorCategoria === 'function') {
+                await window.autocompletarMaterialPorCategoria(4, 'materialLogisticaInline');
+                console.log('✅ Material autocompletado para categoría Lunch');
+            } else {
+                console.warn('⚠️ autocompletarMaterialPorCategoria no está disponible');
+            }
         }
 
-        if (typeof window.autocompletarMaterialPorCategoria === 'function') {
-            await window.autocompletarMaterialPorCategoria(4, 'materialLogisticaInline');
-            console.log('✅ Material autocompletado para categoría Lunch');
-        } else {
-            console.warn('⚠️ autocompletarMaterialPorCategoria no está disponible');
-        }
-
+        resolve(true);
     }, 100);
+    });
+
+    return window._foodboxLunchCargaPromise;
 }
 
 function renderFB(cont, lista, tipo) {
     let h = '';
     lista.forEach(o => {
         const itemId = o.id || o.nombre.toLowerCase().replace(/\s+/g, '_').substring(0, 50);
-        h += `<div class="referencia-option" data-id="${itemId}">
+        h += `<div class="referencia-option" data-id="${itemId}" onclick="fbActivarItem(event, '${itemId}', '${tipo}')">
             <span style="flex:1; font-size:0.82rem;">${o.nombre}</span>
             <div class="cantidad-control" style="gap:4px; align-items:center;">
-                <button type="button" onclick="fbChg('${itemId}','${tipo}',-1)" class="pager-btn" style="width:24px;height:24px;padding:0;">−</button>
+                <button type="button" onclick="event.stopPropagation(); fbChg('${itemId}','${tipo}',-1)" class="pager-btn" style="width:24px;height:24px;padding:0;">−</button>
                 <input type="number" id="fb_${itemId}" value="0" min="0"
+                    onclick="event.stopPropagation()"
+                    onfocus="this.select()"
                     oninput="fbUpd('${itemId}','${tipo}',this.value)"
                     class="cantidad-input" style="width:52px;">
-                <button type="button" onclick="fbChg('${itemId}','${tipo}',1)" class="pager-btn" style="width:24px;height:24px;padding:0;">+</button>
+                <button type="button" onclick="event.stopPropagation(); fbChg('${itemId}','${tipo}',1)" class="pager-btn" style="width:24px;height:24px;padding:0;">+</button>
             </div>
         </div>`;
     });
     cont.innerHTML = h;
+}
+
+function fbActivarItem(event, id, tipo) {
+    if (event?.target?.closest?.('input, button, select, textarea')) return;
+    const inp = document.getElementById('fb_' + id);
+    if (!inp) return;
+    if ((parseInt(inp.value) || 0) <= 0) {
+        inp.value = 1;
+        fbUpd(id, tipo, 1);
+    }
+    setTimeout(() => {
+        inp.focus();
+        inp.select();
+    }, 0);
 }
 
 function fbChg(id, tipo, d) {
@@ -194,10 +226,11 @@ function fbUpd(id, tipo, val) {
     if (!window.foodboxSelecciones) window.foodboxSelecciones = { ensaladas: [], sandwiches: [], postres: [] };
     
     const idx = window.foodboxSelecciones[tipo].findIndex(i => i.id === id);
+    const elem = document.querySelector(`#foodboxLunchSection [data-id="${CSS.escape(String(id))}"]`);
     
     if (c > 0) {
-        const elem = document.querySelector(`[data-id="${id}"]`);
         const nombre = elem ? elem.querySelector('span').textContent : id;
+        if (elem) elem.classList.add('selected');
         
         if (idx >= 0) {
             window.foodboxSelecciones[tipo][idx].cantidad = c;
@@ -206,11 +239,32 @@ function fbUpd(id, tipo, val) {
         }
     } else {
         if (idx >= 0) window.foodboxSelecciones[tipo].splice(idx, 1);
+        if (elem) elem.classList.remove('selected');
     }
 }
 
 function obtenerSeleccionesFoodboxLunch() {
     return window.foodboxSelecciones || { ensaladas: [], sandwiches: [], postres: [] };
+}
+
+function aplicarSeleccionesFoodboxLunch(seleccion) {
+    const normalizada = {
+        ensaladas: (seleccion?.ensaladas || []).map(item => ({ ...item })),
+        sandwiches: (seleccion?.sandwiches || []).map(item => ({ ...item })),
+        postres: (seleccion?.postres || []).map(item => ({ ...item }))
+    };
+    window.foodboxSelecciones = normalizada;
+
+    ['ensaladas', 'sandwiches', 'postres'].forEach(tipo => {
+        (normalizada[tipo] || []).forEach(item => {
+            const id = String(item.id);
+            const cantidad = Number(item.cantidad || 0);
+            const input = document.getElementById('fb_' + id);
+            if (input) input.value = cantidad;
+            const card = document.querySelector(`#foodboxLunchSection [data-id="${CSS.escape(id)}"]`);
+            if (card) card.classList.toggle('selected', cantidad > 0);
+        });
+    });
 }
 
 /**
@@ -228,6 +282,7 @@ function obtenerDatosFoodboxLunch() {
 
 window.cargarOpcionesFoodboxLunch   = cargarOpcionesFoodboxLunch;
 window.obtenerSeleccionesFoodboxLunch = obtenerSeleccionesFoodboxLunch;
+window.aplicarSeleccionesFoodboxLunch = aplicarSeleccionesFoodboxLunch;
 window.obtenerDatosFoodboxLunch     = obtenerDatosFoodboxLunch;
 
 console.log('✅ Módulo Foodbox Lunch listo');

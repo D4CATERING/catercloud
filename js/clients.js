@@ -16,25 +16,9 @@
 
     function _crearSelectorContactos(prefix) {
         const input = document.getElementById(`${prefix}_nombre_contacto`);
-        if (!input || document.getElementById(`${prefix}_contacto_selector`)) return;
-
-        const selector = document.createElement('select');
-        selector.id = `${prefix}_contacto_selector`;
-        selector.className = 'dc-input cliente-contacto-selector';
-        selector.innerHTML = '<option value="">Selecciona un contacto</option>';
-        selector.addEventListener('change', () => {
-            const contacto = (window._clienteContactosEmpresa || [])
-                .find(c => String(c.id) === String(selector.value));
-            if (contacto) {
-                _aplicarContactoLogistica(prefix, contacto);
-            } else {
-                _setVal(`${prefix}_nombre_contacto`, '');
-                _setVal(`${prefix}_telefono_contacto`, '');
-            }
-        });
-
-        input.style.display = 'none';
-        input.parentElement?.insertBefore(selector, input);
+        const selector = document.getElementById(`${prefix}_contacto_selector`);
+        if (selector) selector.remove();
+        if (input) input.style.display = '';
     }
 
     function _crearSelectoresContactos() {
@@ -57,19 +41,8 @@
     function _pintarSelectorContactos(prefix, contactos, selectedId = null) {
         const selector = document.getElementById(`${prefix}_contacto_selector`);
         const input = document.getElementById(`${prefix}_nombre_contacto`);
-        if (!selector) return;
-
-        selector.innerHTML = '<option value="">Selecciona un contacto</option>';
-        (contactos || []).forEach(contacto => {
-            const option = document.createElement('option');
-            option.value = contacto.id;
-            option.textContent = contacto.contacto || 'Sin nombre';
-            selector.appendChild(option);
-        });
-        selector.value = selectedId && contactos.some(c => String(c.id) === String(selectedId)) ? selectedId : '';
-        selector.disabled = !contactos.length;
-        selector.style.display = contactos.length ? '' : 'none';
-        if (input) input.style.display = 'none';
+        if (selector) selector.remove();
+        if (input) input.style.display = '';
     }
 
     window.actualizarSelectoresContactosCliente = async function (empresa = '', selectedId = null) {
@@ -103,20 +76,29 @@
     };
 
     // ── BUSCADOR DE CONTACTO ──────────────────────────────────
-    window.inicializarBuscadorContacto = function () {
-        const input = document.getElementById('log_inline_nombre_contacto');
+    window.inicializarBuscadorContacto = function (prefix = 'log_inline') {
+        const input = document.getElementById(`${prefix}_nombre_contacto`);
         if (!input) return;
+        if (input.dataset.contactSearchReady === '1') return;
+        input.dataset.contactSearchReady = '1';
+        input.setAttribute('autocomplete', 'new-password');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('name', `cc_${prefix}_contacto_busqueda`);
+        input.removeAttribute('list');
 
         const wrapper = input.parentElement;
         wrapper.style.position = 'relative';
+        document.getElementById(`${prefix}_contactosSugerencias`)?.remove();
 
         const dropdown = document.createElement('div');
-        dropdown.id = 'contactosSugerencias';
+        dropdown.id = `${prefix}_contactosSugerencias`;
         dropdown.style.cssText = `
-            display:none; position:absolute; top:100%; left:0; right:0; z-index:1001;
-            background:#fff; border:1px solid #e2e8f0; border-radius:8px;
-            box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:200px; overflow-y:auto;
-            margin-top:4px;
+            display:none; position:absolute; top:100%; left:0; right:auto; z-index:1001;
+            width:min(300px, 100%); min-width:230px; background:#fff;
+            border:1px solid #e5e7eb; border-radius:10px;
+            box-shadow:0 8px 22px rgba(15,23,42,0.14); max-height:150px; overflow-y:auto;
+            margin-top:6px;
         `;
         wrapper.appendChild(dropdown);
 
@@ -125,7 +107,7 @@
             clearTimeout(timer);
             const term = this.value.trim();
             if (term.length < 2) { dropdown.style.display = 'none'; return; }
-            timer = setTimeout(() => buscarContactos(term, dropdown, input), 300);
+            timer = setTimeout(() => buscarContactos(term, dropdown, input, prefix), 300);
         });
 
         document.addEventListener('click', function (e) {
@@ -133,32 +115,20 @@
         });
     };
 
-    async function buscarContactos(term, dropdown, input) {
+    async function buscarContactos(term, dropdown, input, prefix = 'log_inline') {
         if (!window.supabaseClient) return;
 
-        // Buscar en clients por contacto que coincida
-        // Si hay empresa seleccionada, filtrar por ella primero
         try {
+            const empresaActual = _getEmpresaActualCliente();
             let query = window.supabaseClient
                 .from('clients')
-                .select('id, empresa, contacto, telefono')
+                .select('id, empresa, contacto, telefono, direccion, codigo_postal')
                 .ilike('contacto', `%${term}%`)
                 .eq('activo', true)
                 .order('contacto')
                 .limit(8);
 
-            // Si hay empresa vinculada, priorizar sus contactos
-            const empresaActual = document.getElementById('empresa')?.value.trim();
-            if (window._clienteSeleccionadoId) {
-                // Mostrar primero los de la empresa seleccionada
-                query = window.supabaseClient
-                    .from('clients')
-                    .select('id, empresa, contacto, telefono')
-                    .ilike('contacto', `%${term}%`)
-                    .eq('activo', true)
-                    .order('empresa')
-                    .limit(8);
-            }
+            if (empresaActual) query = query.ilike('empresa', empresaActual);
 
             const { data, error } = await query;
             if (error) throw error;
@@ -166,42 +136,26 @@
             dropdown.innerHTML = '';
 
             if (data && data.length > 0) {
-                // Separar: primero los de la empresa actual, luego el resto
-                const deEstaEmpresa = data.filter(c => c.id === window._clienteSeleccionadoId);
-                const deOtras = data.filter(c => c.id !== window._clienteSeleccionadoId);
-                const ordenados = [...deEstaEmpresa, ...deOtras];
-
-                ordenados.forEach(cliente => {
+                data.forEach(cliente => {
                     if (!cliente.contacto) return;
                     const item = document.createElement('div');
-                    const esEmpresaActual = cliente.id === window._clienteSeleccionadoId;
                     item.style.cssText = `
-                        padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;
-                        font-size:.9rem; ${esEmpresaActual ? 'background:#f0f9ff;' : ''}
+                        padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f5f9;
+                        font-size:.84rem; line-height:1.25;
                     `;
                     item.innerHTML = `
-                        <div style="font-weight:600;color:#131B23;">${cliente.contacto}</div>
-                        <div style="color:#64748b;font-size:.82rem;">
-                            ${cliente.empresa}${cliente.telefono ? ' · ' + cliente.telefono : ''}
-                            ${esEmpresaActual ? ' <span style="color:#0ea5e9;">✓ Esta empresa</span>' : ''}
+                        <div style="font-weight:600;color:#131B23;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cliente.contacto}</div>
+                        <div style="color:#64748b;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            ${cliente.empresa}
                         </div>
                     `;
                     item.addEventListener('mouseenter', () => item.style.background = '#f8fafc');
-                    item.addEventListener('mouseleave', () => item.style.background = esEmpresaActual ? '#f0f9ff' : '');
+                    item.addEventListener('mouseleave', () => item.style.background = '');
                     item.addEventListener('click', () => {
-                        input.value = cliente.contacto;
-                        // Autorrellenar teléfono si está vacío
-                        const telInput = document.getElementById('log_inline_telefono_contacto');
-                        if (telInput && !telInput.value && cliente.telefono) {
-                            telInput.value = cliente.telefono;
-                        }
-                        // Si el cliente es diferente al seleccionado, actualizar empresa también
-                        if (cliente.id !== window._clienteSeleccionadoId) {
-                            const empresaInput = document.getElementById('empresa');
-                            if (empresaInput) empresaInput.value = cliente.empresa;
-                            window._clienteSeleccionadoId = cliente.id;
-                            _mostrarBadgeCliente(cliente);
-                        }
+                        _aplicarContactoLogistica(prefix, cliente);
+                        const empresaInput = document.getElementById('empresa');
+                        if (empresaInput && !empresaInput.value && cliente.empresa) empresaInput.value = cliente.empresa;
+                        window._clienteSeleccionadoId = cliente.id || window._clienteSeleccionadoId;
                         dropdown.style.display = 'none';
                     });
                     dropdown.appendChild(item);
@@ -212,18 +166,18 @@
             const textoEscrito = input.value.trim();
             const btnNuevoContacto = document.createElement('div');
             btnNuevoContacto.style.cssText = `
-                padding:10px 14px; cursor:pointer; font-size:.9rem;
+                padding:8px 12px; cursor:pointer; font-size:.82rem; line-height:1.25;
                 color:#E1342E; font-weight:600; border-top:1px solid #e2e8f0;
                 background:#fff8f8; border-radius:0 0 8px 8px;
             `;
 
-            if (window._clienteSeleccionadoId) {
+            if (window._clienteSeleccionadoId || empresaActual) {
                 btnNuevoContacto.textContent = `+ Guardar "${textoEscrito}" como contacto de esta empresa`;
                 btnNuevoContacto.addEventListener('mouseenter', () => btnNuevoContacto.style.background = '#fee2e2');
                 btnNuevoContacto.addEventListener('mouseleave', () => btnNuevoContacto.style.background = '#fff8f8');
                 btnNuevoContacto.addEventListener('click', () => {
                     dropdown.style.display = 'none';
-                    _guardarNuevoContacto(textoEscrito);
+                    _guardarNuevoContacto(textoEscrito, prefix);
                 });
             } else {
                 btnNuevoContacto.textContent = `+ Crear nuevo cliente con contacto "${textoEscrito}"`;
@@ -246,10 +200,12 @@
         }
     }
 
-    async function _guardarNuevoContacto(nombreContacto) {
-        if (!window._clienteSeleccionadoId || !nombreContacto) return;
+    async function _guardarNuevoContacto(nombreContacto, prefix = 'log_inline') {
+        if (!nombreContacto) return;
 
-        const telefono = document.getElementById('log_inline_telefono_contacto')?.value.trim() || null;
+        const telefono = document.getElementById(`${prefix}_telefono_contacto`)?.value.trim() || null;
+        const empresaFormulario = _getEmpresaActualCliente();
+        if (!window._clienteSeleccionadoId && !empresaFormulario) return;
 
         // Abrir mini modal para confirmar datos del contacto
         const modal = document.createElement('div');
@@ -296,11 +252,29 @@
 
             try {
                 // Guardar como nuevo registro en clients con la misma empresa
-                const { data: clienteActual } = await window.supabaseClient
-                    .from('clients')
-                    .select('empresa, direccion, codigo_postal')
-                    .eq('id', window._clienteSeleccionadoId)
-                    .single();
+                let clienteActual = null;
+                if (window._clienteSeleccionadoId) {
+                    const { data } = await window.supabaseClient
+                        .from('clients')
+                        .select('empresa, direccion, codigo_postal')
+                        .eq('id', window._clienteSeleccionadoId)
+                        .single();
+                    clienteActual = data;
+                }
+
+                if (!clienteActual && empresaFormulario) {
+                    const { data } = await window.supabaseClient
+                        .from('clients')
+                        .select('empresa, direccion, codigo_postal')
+                        .ilike('empresa', empresaFormulario)
+                        .eq('activo', true)
+                        .limit(1);
+                    clienteActual = (Array.isArray(data) ? data[0] : data) || {
+                        empresa: empresaFormulario,
+                        direccion: componerDireccionLogisticaCliente(prefix),
+                        codigo_postal: document.getElementById(`${prefix}_codigo_postal`)?.value.trim() || null
+                    };
+                }
 
                 const { data: nuevoCliente, error } = await window.supabaseClient
                     .from('clients')
@@ -318,8 +292,8 @@
                 if (error) throw error;
 
                 // Autorrellenar campos
-                document.getElementById('log_inline_nombre_contacto').value = nombre;
-                if (telefono) document.getElementById('log_inline_telefono_contacto').value = telefono;
+                _setVal(`${prefix}_nombre_contacto`, nombre);
+                if (telefono) _setVal(`${prefix}_telefono_contacto`, telefono);
                 window._clienteSeleccionadoId = nuevoCliente.id;
                 window.actualizarSelectoresContactosCliente(nuevoCliente.empresa, nuevoCliente.id);
 
@@ -331,22 +305,41 @@
         });
     }
 
+    function componerDireccionLogisticaCliente(prefix) {
+        const calle = document.getElementById(`${prefix}_calle`)?.value.trim() || '';
+        const numero = document.getElementById(`${prefix}_numero`)?.value.trim() || '';
+        if (typeof window.componerDireccionLogistica === 'function') {
+            return window.componerDireccionLogistica(calle, numero);
+        }
+        return [calle, numero].filter(Boolean).join(', ');
+    }
+
     // ── BUSCADOR ───────────────────────────────────────────────
     window.inicializarBuscadorClientes = function () {
         const input = document.getElementById('empresa');
         if (!input) return;
+        if (input.dataset.clientSearchReady === '1') return;
+        input.dataset.clientSearchReady = '1';
+        input.setAttribute('autocomplete', 'new-password');
+        input.setAttribute('autocorrect', 'off');
+        input.setAttribute('spellcheck', 'false');
+        input.setAttribute('name', 'cc_empresa_busqueda');
+        input.removeAttribute('list');
+        document.getElementById('empresas-frecuentes-datalist')?.remove();
 
         // Crear contenedor de sugerencias
         const wrapper = input.parentElement;
         wrapper.style.position = 'relative';
+        document.getElementById('clientesSugerencias')?.remove();
 
         const dropdown = document.createElement('div');
         dropdown.id = 'clientesSugerencias';
         dropdown.style.cssText = `
-            display:none; position:absolute; top:100%; left:0; right:0; z-index:1000;
-            background:#fff; border:1px solid #e2e8f0; border-radius:8px;
-            box-shadow:0 4px 16px rgba(0,0,0,0.12); max-height:220px; overflow-y:auto;
-            margin-top:4px;
+            display:none; position:absolute; top:100%; left:0; right:auto; z-index:1000;
+            width:min(300px, 100%); min-width:230px; background:#fff;
+            border:1px solid #e5e7eb; border-radius:10px;
+            box-shadow:0 8px 22px rgba(15,23,42,0.14); max-height:150px; overflow-y:auto;
+            margin-top:6px;
         `;
         wrapper.appendChild(dropdown);
 
@@ -382,18 +375,26 @@
 
             dropdown.innerHTML = '';
 
-            if (!data || data.length === 0) {
+            const empresasUnicas = [];
+            const empresasVistas = new Set();
+            (data || []).forEach(cliente => {
+                const key = String(cliente.empresa || '').trim().toLowerCase();
+                if (!key || empresasVistas.has(key)) return;
+                empresasVistas.add(key);
+                empresasUnicas.push(cliente);
+            });
+
+            if (!empresasUnicas.length) {
                 dropdown.innerHTML = '';
             } else {
-                data.forEach(cliente => {
+                empresasUnicas.forEach(cliente => {
                     const item = document.createElement('div');
                     item.style.cssText = `
-                        padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;
-                        font-size:.9rem;
+                        padding:8px 12px; cursor:pointer; border-bottom:1px solid #f1f5f9;
+                        font-size:.84rem; line-height:1.25;
                     `;
                     item.innerHTML = `
-                        <div style="font-weight:600;color:#131B23;">${cliente.empresa}</div>
-                        ${cliente.contacto ? `<div style="color:#64748b;font-size:.82rem;">${cliente.contacto}${cliente.telefono ? ' · ' + cliente.telefono : ''}</div>` : ''}
+                        <div style="font-weight:600;color:#131B23;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${cliente.empresa}</div>
                     `;
                     item.addEventListener('mouseenter', () => item.style.background = '#f8fafc');
                     item.addEventListener('mouseleave', () => item.style.background = '');
@@ -409,7 +410,7 @@
             const btnNuevo = document.createElement('div');
             const textoEscrito = input.value.trim();
             btnNuevo.style.cssText = `
-                padding:10px 14px; cursor:pointer; font-size:.9rem;
+                padding:8px 12px; cursor:pointer; font-size:.82rem; line-height:1.25;
                 color:#E1342E; font-weight:600; border-top:1px solid #e2e8f0;
                 background:#fff8f8; border-radius:0 0 8px 8px;
             `;
@@ -435,15 +436,9 @@
         const inputEmpresa = document.getElementById('empresa');
         if (inputEmpresa) inputEmpresa.value = cliente.empresa;
 
-        // Autorrellenar campos de logística inline
-        _setVal('log_inline_nombre_contacto', cliente.contacto);
-        _setVal('log_inline_telefono_contacto', cliente.telefono);
         _setDireccionLogistica('log_inline', cliente.direccion);
         _setVal('log_inline_codigo_postal', cliente.codigo_postal);
 
-        // También rellenar si están en el formulario de logística separado
-        _setVal('log_nombre_contacto', cliente.contacto);
-        _setVal('log_telefono_contacto', cliente.telefono);
         _setDireccionLogistica('log', cliente.direccion);
         _setVal('log_codigo_postal', cliente.codigo_postal);
         window.actualizarSelectoresContactosCliente(cliente.empresa, cliente.id);
@@ -690,7 +685,8 @@
     // ── INICIALIZAR AL CARGAR ──────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         inicializarBuscadorClientes();
-        inicializarBuscadorContacto();
+        inicializarBuscadorContacto('log_inline');
+        inicializarBuscadorContacto('log');
         _crearSelectoresContactos();
     });
 

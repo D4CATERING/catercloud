@@ -4,7 +4,7 @@
  * Carga las referencias para el menú de desayuno seleccionado
  * CON CONTAINERS PARA LECHE SIN LACTOSA Y LECHE VEGETAL
  */
-function cargarReferenciasDesayuno(menu) {
+async function cargarReferenciasDesayuno(menu) {
     const containerId = 'referenciasDesayunoGrid';
     let container = document.getElementById(containerId);
     
@@ -168,14 +168,55 @@ function cargarReferenciasDesayuno(menu) {
     const config = configuracionesDesayunos[menu.id];
     if (!config) return;
     
-    const referencias = config.referencias || [];
+    let referencias = config.referencias || [];
+    if (window.supabaseClient) {
+        try {
+            const refsSupabase = await cargarReferenciasDesayunoDesdeSupabase(menu.id);
+            if (refsSupabase.length) referencias = refsSupabase;
+        } catch (error) {
+            console.warn('No se pudieron cargar referencias de desayuno desde Supabase. Usando respaldo local.', error);
+        }
+    }
     
     if (container) {
         container.innerHTML = '';
+        const referenciasPrevias = window.referenciasDesayuno || {};
         window.referenciasDesayuno = {};
+
+        const referenciasCalculadas = referencias.map(ref => {
+            let cantidadTotal;
+
+            if (ref.tipo === 'leche_especial') {
+                cantidadTotal = 0;
+            } else if (ref.tipo === 'termo') {
+                if (ref.id.includes('_cafe')) {
+                    cantidadTotal = Math.ceil(pax * (1/10));
+                } else {
+                    cantidadTotal = Math.ceil(pax * (1/20));
+                }
+            } else if (ref.tipo === 'zumo') {
+                cantidadTotal = Math.ceil(pax * ref.cantidadPorPax);
+            } else {
+                cantidadTotal = Math.ceil(pax * ref.cantidadPorPax);
+            }
+
+            inicializarDatosReferenciaDesayuno(ref, cantidadTotal);
+            if (referenciasPrevias[ref.id]) {
+                const referenciaActualizada = window.referenciasDesayuno[ref.id];
+                window.referenciasDesayuno[ref.id] = {
+                    ...referenciaActualizada,
+                    ...referenciasPrevias[ref.id],
+                    opcionesDisponibles: referenciaActualizada.opcionesDisponibles || [],
+                    pulguitasDisponibles: referenciaActualizada.pulguitasDisponibles || referenciasPrevias[ref.id].pulguitasDisponibles || []
+                };
+            }
+            if (ref.tipo === 'zumo') renderizarZumoEnLogistica(ref, cantidadTotal);
+            return { ref, cantidadTotal };
+        });
+        const referenciasVisibles = referenciasCalculadas.filter(({ ref }) => ref.tipo !== 'zumo');
         
         // Agregar header para leches especiales (solo si hay)
-        const tieneLecheEspecial = referencias.some(ref => ref.tipo === 'leche_especial');
+        const tieneLecheEspecial = referenciasVisibles.some(({ ref }) => ref.tipo === 'leche_especial');
         if (tieneLecheEspecial) {
             const headerEspecial = document.createElement('div');
             headerEspecial.className = 'leche-especial-header';
@@ -197,29 +238,7 @@ function cargarReferenciasDesayuno(menu) {
         }
 
         // Iterar referencias del menú
-        referencias.forEach(ref => {
-            let cantidadTotal;
-
-            if (ref.tipo === 'leche_especial') {
-                cantidadTotal = 0;
-            } else if (ref.tipo === 'termo') {
-                if (ref.id.includes('_cafe')) {
-                    cantidadTotal = Math.ceil(pax * (1/10));
-                } else {
-                    cantidadTotal = Math.ceil(pax * (1/20));
-                }
-            } else if (ref.tipo === 'zumo') {
-                cantidadTotal = Math.ceil(pax * ref.cantidadPorPax);
-            } else {
-                cantidadTotal = Math.ceil(pax * ref.cantidadPorPax);
-            }
-
-            // ZUMO / AGUA: Solo en logística, NO en referencias de cocina
-            if (ref.tipo === 'zumo') {
-                renderizarZumoEnLogistica(ref, cantidadTotal);
-                return;
-            }
-
+        referenciasVisibles.forEach(({ ref, cantidadTotal }) => {
             // Resto de referencias: renderizar como bubble
             const itemDiv = document.createElement('div');
             itemDiv.className = 'dc-item-bubble';
@@ -231,41 +250,114 @@ function cargarReferenciasDesayuno(menu) {
             itemDiv.innerHTML = generarHTMLReferenciaDesayuno(ref, cantidadTotal, pax);
             itemDiv.dataset.id = ref.id;
             itemDiv.dataset.tipo = ref.tipo;
+            itemDiv.onclick = (event) => {
+                if (event.target.closest('input, button, select, textarea, .dropdown-btn')) return;
+                const input = itemDiv.querySelector('input[type="number"]');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            };
 
             container.appendChild(itemDiv);
-            inicializarDatosReferenciaDesayuno(ref, cantidadTotal);
         });
 
         // Menaje y extras vienen de Supabase (logistics-material.js)
     }
 }
 
+async function cargarReferenciasDesayunoDesdeSupabase(menuId) {
+    const { data, error } = await window.supabaseClient
+        .from('menu_reference_items')
+        .select('*')
+        .eq('category_id', 1)
+        .eq('menu_legacy_id', Number(menuId))
+        .eq('item_group', 'desayuno')
+        .eq('active', true)
+        .order('display_order', { ascending: true });
+
+    if (error) throw error;
+
+    return (data || []).map(item => ({
+        id: item.legacy_id || item.id,
+        nombre: item.name,
+        tipo: item.quantity_type || 'simple',
+        cantidadPorPax: Number(item.quantity_per_pax ?? item.quantity ?? 1),
+        unidad: item.unit || 'uds',
+        selectorTermo: Boolean(item.selector_termo),
+        opciones: Array.isArray(item.options) ? item.options : null,
+        pulguitas: Array.isArray(item.pulguitas) ? item.pulguitas : null,
+        sabor: item.fixed_flavor || undefined,
+        cantidadSandwiches: item.sandwiches_count ? Number(item.sandwiches_count) : undefined
+    }));
+}
+
 // ============================================================
 // RENDERIZAR ZUMO/AGUA EN SECCIÓN DE LOGÍSTICA
 // ============================================================
+function normalizarTextoZumoLogistica(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function esZumoDesayunoLogistica(item) {
+    const nombre = normalizarTextoZumoLogistica(item?.nombre || item?.name);
+    return Boolean(item?._zumoId) ||
+        (nombre.includes('zumo') && (nombre.includes('naranja') || nombre.includes('natural')));
+}
+
+function buscarMaterialZumoEnCatalogo() {
+    const catalogo = window.materialLogistica?.catalogoCompleto || [];
+    const items = [];
+
+    const recorrer = (lista) => {
+        (lista || []).forEach(item => {
+            items.push(item);
+            if (Array.isArray(item.subitems) && item.subitems.length) recorrer(item.subitems);
+        });
+    };
+
+    recorrer(catalogo);
+    const zumos = items.filter(item => String(item?.tipo || '') === 'bebidas' && esZumoDesayunoLogistica(item));
+    return zumos.find(item => normalizarTextoZumoLogistica(item?.nombre || item?.name).includes('naranja')) ||
+        zumos[0] ||
+        null;
+}
+
 function renderizarZumoEnLogistica(ref, cantidadTotal) {
     if (!window.materialLogistica) window.materialLogistica = { bebidas: [], menaje: [], extras: [] };
     if (!window.materialLogistica.bebidas) window.materialLogistica.bebidas = [];
 
-    // Limpiar zumos de menús anteriores — cada selección de menú reemplaza el zumo
-    window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !i._zumoId);
+    const materialSupabase = buscarMaterialZumoEnCatalogo();
+    const unidad = materialSupabase?.unidad_comanda || materialSupabase?.unidad || ref.unidad || 'litro';
 
-    // Añadir el zumo del menú actual
+    // Limpiar cualquier zumo equivalente; puede venir del menú o de Supabase.
+    window.materialLogistica.bebidas = window.materialLogistica.bebidas.filter(i => !esZumoDesayunoLogistica(i));
+
     window.materialLogistica.bebidas.push({
-        id: ref.id,
+        ...(materialSupabase || {}),
+        id: materialSupabase?.id || ref.id,
         _zumoId: ref.id,
-        item_id: ref.id,
-        nombre: ref.nombre,
+        item_id: materialSupabase?.item_id || materialSupabase?.id || ref.id,
+        nombre: materialSupabase?.nombre || materialSupabase?.name || 'Zumo de naranja',
         cantidad: cantidadTotal,
         cantidadPorPax: ref.cantidadPorPax,
-        unidad: ref.unidad || 'litros',
+        unidad,
+        unidad_comanda: unidad,
+        unidad_inventario: materialSupabase?.unidad_inventario || unidad,
         checked: true,
         tipo: 'bebidas',
-        precio: 0,
-        incluido_en: ['desayunos'],
+        precio: materialSupabase?.precio || 0,
+        incluido_en: materialSupabase?.incluido_en || ['desayunos'],
         tiene_subitems: false,
         subitems: [],
-        subitems_selected: []
+        subitems_selected: [],
+        source_table: materialSupabase?.source_table || 'logistics_materials',
+        conversion_a_stock: Number(materialSupabase?.conversion_a_stock || materialSupabase?.contenido_por_unidad || 1)
     });
 
     if (typeof window.renderizarMaterial === 'function') window.renderizarMaterial('materialLogisticaInline');
@@ -337,6 +429,7 @@ function generarHTMLReferenciaDesayuno(ref, cantidadTotal, pax) {
             <button type="button" class="dc-btn-qty" onclick="cambiarCantidadDesayuno('${ref.id}', -1)">−</button>
             <input type="number" class="dc-input-qty" id="input_${ref.id}"
                 value="${cantidadTotal}" min="0"
+                onfocus="this.select()"
                 onchange="actualizarCantidadDesayuno('${ref.id}', this.value)"
                 data-base="${ref.cantidadPorPax}"
                 ${ref.tipo === 'leche_especial' ? 'style="background: #fef3c7;"' : ''}>
@@ -353,6 +446,7 @@ function generarHTMLReferenciaDesayuno(ref, cantidadTotal, pax) {
             <button type="button" class="dc-btn-qty" onclick="cambiarCantidadDesayuno('${ref.id}', -1)">−</button>
             <input type="number" class="dc-input-qty" id="input_${ref.id}"
                 value="${cantidadTotal}" min="0"
+                onfocus="this.select()"
                 onchange="actualizarCantidadDesayuno('${ref.id}', this.value)"
                 data-base="${ref.cantidadPorPax}">
             <button type="button" class="dc-btn-qty" onclick="cambiarCantidadDesayuno('${ref.id}', 1)">+</button>
@@ -595,6 +689,7 @@ function actualizarCantidadDesayuno(refId, nuevaCantidad) {
     
     const cantidad = parseInt(nuevaCantidad) || 0;
     window.referenciasDesayuno[refId].cantidad = cantidad;
+    window.referenciasDesayuno[refId].cantidad_manual = true;
     
     // NOTA: Ya no actualizamos el texto del contador de termos porque lo eliminamos
     
@@ -635,6 +730,7 @@ function actualizarCantidadesDesayuno() {
         const input = item.querySelector('.cantidad-input-compact');
         
         if (!input || !window.referenciasDesayuno || !window.referenciasDesayuno[refId]) return;
+        if (window.referenciasDesayuno[refId].cantidad_manual || window.referenciasDesayuno[refId]._cantidad_guardada_edicion) return;
         
         const baseCantidad = parseFloat(input.dataset.base) || 0;
         let nuevaCantidad;
@@ -833,6 +929,7 @@ function mostrarReferenciasPrincipales(referencias, containerId, tipo) {
             <span style="flex: 1;">${ref.nombre}</span>
             <div class="cantidad-control">
                 <input type="number" class="cantidad-input" value="${cantidadBase}" min="1"
+                       onfocus="this.select()"
                        onchange="actualizarCantidadReferencia(${ref.id}, '${tipo}', this.value)">
                 <select class="unidad-select" onchange="actualizarUnidadReferencia(${ref.id}, '${tipo}', this.value)">
                     <option value="uds" ${ref.unidad === 'uds' ? 'selected' : ''}>uds</option>
@@ -851,6 +948,13 @@ function mostrarReferenciasPrincipales(referencias, containerId, tipo) {
         div.onclick = (e) => {
             if (!e.target.classList.contains('cantidad-input') && !e.target.classList.contains('unidad-select')) {
                 seleccionarReferenciaPrincipal(ref.id, ref.nombre, tipo, cantidadBase, ref.unidad, div);
+                setTimeout(() => {
+                    const input = div.querySelector('.cantidad-input');
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+                }, 0);
             }
         };
         
@@ -889,6 +993,7 @@ function actualizarCantidadReferencia(refId, tipo, cantidad) {
     const ref = window.referenciasSeleccionadas[tipo].find(r => r.id === refId);
     if (ref) {
         ref.cantidad = parseInt(cantidad);
+        ref.cantidad_manual = true;
     }
 }
 
@@ -1125,6 +1230,7 @@ function mostrarReferenciasAdicionales(referencias, containerId, tipo) {
             <span style="flex: 1;">${ref.nombre}</span>
             <div class="cantidad-control">
                 <input type="number" class="cantidad-input" value="${cantidadBase}" min="1"
+                       onfocus="this.select()"
                        onchange="actualizarCantidadReferenciaAdicional(${ref.id}, '${tipo}', this.value)">
                 <select class="unidad-select" onchange="actualizarUnidadReferenciaAdicional(${ref.id}, '${tipo}', this.value)">
                     <option value="uds" ${ref.unidad === 'uds' ? 'selected' : ''}>uds</option>
@@ -1143,6 +1249,13 @@ function mostrarReferenciasAdicionales(referencias, containerId, tipo) {
         div.onclick = (e) => {
             if (!e.target.classList.contains('cantidad-input') && !e.target.classList.contains('unidad-select')) {
                 seleccionarReferenciaAdicional(ref.id, ref.nombre, tipo, cantidadBase, ref.unidad, div);
+                setTimeout(() => {
+                    const input = div.querySelector('.cantidad-input');
+                    if (input) {
+                        input.focus();
+                        input.select();
+                    }
+                }, 0);
             }
         };
         
@@ -1578,7 +1691,6 @@ function mostrarMenusPrincipales(menus) {
         </div>
         `;
     });
-    
     container.innerHTML = html;
 }
 

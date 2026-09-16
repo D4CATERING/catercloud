@@ -34,8 +34,12 @@
 }
 
 .dash-events-panel .event-details {
-  padding: 14px;
+  padding: 10px;
   border-top: none;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 130px);
+  min-height: 0;
 }
 
 .dash-events-panel .event-details h4 {
@@ -45,14 +49,96 @@
   color: var(--dc-negro);
   text-transform: uppercase;
   letter-spacing: .4px;
-  margin-bottom: 10px;
-  padding-bottom: 10px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
   border-bottom: 1px solid var(--dc-border);
 }
 
 .dash-events-panel .event-list {
-  max-height: calc(100vh - 220px);
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  gap: 6px;
+  padding-right: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #aab4c2 transparent;
+}
+
+.dash-events-panel .event-list::-webkit-scrollbar {
+  width: 12px;
+}
+
+.dash-events-panel .event-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.dash-events-panel .event-list::-webkit-scrollbar-thumb {
+  background: #aab4c2;
+  border: 3px solid #f1f5f9;
+  border-radius: 999px;
+}
+
+.dash-events-panel .event-list::-webkit-scrollbar-thumb:hover {
+  background: #7f8da0;
+}
+
+.dash-events-panel .event-item {
+  padding: 9px 12px;
+}
+
+.dash-events-panel .event-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
+  margin-bottom: 3px;
+}
+
+.dash-events-panel .event-code-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.dash-events-panel .event-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dash-events-panel .event-codigo {
+  margin-bottom: 0;
+  font-family: var(--font-title);
+  font-size: .82rem;
+  font-weight: 700;
+  color: var(--dc-negro);
+}
+
+.dash-events-panel .event-time--inline {
+  color: var(--dc-rojo);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dash-events-panel .event-empresa {
+  margin-bottom: 2px;
+}
+
+.dash-events-panel .event-meta {
+  line-height: 1.25;
+}
+
+.dash-events-panel .event-menu-line {
+  display: inline;
+}
+
+.dash-events-panel .event-menu-line strong {
+  color: #475569;
+  font-weight: 700;
 }
 
 /* ── Header de sección ── */
@@ -60,12 +146,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 7px;
 }
 .dash-section-title {
   font-family: var(--font-title);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--dc-negro);
   text-transform: uppercase;
   letter-spacing: .4px;
@@ -240,6 +326,46 @@
 .estado-confirmado{ background: #d1fae5; color: #065f46; }
 .estado-anulada{ background: #fee2e2; color: #991b1b; }
 
+.operative-confirmation-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+.operative-confirmation-pill--confirmado {
+  background: #dcfce7;
+  color: #166534;
+}
+.operative-confirmation-pill--por_confirmar {
+  background: #fef3c7;
+  color: #92400e;
+}
+.operative-confirmation-pill--anulada {
+  background: #fee2e2;
+  color: #991b1b;
+}
+.operative-confirmation-banner {
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: .86rem;
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+.operative-confirmation-banner--por_confirmar {
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  color: #92400e;
+}
+.operative-confirmation-banner--anulada {
+  background: #fef2f2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+}
+
 /* Botones de documentos */
 .comanda-docs {
   display: flex; gap: 4px;
@@ -310,7 +436,18 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  margin-top: 0;
+}
+
+.event-actions-host {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
   margin-top: 10px;
+  padding-top: 10px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.84), #fff 28%);
+  border-top: 1px solid var(--dc-border);
 }
 
 .event-actions .event-new-btn,
@@ -938,6 +1075,12 @@
     max-height: none;
   }
 
+  .dash-section-header {
+    align-items: flex-start;
+    gap: 8px;
+    flex-direction: column;
+  }
+
   .calendar-request-form {
     padding: 10px;
   }
@@ -950,6 +1093,7 @@
   .calendar-request-actions button {
     width: 100%;
     max-width: none;
+    min-height: 42px;
   }
 
   .expediente-container {

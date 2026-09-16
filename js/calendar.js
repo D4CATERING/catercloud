@@ -1,7 +1,7 @@
 // ========== CALENDARIO ==========
 let currentYear = new Date().getFullYear();
 let currentMonth = new Date().getMonth();
-let selectedDate = new Date();
+let selectedDate = null;
 
 const MONTH_NAMES = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -15,6 +15,114 @@ function formatoFechaLocal(date) {
     return `${year}-${month}-${day}`;
 }
 
+function escapeCalendarHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getEstadoVisibleCalendario(comanda = {}) {
+    const tipo = comanda.tipo_registro || 'comanda';
+    const estadoBase = comanda.estado || comanda.estado_pedido || 'creada';
+
+    if (tipo === 'solicitud') return estadoBase;
+    if (estadoBase === 'anulada' || estadoBase === 'eliminada') return estadoBase;
+
+    const estadoConfirmacion = String(comanda.estado_confirmacion || comanda.confirmation_status || '').trim();
+    if (estadoConfirmacion === 'confirmado' || estadoConfirmacion === 'por_confirmar' || estadoConfirmacion === 'anulada') {
+        return estadoConfirmacion;
+    }
+
+    return estadoBase;
+}
+
+function getNombreCategoriaDashboard(categoriaId, menu = {}) {
+    const id = Number(menu._cat || menu.categoriaId || menu.categoria_id || categoriaId || 0);
+    const nombres = {
+        1: 'Desayuno',
+        2: 'Foodbox',
+        3: 'Cóctel',
+        4: 'Foodbox',
+        5: 'Bandejas',
+        6: 'Bandejas'
+    };
+    return nombres[id] || menu.categoria_nombre || menu.menu_categoria_nombre || 'Menu';
+}
+
+function getNombreMenuDashboard(nombre, categoriaId, menu = {}) {
+    const id = Number(menu._cat || menu.categoriaId || menu.categoria_id || categoriaId || 0);
+    const texto = String(nombre || '').trim();
+    const normalizado = texto.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    if (id === 4 && normalizado.includes('foodbox lunch')) return 'LUNCH';
+    if (id === 5 && normalizado.includes('desayunos')) return 'DESAYUNOS';
+    if (id === 6 && normalizado.includes('foodbox')) return 'FOODBOX';
+
+    return texto || 'Menu';
+}
+
+function getMenusEventoDashboard(comanda) {
+    if (comanda?.tipo_registro === 'solicitud') {
+        return [{
+            categoria: 'Solicitud',
+            nombre: comanda.menu_principal?.nombre || comanda.menu_categoria_nombre || 'Pendiente'
+        }];
+    }
+
+    const categoriaBase = comanda?.categoria_id || comanda?.categoriaId || comanda?.categoria;
+    const menus = [];
+    const principal = comanda?.menu_principal || null;
+
+    if (principal) {
+        const categoria = principal.categoria_id || principal.categoriaId || categoriaBase;
+        menus.push({
+            categoria: getNombreCategoriaDashboard(categoria, principal),
+            nombre: getNombreMenuDashboard(principal.nombre || comanda.menu_nombre || comanda.menu_categoria_nombre, categoria, principal)
+        });
+    } else if (comanda?.menu_nombre || comanda?.menu_categoria_nombre) {
+        menus.push({
+            categoria: getNombreCategoriaDashboard(categoriaBase, comanda),
+            nombre: getNombreMenuDashboard(comanda.menu_nombre || comanda.menu_categoria_nombre, categoriaBase, comanda)
+        });
+    }
+
+    (comanda?.menus_adicionales || []).forEach(menu => {
+        const categoria = menu.categoria_id || menu.categoriaId || menu._cat || categoriaBase;
+        menus.push({
+            categoria: getNombreCategoriaDashboard(categoria, menu),
+            nombre: getNombreMenuDashboard(menu.nombre || menu.menu_principal?.nombre, categoria, menu)
+        });
+    });
+
+    return menus.filter(menu => menu.nombre);
+}
+
+function renderMenusEventoDashboard(menus) {
+    if (!Array.isArray(menus) || !menus.length) return '<span>Pendiente</span>';
+    return menus.map(menu => `
+        <span class="event-menu-line">
+            <strong>${escapeCalendarHtml(menu.categoria)}</strong>
+            ${escapeCalendarHtml(menu.nombre)}
+        </span>
+    `).join('');
+}
+
+function generarCodigoSolicitudPedido() {
+    const ahora = new Date();
+    const yy = String(ahora.getFullYear()).slice(-2);
+    const mm = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dd = String(ahora.getDate()).padStart(2, '0');
+    const hh = String(ahora.getHours()).padStart(2, '0');
+    const mi = String(ahora.getMinutes()).padStart(2, '0');
+    const ss = String(ahora.getSeconds()).padStart(2, '0');
+    const ms = String(ahora.getMilliseconds()).padStart(3, '0');
+    return `SOL${yy}${mm}${dd}${hh}${mi}${ss}${ms}`;
+}
+
 function getEventosPorFecha() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
     const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
@@ -22,18 +130,21 @@ function getEventosPorFecha() {
     const map = {};
 
     historial.forEach(c => {
-        if (c.estado === 'anulada' || c.estado_pedido === 'anulada') return;
+        if (['anulada', 'eliminada'].includes(c.estado) || ['anulada', 'eliminada'].includes(c.estado_pedido)) return;
         const fecha = (c.fecha_evento || '').split('T')[0];
         if (!fecha) return;
         if (!map[fecha]) map[fecha] = [];
 
         map[fecha].push({
             codigo: c.codigo || '',
+            codigoVisible: c.tipo_registro === 'solicitud' ? 'Solicitud' : (c.codigo || ''),
             empresa: c.empresa || 'Pendiente',
+            contacto: c.cliente_contacto || c.logistica_inline?.nombre_contacto || c.logistica?.nombre_contacto || '',
             pax: c.pax || c.pax_total || 0,
             menu: c.menu_principal?.nombre || c.menu_categoria_nombre || (c.tipo_registro === 'solicitud' ? 'Solicitud' : 'Pendiente'),
-            hora: c.logistica_inline?.hora_entrega || c.hora_salida || '',
-            estado: c.estado || 'creada',
+            menus: getMenusEventoDashboard(c),
+            hora: c.hora_salida || c.logistica_inline?.hora_salida || c.logistica_inline?.hora_entrega || '',
+            estado: getEstadoVisibleCalendario(c),
             tipo: c.tipo_registro || 'comanda',
             tieneLogistica: !!c.documentos?.logistica || codigosConLogistica.has(c.codigo || ''),
         });
@@ -77,7 +188,7 @@ function cargarCalendario() {
         const isToday = today.getFullYear() === currentYear &&
             today.getMonth() === currentMonth &&
             today.getDate() === day;
-        const isSelected = date.toDateString() === selectedDate.toDateString();
+        const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
         const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
         if (isToday) el.classList.add('today');
@@ -109,10 +220,28 @@ function seleccionarDia(date) {
     cargarCalendario();
 }
 
+function limpiarSeleccionCalendario() {
+    selectedDate = null;
+}
+
+window.limpiarSeleccionCalendario = limpiarSeleccionCalendario;
+
 function _renderEventosDia(eventosPorFecha) {
     const eventList = document.getElementById('eventList');
+    const actionsHost = document.getElementById('eventActionsHost');
     const titleEl = document.getElementById('selectedDateTitle');
     if (!eventList) return;
+
+    if (!selectedDate) {
+        if (titleEl) titleEl.textContent = 'Selecciona una fecha';
+        if (actionsHost) actionsHost.innerHTML = '';
+        eventList.innerHTML = `
+            <div class="event-empty">
+                <div class="event-empty-icon">--</div>
+                <div>Haz click en una fecha para ver sus carpetas</div>
+            </div>`;
+        return;
+    }
 
     const dateStr = formatoFechaLocal(selectedDate);
     const evs = eventosPorFecha[dateStr] || [];
@@ -145,14 +274,14 @@ function _renderEventosDia(eventosPorFecha) {
                 + Crear solicitud
             </button>
         </div>`;
+    if (actionsHost) actionsHost.innerHTML = btnHtml;
 
     if (!evs.length) {
         eventList.innerHTML = `
             <div class="event-empty">
                 <div class="event-empty-icon">--</div>
                 <div>Sin pedidos este dia</div>
-            </div>
-            ${btnHtml}`;
+            </div>`;
         if (window.AppPermissions) AppPermissions.applyUI();
         return;
     }
@@ -162,7 +291,10 @@ function _renderEventosDia(eventosPorFecha) {
         return `
         <div class="event-item" onclick="verExpedientePedido('${ev.codigo}')">
             <div class="event-header">
-                ${ev.hora ? `<span class="event-time">${ev.hora}</span>` : ''}
+                <div class="event-code-row">
+                    <span class="event-codigo">${escapeCalendarHtml(ev.codigoVisible || ev.codigo)}</span>
+                    ${ev.hora ? `<span class="event-time event-time--inline">Salida: ${escapeCalendarHtml(ev.hora)}</span>` : ''}
+                </div>
                 <div class="event-header-actions">
                     <span class="event-badge ${badge.cls}">${badge.label}</span>
                     <button type="button" class="event-icon-btn event-icon-btn--edit" title="Editar carpeta" aria-label="Editar carpeta" data-requires-write
@@ -184,17 +316,19 @@ function _renderEventosDia(eventosPorFecha) {
                     </button>
                 </div>
             </div>
-            <div class="event-empresa">${ev.empresa}</div>
-            <div class="event-meta">
-                <span>${ev.menu}</span>
-                <span class="event-sep">-</span>
-                <span>${ev.pax} pax</span>
+            <div class="event-empresa">
+                ${escapeCalendarHtml(ev.empresa)}
+                ${ev.contacto ? `<span class="event-contact-inline"> - ${escapeCalendarHtml(ev.contacto)}</span>` : ''}
             </div>
-            <div class="event-codigo">${ev.codigo}</div>
+            <div class="event-meta">
+                ${renderMenusEventoDashboard(ev.menus)}
+                <span class="event-sep">-</span>
+                <span>${escapeCalendarHtml(ev.pax)} pax</span>
+            </div>
         </div>`;
     }).join('');
 
-    eventList.innerHTML = itemsHtml + btnHtml;
+    eventList.innerHTML = itemsHtml;
     if (window.AppPermissions) AppPermissions.applyUI();
 }
 
@@ -318,11 +452,7 @@ async function eliminarCarpetaPedido(codigo) {
 
     if (window.supabaseClient) {
         try {
-            const { error } = await window.supabaseClient
-                .from('orders')
-                .delete()
-                .eq('codigo', codigo);
-            if (error) throw error;
+            await window.marcarComandaEliminadaEnSupabase?.(codigo, pedido);
         } catch (error) {
             console.warn('No se pudo eliminar la carpeta en Supabase:', error);
             alert('La carpeta se elimino localmente, pero no se pudo sincronizar la eliminacion con Supabase. Revisa permisos.');
@@ -333,30 +463,36 @@ async function eliminarCarpetaPedido(codigo) {
     cargarCalendario();
 }
 
-function nuevaComandaEnFecha(dateStr) {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear comandas.')) {
+async function nuevaComandaEnFecha(dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear comandas.')) {
         return;
     }
 
     if (typeof mostrarComandaCocina === 'function') {
-        mostrarComandaCocina();
+        await mostrarComandaCocina({ fechaEvento: dateStr });
     }
 
     const fechaInput = document.getElementById('fecha_evento');
     if (fechaInput) fechaInput.value = dateStr;
+    if (typeof window.actualizarDiaFechaEvento === 'function') {
+        window.actualizarDiaFechaEvento();
+    }
 }
 
-function nuevoServicioEnFecha(dateStr) {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear servicios.')) {
+async function nuevoServicioEnFecha(dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear servicios.')) {
         return;
     }
 
     if (typeof mostrarServicios === 'function') {
-        mostrarServicios();
+        await mostrarServicios({ fechaEvento: dateStr });
     }
 
     const fechaInput = document.getElementById('fecha_evento');
     if (fechaInput) fechaInput.value = dateStr;
+    if (typeof window.actualizarDiaFechaEvento === 'function') {
+        window.actualizarDiaFechaEvento();
+    }
 }
 
 function getOpcionesMenuSolicitud() {
@@ -384,18 +520,26 @@ function getOpcionesMenuSolicitud() {
 }
 
 async function nuevaSolicitudEnFecha(dateStr) {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear solicitudes.')) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear solicitudes.')) {
         return;
     }
 
     const cont = document.getElementById('solicitudFormCalendario');
     if (!cont) return;
 
+    const estaAbierto = cont.style.display !== 'none' && cont.innerHTML.trim();
+    if (estaAbierto && cont.dataset.formType === 'crear-solicitud' && cont.dataset.date === dateStr) {
+        cerrarSolicitudCalendario();
+        return;
+    }
+
     const opcionesMenu = getOpcionesMenuSolicitud()
         .map(menu => `<option value="${menu.id}">${menu.nombre}</option>`)
         .join('');
 
     cont.style.display = 'block';
+    cont.dataset.formType = 'crear-solicitud';
+    cont.dataset.date = dateStr;
     cont.innerHTML = `
         <div class="calendar-request-title">Solicitud de pedido</div>
         <div class="calendar-request-grid">
@@ -428,6 +572,8 @@ async function nuevaSolicitudEnFecha(dateStr) {
             <button type="button" class="event-secondary-btn" onclick="guardarSolicitudDesdeCalendario('${dateStr}')">Crear carpeta</button>
             <button type="button" class="calendar-request-cancel" onclick="cerrarSolicitudCalendario()">Cancelar</button>
         </div>`;
+
+    scrollSolicitudCalendarioSiNecesario();
 }
 
 function cerrarSolicitudCalendario() {
@@ -435,11 +581,23 @@ function cerrarSolicitudCalendario() {
     if (cont) {
         cont.style.display = 'none';
         cont.innerHTML = '';
+        cont.dataset.formType = '';
+        cont.dataset.date = '';
     }
 }
 
+function scrollSolicitudCalendarioSiNecesario() {
+    const cont = document.getElementById('solicitudFormCalendario');
+    if (!cont || cont.style.display === 'none') return;
+    if (!window.matchMedia('(max-width: 1100px)').matches) return;
+    setTimeout(() => {
+        cont.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('solHoraSalida')?.focus({ preventScroll: true });
+    }, 60);
+}
+
 async function guardarSolicitudDesdeCalendario(dateStr) {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear solicitudes.')) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear solicitudes.')) {
         return;
     }
 
@@ -468,7 +626,7 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
 
     const solicitud = {
         tipo_registro: 'solicitud',
-        codigo: generarCodigoComanda(),
+        codigo: generarCodigoSolicitudPedido(),
         empresa,
         cliente_id: clienteId,
         responsable: usuarioActualNombre || 'Pendiente',
@@ -499,6 +657,7 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
         await sincronizarSolicitudPedido(solicitud);
     }
 
+    cerrarSolicitudCalendario();
     cargarCalendario();
 
     if (typeof verExpedientePedido === 'function') {
@@ -507,6 +666,22 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
 }
 
 let _solicitudClientesTimer = null;
+
+function agruparClientesSolicitudPorEmpresa(clientes = []) {
+    const mapa = new Map();
+    clientes.forEach(cliente => {
+        const empresa = (cliente.empresa || '').trim();
+        if (!empresa) return;
+        const key = empresa.toLocaleLowerCase('es');
+        const actual = mapa.get(key);
+        if (!actual || (!actual.contacto && cliente.contacto)) {
+            mapa.set(key, cliente);
+        }
+    });
+    return Array.from(mapa.values()).sort((a, b) =>
+        String(a.empresa || '').localeCompare(String(b.empresa || ''), 'es', { sensitivity: 'base' })
+    );
+}
 
 function buscarClientesSolicitud(term) {
     const clienteIdInput = document.getElementById('solClienteId');
@@ -555,11 +730,11 @@ async function cargarClientesSolicitud(term) {
             return;
         }
 
-        window._solicitudClientesResultados = data;
-        results.innerHTML = data.map((cliente, index) => `
+        const empresas = agruparClientesSolicitudPorEmpresa(data);
+        window._solicitudClientesResultados = empresas;
+        results.innerHTML = empresas.map((cliente, index) => `
             <button type="button" class="calendar-client-option" onclick="seleccionarClienteSolicitud(${index})">
                 <strong>${cliente.empresa || ''}</strong>
-                <span>${cliente.contacto || 'Sin contacto'}${cliente.telefono ? ' - ' + cliente.telefono : ''}</span>
             </button>
         `).join('') + `
             <button type="button" class="calendar-client-create" onclick="crearClienteDesdeSolicitud()">

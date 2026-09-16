@@ -9,7 +9,7 @@ if (!window.referenciasSeleccionadas) window.referenciasSeleccionadas = { gris: 
 if (!window.referenciasDesayuno) window.referenciasDesayuno = null;
 
 function resetPaxMenuActual() {
-    if (window._cargandoComandaEnFormulario) return;
+    if (window._cargandoComandaEnFormulario || window._editandoMenuDesdeResumen) return;
     window.pax = 0;
     const paxInput = document.getElementById('pax');
     if (paxInput) paxInput.value = '0';
@@ -19,6 +19,19 @@ function resetPaxMenuActual() {
     if (typeof actualizarCantidadesReferencias === 'function') actualizarCantidadesReferencias();
     if (typeof actualizarCantidadesDesayuno === 'function') actualizarCantidadesDesayuno();
 }
+
+function recalcularCantidadesPorPax() {
+    const paxInput = document.getElementById('pax');
+    window.pax = parseInt(paxInput?.value) || 0;
+
+    if (typeof actualizarCantidades === 'function') actualizarCantidades();
+    if (typeof actualizarCantidadesDesayuno === 'function') actualizarCantidadesDesayuno();
+    if (typeof window.actualizarCantidadesMaterialIncluido === 'function') {
+        window.actualizarCantidadesMaterialIncluido('materialLogisticaInline');
+    }
+}
+
+window.recalcularCantidadesPorPax = recalcularCantidadesPorPax;
 
 function asegurarLogisticaInlineVisible() {
     const logisticaSection = document.getElementById('logisticaInlineSection');
@@ -38,6 +51,13 @@ function asegurarLogisticaInlineVisible() {
 
     if (logisticaSection) logisticaSection.style.display = 'block';
     if (notasSection) notasSection.style.display = 'block';
+}
+
+function establecerModoMaterialLogisticaInline(categoriaId) {
+    const materialInline = document.getElementById('materialLogisticaInline');
+    const modo = Number(categoriaId || document.getElementById('categoria')?.value || 0) === 3 ? 'servicios' : 'menus';
+    window.modoMaterialLogisticaInline = modo;
+    if (materialInline) materialInline.dataset.modoLogistica = modo;
 }
 
 // ========== NUEVO: AÑADIR VARIABLE FOODBOX ==========
@@ -103,6 +123,7 @@ function actualizarCantidadesReferencias() {
         const seleccionadas = window.referenciasSeleccionadas[tipo] || [];
 
         seleccionadas.forEach(sel => {
+            if (sel.cantidad_manual || sel._cantidad_guardada_edicion) return;
             const ref = catalogo.find(r => String(r.id) === String(sel.id));
             if (!ref || typeof calcularCantidad !== 'function') return;
             sel.cantidad = calcularCantidad(ref, pax);
@@ -145,8 +166,8 @@ function actualizarCantidadesDesayuno() {
         const input = item.querySelector('.dc-input-qty, .cantidad-input-compact');
 
         if (!refData || !input || tipo === 'leche_especial') return;
+        if (refData.cantidad_manual || refData._cantidad_guardada_edicion) return;
 
-        const baseCantidad = parseFloat(input.dataset.base || refData.cantidadPorPax) || 0;
         let nuevaCantidad = 0;
 
         if (tipo === 'termo') {
@@ -154,6 +175,7 @@ function actualizarCantidadesDesayuno() {
                 ? Math.ceil(pax / 10)
                 : Math.ceil(pax / 20);
         } else {
+            const baseCantidad = parseFloat(input.dataset.base || refData.cantidadPorPax) || 0;
             nuevaCantidad = Math.ceil(pax * baseCantidad);
         }
 
@@ -247,7 +269,7 @@ async function cargarMenus() {
     const categoriaId = document.getElementById('categoria').value;
     const container = document.getElementById('menusContainer');
     container.innerHTML = '';
-    resetPaxMenuActual();
+    window.pax = parseInt(document.getElementById('pax')?.value) || 0;
     const esCategoriaServicios = String(categoriaId) === '3';
     const serviciosGroup = document.getElementById('serviciosCategoriaGroup');
     const tipoMenajeGroup = document.getElementById('tipoMenajeGroup');
@@ -274,6 +296,7 @@ async function cargarMenus() {
     if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
     window.menuSeleccionado = null;
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [], saladas: [] };
+    window.referenciasExtras = [];
 
     // PAX + botón: visible si hay categoría, oculto si se deselecciona
     const btnWrap = document.getElementById('btnAnadirMenuWrap');
@@ -306,8 +329,19 @@ async function cargarMenus() {
     if (!categoriaId) return;
     
     let menus = [];
+    let menusDesdeSupabase = false;
+
+    if (window.supabaseClient && typeof cargarMenusCartaDesdeSupabase === 'function') {
+        try {
+            const servicioTipo = document.getElementById('serviciosCategoria')?.value || '';
+            menus = await cargarMenusCartaDesdeSupabase(categoriaId, servicioTipo);
+            menusDesdeSupabase = menus.length > 0;
+        } catch (error) {
+            console.warn('No se pudieron cargar menús desde Supabase. Usando respaldo local.', error);
+        }
+    }
     
-    if (categoriaId == 1) {
+    if (!menusDesdeSupabase && categoriaId == 1) {
         menus = [
             { id: 17, nombre: 'WELCOME COFFEE & COFFEE BREAK', descripcion: 'Termo café + leche + 2 mini cookies o pastas de té + 1 mini bolleríía + agua mineral' },
             { id: 1, nombre: 'HEALTHY', descripcion: 'Termo café + leche + infusión + tostada aguacate y tomate + fruta + bolleríía + mini sándwich + zumo naranja' },
@@ -316,7 +350,7 @@ async function cargarMenus() {
             { id: 4, nombre: 'VEGGIE', descripcion: 'Termo café + leche vegetal + infusión + cookie vegana + sándwich vegetal + sándwich aguacate-tomate + fruta + zumo naranja' }
         ];
     }
-    else if (categoriaId == 2) {
+    else if (!menusDesdeSupabase && categoriaId == 2) {
         menus = [
             { id: 18, nombre: 'BASIC', descripcion: '5 ref. grises + 1 ref. roja', items_gris_max: 5, items_rojo_max: 1, items_postres_min: 0, items_postres_max: 0, mult_postres: 1 },
             { id: 5,  nombre: 'ECONÓMICO', descripcion: '5 ref. grises + 2 ref. rojas + 1 postre', items_gris_max: 5, items_rojo_max: 2, items_postres_min: 1, items_postres_max: 1, mult_postres: 1 },
@@ -325,7 +359,7 @@ async function cargarMenus() {
             { id: 8,  nombre: 'VEGGIE', descripcion: '6 ref. grises sin rojas', items_gris_max: 6, items_rojo_max: 0, items_postres_min: 0, items_postres_max: 0, mult_postres: 1 }
         ];
     }
-    else if (categoriaId == 3) {
+    else if (!menusDesdeSupabase && categoriaId == 3) {
         menus = [
             { id: 9, nombre: 'AFTERWORK', descripcion: '6 items salados', items_salados_min: 6, items_salados_max: 6 },
             { id: 10, nombre: 'VINOESPAÑOL', descripcion: '7 items salados', items_salados_min: 7, items_salados_max: 7 },
@@ -335,7 +369,7 @@ async function cargarMenus() {
             { id: 14, nombre: 'ATRACTIVIDAD', descripcion: '17 items salados', items_salados_min: 17, items_salados_max: 17 }
         ];
     }
-    else if (categoriaId == 4) {
+    else if (!menusDesdeSupabase && categoriaId == 4) {
         menus = [
             {
                 id: 15,
@@ -349,14 +383,14 @@ async function cargarMenus() {
             }
         ];
     }
-    else if (categoriaId == 5) {
+    else if (!menusDesdeSupabase && categoriaId == 5) {
         menus = [
             { id: 16, nombre: 'DO IT YOURSELF DESAYUNOS', descripcion: 'Bandejas de desayuno para montar', _cat: 5 },
             { id: 17, nombre: 'DO IT YOURSELF FOODBOX',   descripcion: 'Bandejas foodbox para montar',    _cat: 6 }
         ];
     }
     
-    if (categoriaId == 3) {
+    if (!menusDesdeSupabase && categoriaId == 3) {
         const servicioTipo = document.getElementById('serviciosCategoria')?.value || '';
         if (!servicioTipo) {
             container.innerHTML = '';
@@ -380,6 +414,44 @@ async function cargarMenus() {
     mostrarMenusPrincipales(menus);
 }
 
+async function cargarMenusCartaDesdeSupabase(categoriaId, servicioTipo = '') {
+    const query = window.supabaseClient
+        .from('menu_menus')
+        .select('*')
+        .eq('category_id', Number(categoriaId))
+        .eq('active', true)
+        .order('display_order', { ascending: true });
+
+    if (Number(categoriaId) === 3) {
+        if (!servicioTipo) return [];
+        query.eq('service_category', servicioTipo);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data || []).map(row => ({
+        id: row.legacy_id !== null && row.legacy_id !== undefined ? Number(row.legacy_id) : row.id,
+        nombre: row.name,
+        descripcion: row.description || '',
+        tipo: row.menu_type || undefined,
+        servicio_categoria: row.service_category || undefined,
+        _cat: row.effective_category_id ? Number(row.effective_category_id) : undefined,
+        items_gris_min: Number(row.items_gris_min || 0),
+        items_gris_max: Number(row.items_gris_max || 0),
+        items_rojo_min: Number(row.items_rojo_min || 0),
+        items_rojo_max: Number(row.items_rojo_max || 0),
+        items_salados_min: Number(row.items_salados_min || 0),
+        items_salados_max: Number(row.items_salados_max || 0),
+        items_postres_min: Number(row.items_postres_min || 0),
+        items_postres_max: Number(row.items_postres_max || 0),
+        mult_postres: Number(row.mult_postres || 1),
+        omitir_material_menu: Boolean(row.omit_material_menu)
+    }));
+}
+
+window.cargarMenusCartaDesdeSupabase = cargarMenusCartaDesdeSupabase;
+
 /**
  * Muestra los menús en el contenedor
  */
@@ -394,8 +466,10 @@ function mostrarMenusPrincipales(menus) {
     let html = '';
     
     menus.forEach(menu => {
+        const menuJson = JSON.stringify(menu).replace(/'/g, '&#39;');
         html += `
-        <div class="menu-option" onclick="seleccionarMenu(${menu.id}, this)" data-menu='${JSON.stringify(menu)}'>
+        <div class="menu-option" data-menu='${menuJson}' style="display:flex; align-items:center; gap:8px;">
+            <div class="menu-option-info" onclick="seleccionarMenu(${menu.id}, this.closest('.menu-option'))" style="flex:1; cursor:pointer;">
             <h4>${menu.nombre}</h4>
             <p>${menu.descripcion || 'Sin descripción'}</p>
             ${menu.items_salados_min > 0 ?
@@ -404,10 +478,10 @@ function mostrarMenusPrincipales(menus) {
                     ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
                 </p>` : ''
             }
+            </div>
         </div>
         `;
     });
-    
     container.innerHTML = html;
 }
 
@@ -429,7 +503,6 @@ async function seleccionarMenu(menuId, element) {
     // Estado global
     window.menuSeleccionado = JSON.parse(element.dataset.menu);
     document.getElementById('menu_id').value = menuId;
-    resetPaxMenuActual();
     window.pax = parseInt(document.getElementById('pax').value) || 0;
 
     // Aplicar tipo de menaje ya seleccionado a los termos y material
@@ -480,7 +553,8 @@ async function seleccionarMenu(menuId, element) {
             selectMenaje.value = 'desechable';
         }
 
-        if (!window.menuSeleccionado?.omitir_material_menu) {
+        establecerModoMaterialLogisticaInline(categoriaId);
+        if (!window.menuSeleccionado?.omitir_material_menu && !window._cargandoComandaEnFormulario && !window._editandoMenuDesdeResumen) {
             // Mostrar solo el material (logística siempre visible)
             const materialInline = document.getElementById('materialLogisticaInline');
             if (materialInline) materialInline.style.display = 'block';
@@ -503,7 +577,7 @@ async function seleccionarMenu(menuId, element) {
 
         // Cargar referencias del desayuno (zumo/agua se inyectan en _bebidas)
         if (typeof cargarReferenciasDesayuno === 'function') {
-            cargarReferenciasDesayuno(window.menuSeleccionado);
+            await cargarReferenciasDesayuno(window.menuSeleccionado);
         } else {
             console.error('No existe cargarReferenciasDesayuno(). Falta importar/definir el módulo de desayunos.');
         }
@@ -582,10 +656,11 @@ async function seleccionarMenu(menuId, element) {
             document.getElementById('referenciasPostresGroup').style.display = 'none';
         }
 
+        establecerModoMaterialLogisticaInline(categoriaId);
         // Inicializar logística para Foodbox/Comida (2) y Servicios (3)
         // setTimeout para asegurar que el DOM esté listo antes de renderizar
         const _catId = categoriaId;
-        if (!(categoriaId === 3 && window.serviciosMode)) {
+        if (!(categoriaId === 3 && window.serviciosMode) && !window._cargandoComandaEnFormulario && !window._editandoMenuDesdeResumen) {
         setTimeout(async () => {
             // Solo mostrar el material (logística siempre visible)
             const matInline = document.getElementById('materialLogisticaInline');
@@ -611,8 +686,9 @@ async function seleccionarMenu(menuId, element) {
         const desayunoSection = document.getElementById('desayunoReferencesSection');
         if (desayunoSection) desayunoSection.style.display = 'none';
         
+        establecerModoMaterialLogisticaInline(categoriaId);
         if (typeof cargarOpcionesFoodboxLunch === 'function') {
-            cargarOpcionesFoodboxLunch();
+            await cargarOpcionesFoodboxLunch();
             // La logística (logisticaInlineSection + materialLogisticaInline)
             // la muestra e inicializa foodbox-lunch.js en su propio setTimeout
         } else {
@@ -640,12 +716,13 @@ if (categoriaId === 5) {
         console.error('cargarDIYDesayunos() no encontrado. Revisa bandejas-preparadas.js');
     }
 
+    establecerModoMaterialLogisticaInline(categoriaId);
     // Mostrar logística inline igual que Foodbox/Comida
     const logSecDIY5 = document.getElementById('logisticaInlineSection');
     if (logSecDIY5) logSecDIY5.style.display = 'block';
     const matInlineDIY5 = document.getElementById('materialLogisticaInline');
     if (matInlineDIY5) matInlineDIY5.style.display = 'block';
-    if (typeof inicializarMaterialLogistica === 'function') {
+    if (!window._cargandoComandaEnFormulario && !window._editandoMenuDesdeResumen && typeof inicializarMaterialLogistica === 'function') {
         await inicializarMaterialLogistica('materialLogisticaInline');
         if (typeof autocompletarMaterialPorCategoria === 'function') {
             await autocompletarMaterialPorCategoria(5, 'materialLogisticaInline');
@@ -671,12 +748,13 @@ if (categoriaId === 6) {
         console.error('cargarDIYFoodbox() no encontrado. Revisa bandejas-preparadas.js');
     }
 
+    establecerModoMaterialLogisticaInline(categoriaId);
     // Mostrar logística inline igual que Foodbox/Comida
     const logSecDIY6 = document.getElementById('logisticaInlineSection');
     if (logSecDIY6) logSecDIY6.style.display = 'block';
     const matInlineDIY6 = document.getElementById('materialLogisticaInline');
     if (matInlineDIY6) matInlineDIY6.style.display = 'block';
-    if (typeof inicializarMaterialLogistica === 'function') {
+    if (!window._cargandoComandaEnFormulario && !window._editandoMenuDesdeResumen && typeof inicializarMaterialLogistica === 'function') {
         await inicializarMaterialLogistica('materialLogisticaInline');
         if (typeof autocompletarMaterialPorCategoria === 'function') {
             await autocompletarMaterialPorCategoria(6, 'materialLogisticaInline');
@@ -695,6 +773,35 @@ if (categoriaId === 6) {
     }
 
 }
+
+window._activarPrimerMenuEdicion = async function(menu) {
+    const categoriaId = Number(menu?.categoriaId || menu?._cat || 0);
+    const categoriaSelect = document.getElementById('categoria');
+    if (categoriaSelect && categoriaId) categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
+    establecerModoMaterialLogisticaInline(categoriaId);
+
+    window._editandoMenuDesdeResumen = true;
+    try {
+        if (typeof cargarMenus === 'function') await cargarMenus();
+
+        const opciones = Array.from(document.querySelectorAll('#menusContainer .menu-option'));
+        const opcion = opciones.find(opt => {
+            try {
+                const data = JSON.parse(opt.dataset.menu || '{}');
+                return String(data.id) === String(menu?.id) ||
+                    String(data.nombre || '').trim().toLowerCase() === String(menu?.nombre || '').trim().toLowerCase();
+            } catch (_) {
+                return false;
+            }
+        });
+
+        if (opcion && typeof seleccionarMenu === 'function') {
+            await seleccionarMenu(menu.id, opcion);
+        }
+    } finally {
+        window._editandoMenuDesdeResumen = false;
+    }
+};
 
 function limpiarSeccionesMenu() {
     const desayunoSection = document.getElementById('desayunoReferencesSection');
@@ -719,6 +826,7 @@ function limpiarSeccionesMenu() {
     if (diyFoodboxSection) diyFoodboxSection.remove();
 
     window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [], saladas: [] };
+    window.referenciasExtras = [];
     window.referenciasDesayuno = {};
     if (window.BandejasState) {
         ['diy_dulces','diy_salados','diy_termos','diy_servicio',

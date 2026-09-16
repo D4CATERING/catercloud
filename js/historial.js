@@ -8,10 +8,31 @@ function getEstadoPedidoLabel(estado) {
         negociacion: 'En negociacion',
         por_confirmar: 'Por confirmar',
         confirmado: 'Confirmado',
+        eliminada: 'Eliminada',
         anulada: 'Anulado'
     };
 
     return labels[estado] || (estado ? estado.charAt(0).toUpperCase() + estado.slice(1) : '-');
+}
+
+function getEstadoConfirmacionPedido(comanda = {}) {
+    const estado = String(comanda.estado_confirmacion || comanda.confirmation_status || '').trim();
+    if (estado === 'confirmado' || estado === 'por_confirmar' || estado === 'anulada') return estado;
+    if (comanda.estado === 'confirmado' || comanda.estado === 'por_confirmar' || comanda.estado === 'anulada') return comanda.estado;
+    return 'confirmado';
+}
+
+function tieneEstadoConfirmacionPedido(comanda = {}) {
+    const estado = String(comanda.estado_confirmacion || comanda.confirmation_status || '').trim();
+    return estado === 'confirmado' || estado === 'por_confirmar' || estado === 'anulada';
+}
+
+function getEstadoVisiblePedido(comanda = {}) {
+    const estadoBase = comanda.estado || comanda.estado_pedido || 'creada';
+    if (comanda.tipo_registro === 'solicitud') return estadoBase;
+    if (estadoBase === 'anulada' || estadoBase === 'eliminada') return estadoBase;
+    if (!tieneEstadoConfirmacionPedido(comanda)) return estadoBase;
+    return getEstadoConfirmacionPedido(comanda);
 }
 
 function textoSeguro(valor) {
@@ -24,17 +45,121 @@ function textoSeguro(valor) {
     }[char]));
 }
 
+function renderDatosEntregaLogistica(datos = {}) {
+    const direccionCompleta = datos.direccion || [datos.calle, datos.numero].filter(Boolean).join(', ');
+    const direccionPartes = typeof window.separarDireccionLogistica === 'function'
+        ? window.separarDireccionLogistica(direccionCompleta)
+        : { calle: '', numero: '' };
+    const calle = datos.calle || direccionPartes.calle || direccionCompleta;
+    const numero = datos.numero || direccionPartes.numero || '';
+    const campo = (label, valor, extraClass = '') => {
+        if (!valor) return '';
+        return `<div class="detalle-logistica-entrega-field ${extraClass}">
+            <div class="detalle-field-label">${label}</div>
+            <div class="detalle-field-value">${textoSeguro(valor)}</div>
+        </div>`;
+    };
+
+    const campos = [
+        campo('Contacto', datos.nombre_contacto, 'detalle-logistica-contacto'),
+        campo('Telefono', datos.telefono_contacto, 'detalle-logistica-telefono'),
+        campo('Duracion evento', datos.duracion_evento, 'detalle-logistica-duracion'),
+        campo('Cantidad camareros', datos.cantidad_camareros, 'detalle-logistica-camareros'),
+        campo('Hora Entrega', datos.hora_entrega, 'detalle-logistica-hora detalle-logistica-hora-entrega'),
+        campo('Calle', calle, 'detalle-logistica-calle'),
+        campo('Numero / Portal', numero, 'detalle-logistica-numero'),
+        campo('Cod. Postal', datos.codigo_postal, 'detalle-logistica-cp'),
+        campo('Montaje', datos.montaje, 'detalle-logistica-montaje'),
+        campo('Hora Evento', datos.hora_evento, 'detalle-logistica-hora detalle-logistica-hora-evento')
+    ].join('');
+
+    if (!campos) return '';
+
+    return `<div class="detalle-logistica-entrega-grid">
+        ${campos}
+    </div>`;
+}
+
+function getDatosEntregaLogisticaComanda(comanda = {}) {
+    const salida = {};
+    const fuentes = [
+        comanda.logistica_inline,
+        comanda.logistica,
+        comanda.datos_entrega,
+        comanda.delivery_data,
+        comanda.delivery,
+        comanda.entrega,
+        comanda.logistica?.datos_entrega,
+        comanda.logistica?.delivery_data,
+        comanda.logistica?.entrega
+    ];
+
+    fuentes.forEach(fuente => {
+        if (!fuente || typeof fuente !== 'object' || Array.isArray(fuente)) return;
+        Object.entries(fuente).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            if (typeof value === 'object') return;
+            if (String(value).trim() === '') return;
+            salida[key] = value;
+        });
+    });
+
+    const direccionCompleta = comanda.direccion_entrega || comanda.direccion || '';
+    if (!salida.direccion && direccionCompleta) salida.direccion = direccionCompleta;
+    if (!salida.calle && comanda.calle) salida.calle = comanda.calle;
+    if (!salida.numero && (comanda.numero || comanda.portal)) salida.numero = comanda.numero || comanda.portal;
+    if (!salida.codigo_postal && (comanda.codigo_postal || comanda.cp)) salida.codigo_postal = comanda.codigo_postal || comanda.cp;
+    if (!salida.nombre_contacto && (comanda.nombre_contacto || comanda.contacto)) salida.nombre_contacto = comanda.nombre_contacto || comanda.contacto;
+    if (!salida.telefono_contacto && (comanda.telefono_contacto || comanda.telefono)) salida.telefono_contacto = comanda.telefono_contacto || comanda.telefono;
+    return salida;
+}
+
+function getClaseIconoIntolerancia(nombre = '') {
+    const limpio = String(nombre || '').toLowerCase();
+    if (limpio.includes('gluten')) return 'gluten';
+    if (limpio.includes('lactosa')) return 'lactosa';
+    if (limpio.includes('frutos')) return 'frutos';
+    if (limpio.includes('huevo')) return 'huevo';
+    if (limpio.includes('marisco')) return 'marisco';
+    if (limpio.includes('vegetariano')) return 'vegetariano';
+    if (limpio.includes('vegano')) return 'vegano';
+    return 'otro';
+}
+
+function getNombreIntoleranciaDisplay(nombre = '') {
+    const texto = String(nombre || '').trim();
+    if (!texto) return '';
+    return /^foodbox\b/i.test(texto) ? texto.replace(/^foodbox\b/i, 'FOODBOX') : `FOODBOX ${texto}`;
+}
+
+function getIconoIntoleranciaSrc(nombre = '') {
+    const icono = getClaseIconoIntolerancia(nombre);
+    const archivos = {
+        gluten: 'gluten.svg',
+        lactosa: 'lacteos.svg',
+        frutos: 'frutos-cascara.svg',
+        huevo: 'huevo.svg',
+        marisco: 'crustaceos.svg',
+        vegetariano: 'vegetariano.svg',
+        vegano: 'vegano.svg',
+        otro: 'otro.svg'
+    };
+    return `assets/icons/allergens/${archivos[icono] || archivos.otro}`;
+}
+
 function cargarHistorial() {
     const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
     const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
 
-    if (historial.length === 0) {
+    const historialVisible = historial.filter(comanda => comanda.estado !== 'eliminada' && comanda.estado_pedido !== 'eliminada');
+
+    if (historialVisible.length === 0) {
         container.innerHTML = '<p style="color: #94a3b8; text-align: center; font-size: 0.9rem; padding: 40px;">No hay comandas en el historial</p>';
         return;
     }
 
-    historial.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
-    container.innerHTML = historial.map(renderHistorialItem).join('');
+    historialVisible.sort((a, b) => new Date(b.fecha_creacion) - new Date(a.fecha_creacion));
+    container.innerHTML = historialVisible.map(renderHistorialItem).join('');
 }
 
 function filtrarComandas() {
@@ -45,6 +170,7 @@ function filtrarComandas() {
     const filtroEstado = document.getElementById('filtroEstado').value;
 
     const comandasFiltradas = historial.filter(comanda => {
+        if (comanda.estado === 'eliminada' || comanda.estado_pedido === 'eliminada') return false;
         const empresa = (comanda.empresa || '').toLowerCase();
         const codigo = (comanda.codigo || '').toLowerCase();
         const responsable = (comanda.responsable || '').toLowerCase();
@@ -79,7 +205,7 @@ function renderHistorialItem(comanda) {
     const fechaCreacion = new Date(comanda.fecha_creacion);
     const fechaEvento = new Date(comanda.fecha_evento);
     const menuNombre = comanda.menu_principal?.nombre || comanda.menu_categoria_nombre || 'No especificado';
-    const estado = comanda.estado || 'creada';
+    const estado = getEstadoVisiblePedido(comanda);
 
     return `
         <div class="comanda-item" onclick="verExpedientePedido('${comanda.codigo}')">
@@ -163,13 +289,17 @@ function _renderExpedientePedido(comanda) {
     const archivosHtml = _renderArchivosSolicitud(comanda);
     const tieneLogistica = !!comanda.documentos?.logistica || _pedidoTieneComandaLogistica(comanda.codigo);
     const esComandaServicios = typeof _esComandaServicios === 'function' && _esComandaServicios(comanda);
-    const puedeCrearLogistica = (!window.AppPermissions || AppPermissions.canEditLogistics()) &&
+    const tieneLogisticaSeparada = tieneLogistica && esComandaServicios;
+    const puedeCrearLogistica = (!window.AppPermissions || AppPermissions.canCreateServiceLogistics()) &&
         !tieneLogistica &&
         esComandaServicios &&
         !esSolicitud &&
         estado !== 'anulada';
+    const estadoConfirmacion = getEstadoConfirmacionPedido(comanda);
     const puedeConfirmarSolicitud = puedeEditar && esSolicitud && estado !== 'confirmado' && estado !== 'anulada';
+    const puedeConfirmarComanda = puedeEditar && !esSolicitud && estadoConfirmacion === 'por_confirmar' && estado !== 'anulada';
     const puedeAnularPedido = puedeEditar && estado !== 'anulada';
+    const estadoVisibleHeader = esSolicitud || !tieneEstadoConfirmacionPedido(comanda) ? estado : estadoConfirmacion;
     const notasPedido = comanda.notas_pedido || comanda.anotaciones_pedido || '';
     const accionesCarpetaHtml = puedeEditar ? `<div class="expediente-folder-actions">
                 <button type="button" class="expediente-icon-btn expediente-icon-btn--edit" title="Editar carpeta" aria-label="Editar carpeta" onclick="mostrarEditorCarpetaExpediente('${comanda.codigo}')">
@@ -180,23 +310,27 @@ function _renderExpedientePedido(comanda) {
                 </button>
             </div>` : '';
     const editorCarpetaHtml = puedeEditar ? _renderEditorCarpetaExpediente(comanda) : '';
-    const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeAnularPedido)
+    const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeConfirmarComanda || puedeAnularPedido)
         ? `<div class="expediente-status-actions">
                     ${puedeConfirmarSolicitud ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar</button>` : ''}
+                    ${puedeConfirmarComanda ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoConfirmacionComandaDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar comanda</button>` : ''}
                     ${puedeAnularPedido ? `<button class="expediente-status-btn estado-anulada" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'anulada')">Anular</button>` : ''}
                 </div>`
         : '';
+    const tituloExpediente = esSolicitud ? 'Solicitud por confirmar' : (comanda.codigo || 'Sin codigo');
 
     cont.innerHTML = `
         <div class="expediente-header">
             <div>
                 <div class="expediente-label">Expediente de pedido</div>
-                <h2>${comanda.codigo || 'Sin codigo'}</h2>
+                <h2>${tituloExpediente}</h2>
                 <p>${comanda.empresa || 'Empresa pendiente'} - ${fechaEvento}</p>
             </div>
             <div class="expediente-header-side">
                 ${accionesCarpetaHtml}
-                <div class="comanda-estado estado-${estado}">${estadoLabel}</div>
+                <div class="comanda-estado estado-${estadoVisibleHeader}">
+                    ${getEstadoPedidoLabel(estadoVisibleHeader)}
+                </div>
             </div>
         </div>
 
@@ -224,7 +358,7 @@ function _renderExpedientePedido(comanda) {
                     ${esSolicitud
                         ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
                         : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>
-                           ${tieneLogistica ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}
+                           ${tieneLogisticaSeparada ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}
                            ${puedeCrearLogistica ? `<button class="btn-submit" onclick="crearComandaLogisticaDesdeExpediente('${comanda.codigo}')">Crear comanda Logistica</button>` : ''}`}
                 </div>
             </section>
@@ -350,6 +484,12 @@ async function eliminarCarpetaDesdeExpediente(codigo) {
         return;
     }
 
+    const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    if (!pedido) {
+        alert('No se encontro la carpeta.');
+        return;
+    }
+
     if (!confirm(`Eliminar la carpeta ${codigo}? Esta accion no se puede deshacer.`)) return;
 
     if (typeof eliminarComandaDelHistorial === 'function') {
@@ -364,11 +504,7 @@ async function eliminarCarpetaDesdeExpediente(codigo) {
 
     if (window.supabaseClient) {
         try {
-            const { error } = await window.supabaseClient
-                .from('orders')
-                .delete()
-                .eq('codigo', codigo);
-            if (error) throw error;
+            await window.marcarComandaEliminadaEnSupabase?.(codigo, pedido);
         } catch (error) {
             console.warn('No se pudo eliminar la carpeta en Supabase:', error);
             alert('La carpeta se elimino localmente, pero no se pudo sincronizar la eliminacion con Supabase. Revisa permisos.');
@@ -405,13 +541,240 @@ async function guardarAnotacionesPedido(codigo) {
 
 function _pedidoTieneComandaLogistica(codigo) {
     const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
-    return historialLogistica.some(item => (item.codigo_cocina || item.codigo) === codigo);
+    if (historialLogistica.some(item => (item.codigo_cocina || item.codigo_original || item.codigo) === codigo)) return true;
+    const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    return Boolean(pedido?.tiene_comanda_logistica || pedido?.documentos?.logistica || pedido?.logistica_creada || pedido?.logistica_inline || pedido?.material_logistica);
 }
 
 function _obtenerComandaLogisticaPorCodigo(codigo) {
     const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
-    const index = historialLogistica.findIndex(item => (item.codigo_cocina || item.codigo) === codigo || item.codigo === codigo);
-    return index >= 0 ? { item: historialLogistica[index], index, historial: historialLogistica } : null;
+    const index = historialLogistica.findIndex(item => (item.codigo_cocina || item.codigo_original || item.codigo) === codigo || item.codigo === codigo);
+    const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    if (index >= 0) {
+        const item = historialLogistica[index];
+        const logPedido = getDatosEntregaLogisticaComanda(pedido || {});
+        const logItem = getDatosEntregaLogisticaComanda(item || {});
+        const materialPedido = pedido?.material_logistica || logPedido.material_logistica || {};
+        return {
+            item: {
+                ...(pedido || {}),
+                ...item,
+                logistica: {
+                    ...logPedido,
+                    ...logItem
+                },
+                logistica_inline: {
+                    ...logPedido,
+                    ...logItem
+                },
+                material_logistica: item.material_logistica || materialPedido || {}
+            },
+            index,
+            historial: historialLogistica
+        };
+    }
+
+    if (!pedido) return null;
+
+    const logistica = pedido.logistica_inline || pedido.logistica || {};
+    const material = pedido.material_logistica || logistica.material_logistica || {};
+    const tieneDatosLogistica = Boolean(
+        pedido.tiene_comanda_logistica ||
+        pedido.documentos?.logistica ||
+        pedido.logistica_creada ||
+        Object.values(logistica || {}).some(Boolean) ||
+        ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length)
+    );
+
+    if (!tieneDatosLogistica) return null;
+
+    return {
+        item: {
+            ...pedido,
+            tipo_registro: 'logistica',
+            codigo: pedido.documentos?.logistica?.codigo || pedido.codigo || codigo,
+            codigo_cocina: pedido.codigo || codigo,
+            codigo_original: pedido.documentos?.logistica?.codigo || pedido.codigo || codigo,
+            logistica,
+            material_logistica: material,
+            estado: pedido.logistics_status || pedido.estado_logistica || pedido.estado || 'sin_preparar'
+        },
+        index: -1,
+        historial: historialLogistica,
+        embebida: true
+    };
+}
+
+function _tieneDatosEntregaLogistica(comanda = {}) {
+    const li = getDatosEntregaLogisticaComanda(comanda);
+    return Boolean(
+        li.nombre_contacto || li.telefono_contacto || li.montaje || li.duracion_evento ||
+        li.cantidad_camareros || li.direccion || li.calle || li.numero || li.codigo_postal ||
+        li.hora_entrega || li.hora_evento || li.notas_logistica
+    );
+}
+
+function _normalizarMaterialLogisticaVista(material) {
+    if (!material) return { bebidas: [], menaje: [], extras: [] };
+    if (typeof material === 'string') {
+        try {
+            material = JSON.parse(material);
+        } catch (_) {
+            material = {};
+        }
+    }
+    if (material.material_logistica) return _normalizarMaterialLogisticaVista(material.material_logistica);
+    if (material.materialLogistica) return _normalizarMaterialLogisticaVista(material.materialLogistica);
+
+    const base = {
+        bebidas: Array.isArray(material.bebidas) ? material.bebidas : [],
+        menaje: Array.isArray(material.menaje) ? material.menaje : [],
+        extras: [
+            ...(Array.isArray(material.extras) ? material.extras : []),
+            ...(Array.isArray(material.otros) ? material.otros : []),
+            ...(Array.isArray(material.material) ? material.material : [])
+        ]
+    };
+
+    return typeof window.normalizarMaterialLogistica === 'function'
+        ? window.normalizarMaterialLogistica(base)
+        : base;
+}
+
+function _tieneMaterialLogisticaVista(material = {}) {
+    const normalizado = _normalizarMaterialLogisticaVista(material);
+    return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(normalizado?.[tipo]) && normalizado[tipo].length);
+}
+
+function _normalizarComandaLogisticaRemota(row, codigoBuscado) {
+    const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+    const logistica = getDatosEntregaLogisticaComanda(payload);
+    const material = _normalizarMaterialLogisticaVista(
+        payload.material_logistica ||
+        payload.materialLogistica ||
+        payload.logistica?.material_logistica ||
+        payload.logistica_inline?.material_logistica ||
+        {}
+    );
+
+    if (!_tieneDatosEntregaLogistica({ logistica }) && !_tieneMaterialLogisticaVista(material)) {
+        return null;
+    }
+
+    const codigoBase = payload.codigo || row?.codigo || codigoBuscado || '';
+    return {
+        ...payload,
+        orden_id: payload.orden_id || row?.id || null,
+        supabase_order_id: payload.supabase_order_id || row?.id || null,
+        tipo_registro: 'logistica',
+        codigo: payload.documentos?.logistica?.codigo || codigoBase,
+        codigo_cocina: codigoBase,
+        codigo_original: payload.documentos?.logistica?.codigo || codigoBase,
+        empresa: payload.empresa || payload.empresa_nombre || payload.company_name || row?.company_name || '',
+        responsable: payload.responsable || payload.responsable_nombre || row?.responsable_name || '',
+        pax: payload.pax || payload.pax_total || row?.pax_total || 0,
+        pax_total: payload.pax_total || payload.pax || row?.pax_total || 0,
+        fecha_creacion: payload.fecha_creacion || row?.created_at || '',
+        fecha_modificacion: payload.fecha_modificacion || row?.updated_at || row?.created_at || '',
+        fecha_evento: payload.fecha_evento || row?.fecha_evento || '',
+        hora_salida: payload.hora_salida || row?.hora_salida || '',
+        logistica,
+        logistica_inline: logistica,
+        material_logistica: material,
+        tiene_comanda_logistica: true,
+        logistica_creada: true,
+        logistics_status: payload.logistics_status || payload.estado_logistica || payload.estado || row?.estado || 'sin_preparar',
+        estado: payload.logistics_status || payload.estado_logistica || payload.estado || row?.estado || 'sin_preparar'
+    };
+}
+
+async function _obtenerComandaLogisticaRemotaPorCodigo(codigo) {
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return null;
+
+    const selectBase = 'id, codigo, company_name, responsable_name, estado, fecha_evento, hora_salida, pax_total, created_at, updated_at, payload';
+    let respuesta = await window.supabaseClient
+        .from('orders')
+        .select(selectBase)
+        .eq('codigo', codigo)
+        .limit(1);
+
+    if (respuesta.error && /updated_at|company_name|responsable_name/i.test(String(respuesta.error.message || ''))) {
+        respuesta = await window.supabaseClient
+            .from('orders')
+            .select('id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, payload')
+            .eq('codigo', codigo)
+            .limit(1);
+    }
+
+    if (respuesta.error) {
+        console.warn('No se pudo consultar la comanda logistica en Supabase:', respuesta.error);
+        return null;
+    }
+
+    let row = (respuesta.data || [])[0] || null;
+    if (!row) {
+        const fallback = await window.supabaseClient
+            .from('orders')
+            .select(selectBase)
+            .filter('payload->>codigo', 'eq', codigo)
+            .limit(1);
+
+        if (!fallback.error) row = (fallback.data || [])[0] || null;
+    }
+
+    return row ? _normalizarComandaLogisticaRemota(row, codigo) : null;
+}
+
+function _guardarComandaLogisticaHidratadaLocal(codigo, item) {
+    if (!codigo || !item) return;
+
+    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const idxPedido = historial.findIndex(pedido => (pedido.codigo || pedido.codigo_cocina || pedido.codigo_original) === codigo);
+    if (idxPedido >= 0) {
+        const previo = historial[idxPedido] || {};
+        historial[idxPedido] = {
+            ...previo,
+            logistica: {
+                ...(previo.logistica || {}),
+                ...(item.logistica || {})
+            },
+            logistica_inline: {
+                ...(previo.logistica_inline || {}),
+                ...(item.logistica_inline || item.logistica || {})
+            },
+            material_logistica: item.material_logistica || previo.material_logistica || {},
+            tiene_comanda_logistica: true,
+            logistica_creada: true,
+            documentos: {
+                ...(previo.documentos || {}),
+                ...(item.documentos || {})
+            },
+            fecha_modificacion: item.fecha_modificacion || previo.fecha_modificacion
+        };
+        localStorage.setItem('historialComandas', JSON.stringify(historial));
+    }
+
+    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const idxLogistica = historialLogistica.findIndex(log =>
+        (log.codigo_cocina || log.codigo_original || log.codigo) === codigo || log.codigo === item.codigo
+    );
+    if (idxLogistica >= 0) {
+        historialLogistica[idxLogistica] = {
+            ...historialLogistica[idxLogistica],
+            ...item,
+            logistica: {
+                ...(historialLogistica[idxLogistica].logistica || {}),
+                ...(item.logistica || {})
+            },
+            logistica_inline: {
+                ...(historialLogistica[idxLogistica].logistica_inline || {}),
+                ...(item.logistica_inline || item.logistica || {})
+            }
+        };
+    } else {
+        historialLogistica.unshift(item);
+    }
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(historialLogistica));
 }
 
 function _renderArchivosSolicitud(comanda) {
@@ -475,8 +838,21 @@ function abrirComandaDesdeExpediente(codigo) {
     verDetalleComanda(codigo);
 }
 
-function abrirComandaLogisticaDesdeExpediente(codigo) {
-    const resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+async function abrirComandaLogisticaDesdeExpediente(codigo) {
+    let resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+
+    if (!resultado || !_tieneDatosEntregaLogistica(resultado.item)) {
+        const remota = await _obtenerComandaLogisticaRemotaPorCodigo(codigo);
+        if (remota) {
+            _guardarComandaLogisticaHidratadaLocal(codigo, remota);
+            resultado = {
+                item: remota,
+                index: -1,
+                historial: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]'),
+                hidratada: true
+            };
+        }
+    }
 
     if (!resultado) {
         alert('No se encontro la comanda de logistica para este pedido.');
@@ -487,13 +863,19 @@ function abrirComandaLogisticaDesdeExpediente(codigo) {
 }
 
 async function crearComandaLogisticaDesdeExpediente(codigo) {
-    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para crear comandas de logistica.')) {
-        return;
-    }
-
     const comanda = obtenerComandaDelHistorial(codigo);
     if (!comanda) {
         alert('Comanda no encontrada.');
+        return;
+    }
+
+    const esComandaServicios = typeof _esComandaServicios === 'function' && _esComandaServicios(comanda);
+    if (!esComandaServicios) {
+        alert('La comanda de logistica solo se puede crear desde la carpeta para comandas de servicios.');
+        return;
+    }
+
+    if (window.AppPermissions && !AppPermissions.requireServiceLogisticsCreate('Tu usuario no tiene permiso para crear comandas de logistica de servicios.')) {
         return;
     }
 
@@ -537,13 +919,19 @@ async function crearComandaLogisticaDesdeExpediente(codigo) {
     await abrirFormularioLogistica(codigoCocina, window.ultimoOrdenId, datosBase);
 }
 
-function convertirSolicitudEnComanda(codigo) {
-    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede crear comandas.')) {
+async function convertirSolicitudEnComanda(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireCreateOrders('Tu usuario no tiene permiso para crear comandas.')) {
         return;
     }
 
     const solicitud = obtenerComandaDelHistorial(codigo);
     if (!solicitud) { alert('Solicitud no encontrada'); return; }
+    window.solicitudConvirtiendo = {
+        ...solicitud,
+        codigo_solicitud: solicitud.codigo || codigo,
+        orden_id: solicitud.orden_id || solicitud.supabase_order_id || null,
+        supabase_order_id: solicitud.supabase_order_id || solicitud.orden_id || null
+    };
     const expedientePedido = document.getElementById('expedientePedido');
     const expedienteContent = document.getElementById('expedientePedidoContent');
     const historialPage = document.getElementById('historialPage');
@@ -557,7 +945,13 @@ function convertirSolicitudEnComanda(codigo) {
     if (detalleComanda) detalleComanda.style.display = 'none';
 
     window.comandaEditando = null;
-    if (typeof mostrarComandaCocina === 'function') mostrarComandaCocina();
+    window.serviciosMode = false;
+    if (typeof mostrarComandaCocina === 'function') {
+        await mostrarComandaCocina({
+            fechaEvento: (solicitud.fecha_evento || '').split('T')[0],
+            fecha_evento: (solicitud.fecha_evento || '').split('T')[0]
+        });
+    }
 
     if (expedientePedido) {
         expedientePedido.hidden = true;
@@ -576,6 +970,9 @@ function convertirSolicitudEnComanda(codigo) {
         : (solicitud.responsable || '');
     if (pax) pax.value = solicitud.pax || '';
     if (fecha) fecha.value = (solicitud.fecha_evento || '').split('T')[0];
+    if (typeof window.actualizarDiaFechaEvento === 'function') {
+        window.actualizarDiaFechaEvento();
+    }
 }
 
 async function anularPedidoDesdeExpediente(codigo) {
@@ -600,6 +997,26 @@ async function actualizarEstadoPedidoDesdeExpediente(codigo, estado) {
     }
 
     if (typeof cargarCalendario === 'function') cargarCalendario();
+    verExpedientePedido(codigo);
+}
+
+async function actualizarEstadoConfirmacionComandaDesdeExpediente(codigo, estadoConfirmacion) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede cambiar estados.')) {
+        return;
+    }
+
+    const ok = await actualizarComandaEnHistorial(codigo, {
+        estado_confirmacion: estadoConfirmacion,
+        confirmation_status: estadoConfirmacion
+    });
+    if (!ok) {
+        alert('No se pudo actualizar la confirmacion de la comanda.');
+        return;
+    }
+
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    if (typeof renderizarComandasCocina === 'function') renderizarComandasCocina();
+    if (typeof renderizarComandasLogistica === 'function') renderizarComandasLogistica();
     verExpedientePedido(codigo);
 }
 
@@ -756,9 +1173,13 @@ function _renderMenuDetalle(comanda, pax) {
         String(comanda?.categoria || '').toLowerCase().includes('servicio') ||
         Boolean(comanda?.servicio_categoria);
 
+    function formatearNombreMenuDetalle(nombre) {
+        return textoSeguro(nombre).replace(/\(([^)]+)\)/g, '<em class="detalle-menu-parentesis">($1)</em>');
+    }
+
     function fila(nombre, cantidad, unidad, esTitulo) {
         return `<div class="detalle-menu-row">
-            <span class="detalle-menu-nombre${esTitulo ? ' es-titulo' : ''}">${nombre}</span>
+            <span class="detalle-menu-nombre${esTitulo ? ' es-titulo' : ''}">${formatearNombreMenuDetalle(nombre)}</span>
             <span class="detalle-menu-cantidad">${cantidad ? cantidad + ' ' + (unidad || '') : ''}</span>
         </div>`;
     }
@@ -769,6 +1190,27 @@ function _renderMenuDetalle(comanda, pax) {
         const base = Math.floor(cantidadTotal / cantidadOpciones);
         const resto = cantidadTotal % cantidadOpciones;
         return Array.from({ length: cantidadOpciones }, (_, index) => base + (index < resto ? 1 : 0));
+    }
+
+    function grupoDesayuno(ref) {
+        const key = ref?.id || ref?._refKey || '';
+        const texto = `${key} ${ref?.tipo || ''} ${ref?.nombre || ''}`.toLowerCase();
+        if (/fruta|smoothie|zumo/.test(texto)) return 'fruta';
+        if (/sandwich|sándwich|pulguita|tostada/.test(texto)) return 'salado';
+        if (/bolleria|bollería|cookie|dulce/.test(texto)) return 'dulce';
+        return 'otro';
+    }
+
+    function esBebidaSoloLogistica(ref) {
+        const texto = `${ref?.id || ref?._refKey || ''} ${ref?.tipo || ''} ${ref?.nombre || ''}`.toLowerCase();
+        return ref?.tipo === 'zumo' || /\bzumo\b/.test(texto);
+    }
+
+    function separarGrupoDesayuno(grupo, state) {
+        if (state.actual && state.actual !== grupo) {
+            html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
+        }
+        state.actual = grupo;
     }
 
     if (comanda.referencias_desayuno && Object.keys(comanda.referencias_desayuno).length) {
@@ -797,14 +1239,15 @@ function _renderMenuDetalle(comanda, pax) {
             .map(item => ({ ...item.ref, _refKey: item.key }));
 
         let tituloSandwichFijoRenderizado = false;
+        const grupoState = { actual: '' };
 
-        refs.filter(r => r.tipo !== 'termo' && r.tipo !== 'leche_especial').forEach(ref => {
+        refs.filter(r => r.tipo !== 'termo' && r.tipo !== 'leche_especial' && !esBebidaSoloLogistica(r)).forEach(ref => {
             let extra = '';
             const refKey = ref.id || ref._refKey || '';
+            separarGrupoDesayuno(grupoDesayuno(ref), grupoState);
 
             if (ref.tipo === 'bolleria' && ref.opcionesSeleccionadas?.length) {
                 const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, ref.opcionesSeleccionadas.length);
-                html += fila('Bollería:', '', '', true);
                 ref.opcionesSeleccionadas.forEach((opcion, index) => {
                     html += fila(opcion, cantidades[index], ref.unidad || 'uds', false);
                 });
@@ -813,25 +1256,15 @@ function _renderMenuDetalle(comanda, pax) {
 
             if (ref.tipo === 'sandwich' && ref.sabor) {
                 if (refKey === 'premium_cookie' || refKey === 'premium_fruta' || refKey === 'welcome_cookie') {
-                    if (refKey === 'premium_fruta') {
-                        html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
-                    }
                     html += fila(ref.sabor, ref.cantidad, ref.unidad || 'uds', false);
                     return;
                 }
-                const tituloSimple = /sandwich|s[aá]ndwich/i.test(`${ref.id || ''} ${ref.nombre || ''}`)
-                    ? 'Sándwich:'
-                    : `${ref.nombre}:`;
-                html += fila(tituloSimple, '', '', true);
                 html += fila(ref.sabor, ref.cantidad, ref.unidad || 'uds', false);
                 return;
             }
 
             if (ref.tipo === 'sandwich_fijo') {
-                if (!tituloSandwichFijoRenderizado) {
-                    html += fila('Sándwich:', '', '', true);
-                    tituloSandwichFijoRenderizado = true;
-                }
+                tituloSandwichFijoRenderizado = true;
                 html += fila(ref.sabor || ref.nombre, ref.cantidad, ref.unidad || 'uds', false);
                 return;
             }
@@ -839,7 +1272,6 @@ function _renderMenuDetalle(comanda, pax) {
             if (ref.tipo === 'sandwich_multiple' && ref.sandwiches?.length) {
                 const sandwiches = ref.sandwiches.filter(s => s.sabor);
                 const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, sandwiches.length);
-                html += fila('Mini sandwich:', '', '', true);
                 sandwiches.forEach((s, index) => {
                     html += fila(s.sabor, cantidades[index], ref.unidad || 'uds', false);
                 });
@@ -849,16 +1281,12 @@ function _renderMenuDetalle(comanda, pax) {
             if (ref.tipo === 'sandwich_o_pulguita' && ref.modo !== 'pulguita' && ref.sandwiches?.length) {
                 const sandwiches = ref.sandwiches.filter(s => s.sabor);
                 const cantidades = distribuirCantidadPorOpciones(ref.cantidad || pax, sandwiches.length);
-                html += fila('Mini sandwich:', '', '', true);
                 sandwiches.forEach((s, index) => {
                     html += fila(s.sabor, cantidades[index], ref.unidad || 'uds', false);
                 });
                 return;
             }
 
-            if (refKey === 'classic_fruta' || refKey === 'healthy_fruta' || refKey === 'veggie_fruta') {
-                html += '<div class="detalle-menu-row detalle-menu-row--spacer"></div>';
-            }
             html += fila(ref.nombre + extra, ref.cantidad, ref.unidad || 'uds', false);
         });
     }
@@ -873,29 +1301,33 @@ function _renderMenuDetalle(comanda, pax) {
         if (ensaladas.length || sandwiches.length || postres.length) {
             ensaladas.forEach(e => {
                 if ((e.cantidad || 1) > 0) {
-                    html += fila('🥗 ' + (e.nombre || e.id), e.cantidad || '', 'uds', false);
+                    html += fila(e.nombre || e.id, e.cantidad || '', 'uds', false);
                 }
             });
 
             sandwiches.forEach(s => {
                 if ((s.cantidad || 1) > 0) {
-                    html += fila('🥪 ' + (s.nombre || s.id), s.cantidad || '', 'uds', false);
+                    html += fila(s.nombre || s.id, s.cantidad || '', 'uds', false);
                 }
             });
 
+            if (postres.length) html += fila('POSTRES', '', '', true);
             postres.forEach(p => {
                 if ((p.cantidad || 1) > 0) {
-                    html += fila('🍰 ' + (p.nombre || p.id), p.cantidad || '', 'uds', false);
+                    html += fila(p.nombre || p.id, p.cantidad || '', 'uds', false);
                 }
             });
         } else {
-            if (fl.ensalada_principal) html += fila('🥗 ' + (fl.ensalada_principal.nombre || fl.ensalada_principal), '', '', false);
-            if (fl.sandwich_principal) html += fila('🥪 ' + (fl.sandwich_principal.nombre || fl.sandwich_principal), '', '', false);
-            if (fl.postre_principal) html += fila('🍰 ' + (fl.postre_principal.nombre || fl.postre_principal), '', '', false);
+            if (fl.ensalada_principal) html += fila(fl.ensalada_principal.nombre || fl.ensalada_principal, '', '', false);
+            if (fl.sandwich_principal) html += fila(fl.sandwich_principal.nombre || fl.sandwich_principal, '', '', false);
+            if (fl.postre_principal) {
+                html += fila('POSTRES', '', '', true);
+                html += fila(fl.postre_principal.nombre || fl.postre_principal, '', '', false);
+            }
 
             if (fl.adicionales?.length) {
                 fl.adicionales.forEach(a => {
-                    html += fila('➕ ' + (a.nombre || a.opcionId || ''), a.cantidad, '', false);
+                    html += fila(a.nombre || a.opcionId || '', a.cantidad, '', false);
                 });
             }
         }
@@ -905,17 +1337,32 @@ function _renderMenuDetalle(comanda, pax) {
         const saladas = comanda.referencias.saladas || [];
         const postres = comanda.referencias.postres || [];
         const mul = comanda.multiplicadores;
+        const extras = Array.isArray(comanda.referencias_extras) ? comanda.referencias_extras : [];
+        const extrasSaladas = extras.filter(r => r.grupo !== 'postre' && r.tipo !== 'postres');
+        const extrasPostres = extras.filter(r => r.grupo === 'postre' || r.tipo === 'postres');
 
-        if (saladas.length) {
-            const mulLabel = mul?.saladas ? ` ×${mul.saladas}` : '';
-            if (!esServicio) html += fila('Saladas' + mulLabel, '', '', true);
-            saladas.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+        const saladasCarta = saladas.filter(r => !r.fuera_carta);
+        const saladasFueraCarta = saladas.filter(r => r.fuera_carta);
+        const postresCarta = postres.filter(r => !r.fuera_carta);
+        const postresFueraCarta = postres.filter(r => r.fuera_carta);
+
+        if (saladasCarta.length) {
+            saladasCarta.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
 
-        if (postres.length) {
-            const mulLabel = mul?.postres ? ` ×${mul.postres}` : '';
-            html += fila('Postres' + mulLabel, '', '', true);
-            postres.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+        if (saladasFueraCarta.length) {
+            saladasFueraCarta.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+        }
+
+        if (extrasSaladas.length) {
+            extrasSaladas.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+        }
+
+        if (postresCarta.length || postresFueraCarta.length || extrasPostres.length) {
+            html += fila('POSTRES', '', '', true);
+            postresCarta.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+            postresFueraCarta.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
+            extrasPostres.forEach(r => html += fila(r.nombre || r.id, r.cantidad, r.unidad || 'uds', false));
         }
     }
 
@@ -933,7 +1380,7 @@ function _renderMenuDetalle(comanda, pax) {
         ].filter(g => g.items.length > 0);
 
         grupos.forEach(g => {
-            html += fila(g.icono + ' ' + g.label, '', '', true);
+            if (g.label.toLowerCase() === 'postres') html += fila('POSTRES', '', '', true);
             g.items.forEach(it => {
                 const variantes = it.variantes?.length
                     ? ' (' + it.variantes.map(v => v.nombre || v).join(', ') + ')'
@@ -951,7 +1398,16 @@ function _renderMenuDetalle(comanda, pax) {
 }
 
 function _renderTotalTermosDetalle(comanda) {
-    const todosMenusDetalle = [comanda, ...(comanda.menus_adicionales || [])];
+    const todosMenusDetalle = [
+        {
+            ...(comanda.menu_principal || comanda),
+            referencias_desayuno: comanda.menu_principal?.referencias_desayuno || comanda.referencias_desayuno || null
+        },
+        ...(comanda.menus_adicionales || []).map(m => ({
+            ...m,
+            referencias_desayuno: m.referencias_desayuno || null
+        }))
+    ];
     const termosTotales = {};
 
     todosMenusDetalle.forEach(m => {
@@ -983,9 +1439,8 @@ function _renderTotalTermosDetalle(comanda) {
     }).join('  ·  ');
 
     return `<div class="detalle-termos-total">
-        <div class="detalle-menu-row">
-            <span class="detalle-menu-nombre" style="font-weight:600;">☕ Total termos: ${partes}${tag}</span>
-        </div>
+        <span class="detalle-termos-title">☕ Total termos:</span>
+        <span class="detalle-termos-items">${partes}${tag}</span>
     </div>`;
 }
 
@@ -1020,8 +1475,11 @@ function _renderDetalleComanda(comanda) {
     if (el('detallePax')) el('detallePax').textContent = comanda.pax || '0';
 
     if (el('detalleFechaEvento')) {
-        const fe = comanda.fecha_evento ? new Date(comanda.fecha_evento + 'T00:00:00') : null;
-        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '—';
+        el('detalleFechaEvento').textContent = comanda.fecha_evento
+            ? (typeof window.formatearFechaEventoConDia === 'function'
+                ? window.formatearFechaEventoConDia(comanda.fecha_evento)
+                : comanda.fecha_evento)
+            : '—';
     }
 
     if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '—';
@@ -1032,7 +1490,7 @@ function _renderDetalleComanda(comanda) {
     const labelMenaje = tipoMenaje === 'loza'
         ? 'EMPLATADO GOURMET'
         : tipoMenaje === 'desechable'
-            ? 'DESECHABLE'
+            ? 'MENAJE DESECHABLE'
             : (tipoMenaje ? String(tipoMenaje).toUpperCase() : '');
 
     const menusDetalle = [];
@@ -1044,6 +1502,7 @@ function _renderDetalleComanda(comanda) {
         menu_principal: comanda.menu_principal || { nombre: nombreMenu },
         referencias_desayuno: comanda.menu_principal?.referencias_desayuno || comanda.referencias_desayuno || null,
         referencias: comanda.menu_principal?.referencias || comanda.referencias || null,
+        referencias_extras: comanda.menu_principal?.referencias_extras || comanda.referencias_extras || [],
         foodbox_lunch: comanda.menu_principal?.foodbox_lunch || comanda.foodbox_lunch || null,
         bandejas: comanda.menu_principal?.bandejas || comanda.bandejas || null,
         multiplicadores: comanda.menu_principal?.multiplicadores || comanda.multiplicadores || null
@@ -1057,6 +1516,7 @@ function _renderDetalleComanda(comanda) {
             menu_principal: { nombre: m.nombre || m.menu_principal?.nombre || 'Menú adicional' },
             referencias_desayuno: m.referencias_desayuno || null,
             referencias: m.referencias || null,
+            referencias_extras: m.referencias_extras || [],
             foodbox_lunch: m.foodbox_lunch || null,
             bandejas: m.bandejas || null,
             multiplicadores: m.multiplicadores || null
@@ -1064,7 +1524,7 @@ function _renderDetalleComanda(comanda) {
     });
 
     if (el('detalleMenuTitulo')) {
-        const titulo = menusDetalle.length > 1 ? 'Menús de la comanda' : nombreMenu;
+        const titulo = menusDetalle.length > 1 ? 'Menús de la comanda' : 'Menú de la comanda';
         el('detalleMenuTitulo').innerHTML = titulo;
     }
     // Badge DESECHABLE/LOZA centrado debajo del header
@@ -1094,10 +1554,18 @@ function _renderDetalleComanda(comanda) {
                 </div>`;
             }).join('');
 
-            el('detalleMenuPrincipal').innerHTML = `<div class="detalle-menus-grid">${cardsHtml}</div>${totalTermosHtml}`;
+            el('detalleMenuPrincipal').innerHTML = `<div class="detalle-menus-grid">${cardsHtml}${totalTermosHtml}</div>`;
         } else {
             const unico = menusDetalle[0] || comanda;
-            el('detalleMenuPrincipal').innerHTML = _renderMenuDetalle(unico, unico.pax || comanda.pax) + totalTermosHtml;
+            const paxMenu = unico.pax || comanda.pax || '';
+            const cardHtml = `<div class="detalle-menu-card">
+                <div class="detalle-menu-row detalle-menu-row--heading">
+                    <span class="detalle-menu-nombre es-titulo" style="font-weight:600;">${unico.nombre || nombreMenu || 'Menú'}</span>
+                    <span class="detalle-menu-cantidad">${paxMenu ? paxMenu + ' pax' : ''}</span>
+                </div>
+                ${_renderMenuDetalle(unico, paxMenu)}
+            </div>`;
+            el('detalleMenuPrincipal').innerHTML = `<div class="detalle-menus-grid detalle-menus-grid--single">${cardHtml}${totalTermosHtml}</div>`;
         }
     }
 
@@ -1125,7 +1593,10 @@ function _renderDetalleComanda(comanda) {
             const itemsHtml = intoleranciasItems.length
                 ? `<div class="detalle-intolerancias-grid">${intoleranciasItems.map(item => `
                     <div class="detalle-intolerancia-item">
-                        <span>${textoSeguro(item.nombre)}</span>
+                        <span class="detalle-intolerancia-label">
+                            <img class="detalle-intolerancia-img" src="${getIconoIntoleranciaSrc(item.nombre)}" alt="">
+                            <span>${textoSeguro(getNombreIntoleranciaDisplay(item.nombre))}</span>
+                        </span>
                         <span class="detalle-intolerancia-pax">${item.pax ? `${textoSeguro(item.pax)} pax` : 'Informado'}</span>
                     </div>
                 `).join('')}</div>`
@@ -1151,9 +1622,11 @@ function _renderDetalleComanda(comanda) {
         if (secNotas) secNotas.style.display = 'none';
     }
 
-    const ocultarLogisticaEnDetalleCocina = _esComandaServicios(comanda) ||
+    const ocultarLogisticaEnDetalleCocina = _esComandaServicios(comanda) && (
         Boolean(comanda.documentos?.logistica) ||
-        Boolean(comanda.logistica_creada);
+        Boolean(comanda.logistica_creada) ||
+        Boolean(comanda.tiene_comanda_logistica)
+    );
 
     const secEntrega = el('detalleDatosLogisticaSection');
     const contEntrega = el('detalleDatosLogisticaContent');
@@ -1163,11 +1636,7 @@ function _renderDetalleComanda(comanda) {
             secEntrega.style.display = 'none';
             contEntrega.innerHTML = '';
         } else {
-        const logInline = comanda.logistica_inline ||
-            (comanda.logistica && !Array.isArray(comanda.logistica.bebidas) &&
-            (comanda.logistica.nombre_contacto || comanda.logistica.direccion)
-                ? comanda.logistica
-                : null);
+        const logInline = getDatosEntregaLogisticaComanda(comanda);
 
         const campos = [
             { label: 'Contacto', valor: logInline?.nombre_contacto },
@@ -1186,17 +1655,7 @@ function _renderDetalleComanda(comanda) {
             const tieneDireccion = li?.direccion;
             const tieneCP = li?.codigo_postal;
 
-            contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
-                <tr>
-                    ${li?.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:22%;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value" style="word-break:break-word;">${li.nombre_contacto}</div></td>` : ''}
-                    ${li?.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top; width:14%;"><div class="detalle-field-label">Teléfono</div><div class="detalle-field-value">${li.telefono_contacto}</div></td>` : ''}
-                    ${tieneDireccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Dirección</div><div class="detalle-field-value" style="word-break:break-word;">${tieneDireccion}</div></td>` : ''}
-                    ${tieneCP ? `<td style="padding:1px 8px 2px; vertical-align:top; width:90px; white-space:nowrap;"><div class="detalle-field-label">Cód. Postal</div><div class="detalle-field-value">${tieneCP}</div></td>` : ''}
-                    ${li?.montaje ? `<td style="padding:1px 8px 2px; vertical-align:top; width:12%;"><div class="detalle-field-label">Montaje</div><div class="detalle-field-value">${li.montaje}</div></td>` : ''}
-                    ${li?.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${li.hora_entrega}</div></td>` : ''}
-                    ${li?.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top; width:10%;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${li.hora_evento}</div></td>` : ''}
-                </tr>
-            </table>`;
+            contEntrega.innerHTML = renderDatosEntregaLogistica(li);
         } else {
             secEntrega.style.display = 'none';
         }
@@ -1240,18 +1699,18 @@ function _renderDetalleComanda(comanda) {
                     h += `<div class="dc-material-item">
                         <span class="dc-material-nombre">
                             ${textoSeguro(it.nombre)}
-                            ${it.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(it.descripcion)}</small>` : ''}
+                            ${_descripcionMaterialVisibleDetalle(comanda, it) ? `<small class="dc-material-descripcion">${textoSeguro(_descripcionMaterialVisibleDetalle(comanda, it))}</small>` : ''}
                         </span>
-                        <span class="dc-material-medida">${it.cantidad ?? 0} ${it.unidad || 'uds'}</span>
+                        <span class="dc-material-medida">${it.cantidad ?? 0} ${textoSeguro(_unidadVisibleMaterialLogistica(it))}</span>
                     </div>`;
 
                     (it.subitems_selected || []).forEach(sub => {
                         h += `<div class="dc-material-item" style="padding-left:10px; opacity:0.85;">
                             <span class="dc-material-nombre" style="font-size:0.72rem; color:#64748b;">
                                 ↳ ${textoSeguro(sub.nombre)}
-                                ${sub.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(sub.descripcion)}</small>` : ''}
+                                ${_descripcionMaterialVisibleDetalle(comanda, sub) ? `<small class="dc-material-descripcion">${textoSeguro(_descripcionMaterialVisibleDetalle(comanda, sub))}</small>` : ''}
                             </span>
-                            <span class="dc-material-medida">${sub.cantidad ?? 0} ${sub.unidad || 'uds'}</span>
+                            <span class="dc-material-medida">${sub.cantidad ?? 0} ${textoSeguro(_unidadVisibleMaterialLogistica(sub))}</span>
                         </div>`;
                     });
                 });
@@ -1260,10 +1719,14 @@ function _renderDetalleComanda(comanda) {
                 return h;
             }
 
-            contLog.innerHTML = `<div class="dc-material-grid">
-                ${renderColMaterial('🥤', 'Bebidas', logNormalizado.bebidas)}
-                ${renderColMaterial('🍽️', 'Menaje', logNormalizado.menaje)}
-                ${renderColMaterial('✨', 'Extras', logNormalizado.extras)}
+            const columnasMaterial = [
+                renderColMaterial('🥤', 'Bebidas', logNormalizado.bebidas),
+                renderColMaterial('🍽️', 'Menaje', logNormalizado.menaje),
+                renderColMaterial('✨', 'Extras', logNormalizado.extras)
+            ].filter(Boolean);
+
+            contLog.innerHTML = `<div class="dc-material-grid dc-material-grid--cols-${columnasMaterial.length}">
+                ${columnasMaterial.join('')}
             </div>`;
         } else {
             secLog.style.display = 'none';
@@ -1372,8 +1835,11 @@ function _renderDetalleComandaLogistica(comanda) {
     if (el('detalleResponsable')) el('detalleResponsable').textContent = comanda.responsable || '—';
     if (el('detallePax')) el('detallePax').textContent = comanda.pax || '0';
     if (el('detalleFechaEvento')) {
-        const fe = comanda.fecha_evento ? new Date(comanda.fecha_evento + 'T00:00:00') : null;
-        el('detalleFechaEvento').textContent = fe ? fe.toLocaleDateString('es-ES') : '—';
+        el('detalleFechaEvento').textContent = comanda.fecha_evento
+            ? (typeof window.formatearFechaEventoConDia === 'function'
+                ? window.formatearFechaEventoConDia(comanda.fecha_evento)
+                : comanda.fecha_evento)
+            : '—';
     }
     if (el('detalleHoraSalida')) el('detalleHoraSalida').textContent = comanda.hora_salida || '—';
 
@@ -1396,22 +1862,15 @@ function _renderDetalleComandaLogistica(comanda) {
 
     const secEntrega = el('detalleDatosLogisticaSection');
     const contEntrega = el('detalleDatosLogisticaContent');
-    const li = comanda.logistica || {};
+    const li = getDatosEntregaLogisticaComanda(comanda);
     if (secEntrega && contEntrega) {
-        const tieneDatos = li.nombre_contacto || li.telefono_contacto || li.montaje || li.direccion || li.codigo_postal || li.hora_entrega || li.hora_evento;
-        if (tieneDatos) {
+        const tieneDatos = li.nombre_contacto || li.telefono_contacto || li.montaje || li.duracion_evento ||
+            li.cantidad_camareros || li.direccion || li.codigo_postal || li.hora_entrega ||
+            li.hora_evento || li.fecha_recogida || li.hora_recogida;
+        const entregaHtml = renderDatosEntregaLogistica(li);
+        if (tieneDatos && entregaHtml) {
             secEntrega.style.display = '';
-            contEntrega.innerHTML = `<table style="width:100%; border-collapse:collapse; padding: 0 14px; display:block;">
-                <tr>
-                    ${li.nombre_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Contacto</div><div class="detalle-field-value">${textoSeguro(li.nombre_contacto)}</div></td>` : ''}
-                    ${li.telefono_contacto ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Telefono</div><div class="detalle-field-value">${textoSeguro(li.telefono_contacto)}</div></td>` : ''}
-                    ${li.montaje ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Montaje</div><div class="detalle-field-value">${textoSeguro(li.montaje)}</div></td>` : ''}
-                    ${li.direccion ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Direccion</div><div class="detalle-field-value">${textoSeguro(li.direccion)}</div></td>` : ''}
-                    ${li.codigo_postal ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Cod. Postal</div><div class="detalle-field-value">${textoSeguro(li.codigo_postal)}</div></td>` : ''}
-                    ${li.hora_entrega ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Hora Entrega</div><div class="detalle-field-value">${textoSeguro(li.hora_entrega)}</div></td>` : ''}
-                    ${li.hora_evento ? `<td style="padding:1px 8px 2px; vertical-align:top;"><div class="detalle-field-label">Hora Evento</div><div class="detalle-field-value">${textoSeguro(li.hora_evento)}</div></td>` : ''}
-                </tr>
-            </table>`;
+            contEntrega.innerHTML = entregaHtml;
         } else {
             secEntrega.style.display = 'none';
             contEntrega.innerHTML = '';
@@ -1428,7 +1887,7 @@ function _renderDetalleComandaLogistica(comanda) {
             { key: 'extras', icono: '✨', titulo: 'Material' }
         ];
 
-        const html = categorias.map(cat => {
+        const columnasMaterial = categorias.map(cat => {
             const items = (material[cat.key] || []).filter(item => item.checked !== false && Number(item.cantidad || 0) > 0);
             if (!items.length) return '';
             return `<div class="dc-material-col">
@@ -1437,17 +1896,17 @@ function _renderDetalleComandaLogistica(comanda) {
                     ${items.map(item => `<div class="dc-material-item">
                         <span class="dc-material-nombre">
                             ${textoSeguro(item.nombre)}
-                            ${item.descripcion ? `<small class="dc-material-descripcion">${textoSeguro(item.descripcion)}</small>` : ''}
+                            ${_descripcionMaterialVisibleDetalle(comanda, item) ? `<small class="dc-material-descripcion">${textoSeguro(_descripcionMaterialVisibleDetalle(comanda, item))}</small>` : ''}
                         </span>
-                        <span class="dc-material-medida">${textoSeguro(item.cantidad || 0)} ${textoSeguro(item.unidad || 'uds')}</span>
+                        <span class="dc-material-medida">${textoSeguro(item.cantidad || 0)} ${textoSeguro(_unidadVisibleMaterialLogistica(item))}</span>
                     </div>`).join('')}
                 </div>
             </div>`;
-        }).join('');
+        }).filter(Boolean);
 
-        if (html) {
+        if (columnasMaterial.length) {
             secLog.style.display = '';
-            contLog.innerHTML = `<div class="dc-material-grid">${html}</div>`;
+            contLog.innerHTML = `<div class="dc-material-grid dc-material-grid--cols-${columnasMaterial.length}">${columnasMaterial.join('')}</div>`;
         } else {
             secLog.style.display = 'none';
             contLog.innerHTML = '';
@@ -1469,15 +1928,196 @@ function _renderDetalleComandaLogistica(comanda) {
 
 function _clonarValorComanda(valor) {
     try {
+        if (typeof valor === 'string') {
+            return JSON.parse(valor);
+        }
         return JSON.parse(JSON.stringify(valor || null));
     } catch (error) {
         return valor;
     }
 }
 
+function _materialLogisticaTieneItems(material) {
+    return ['bebidas', 'menaje', 'extras'].some(tipo =>
+        (material?.[tipo] || []).some(item =>
+            (item?._cantidad_manual_zero ||
+                (item?.checked !== false &&
+                    (Number(item?.cantidad || 0) > 0 || (item?.subitems_selected || []).length > 0)))
+        )
+    );
+}
+
+function _normalizarMaterialLogisticaEdicion(material) {
+    let valor = _clonarValorComanda(material);
+    if (typeof valor === 'string') {
+        try {
+            valor = JSON.parse(valor);
+        } catch (_) {
+            valor = {};
+        }
+    }
+    if (valor?.material_logistica) valor = _normalizarMaterialLogisticaEdicion(valor.material_logistica);
+    if (valor?.materialLogistica) valor = _normalizarMaterialLogisticaEdicion(valor.materialLogistica);
+    const base = {
+        bebidas: Array.isArray(valor?.bebidas) ? valor.bebidas : [],
+        menaje: Array.isArray(valor?.menaje) ? valor.menaje : [],
+        extras: [
+            ...(Array.isArray(valor?.extras) ? valor.extras : []),
+            ...(Array.isArray(valor?.otros) ? valor.otros : []),
+            ...(Array.isArray(valor?.material) ? valor.material : [])
+        ]
+    };
+    return typeof window.normalizarMaterialLogistica === 'function'
+        ? window.normalizarMaterialLogistica(base)
+        : base;
+}
+
+function _normalizarTextoUnidadMaterial(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function _esZumoMaterialLogistica(item) {
+    const nombre = _normalizarTextoUnidadMaterial(item?.nombre || item?.name);
+    return Boolean(item?._zumoId) ||
+        (nombre.includes('zumo') && (nombre.includes('naranja') || nombre.includes('natural')));
+}
+
+function _unidadVisibleMaterialLogistica(item) {
+    if (_esZumoMaterialLogistica(item)) {
+        return item?.unidad_comanda || item?.unidad || 'Lt';
+    }
+    return item?.unidad_comanda || item?.unidad || 'uds';
+}
+
+function _permiteDescripcionMaterialMenu(item) {
+    const texto = _normalizarTextoUnidadMaterial([
+        item?.nombre,
+        item?.descripcion,
+        item?.presentacion
+    ].filter(Boolean).join(' '));
+    return /\bkit\b/.test(texto) || texto.includes('cristal');
+}
+
+function _descripcionMaterialVisibleDetalle(comanda, item) {
+    const descripcion = item?.descripcion || '';
+    if (!descripcion) return '';
+    const esServicio = typeof _esComandaServicios === 'function' && _esComandaServicios(comanda);
+    const esLogisticaSeparada = comanda?.tipo_registro === 'logistica';
+    if (esServicio || esLogisticaSeparada) return descripcion;
+    return _permiteDescripcionMaterialMenu(item) ? descripcion : '';
+}
+
+function _extraerMaterialLogisticaEdicion(comanda, menus) {
+    const candidatos = [
+        comanda?.material_logistica,
+        comanda?.materialLogistica,
+        comanda?.logistica?.material_logistica,
+        comanda?.logistica?.materialLogistica,
+        comanda?.logistica_inline?.material_logistica,
+        comanda?.logistica_inline?.materialLogistica,
+        ...(menus || []).map(menu => menu?.material)
+    ];
+
+    for (const candidato of candidatos) {
+        const material = _normalizarMaterialLogisticaEdicion(candidato);
+        if (_materialLogisticaTieneItems(material)) return material;
+    }
+
+    return (menus || []).reduce(
+        (acc, menu) => _sumarMaterialParaEdicion(acc, _normalizarMaterialLogisticaEdicion(menu?.material)),
+        { bebidas: [], menaje: [], extras: [] }
+    );
+}
+
+function _restaurarMaterialLogisticaEdicion(material) {
+    const materialSeguro = _normalizarMaterialLogisticaEdicion(material);
+    window._materialAcumulado = materialSeguro;
+    if (window.materialLogistica) {
+        window.materialLogistica = {
+            bebidas: _clonarValorComanda(materialSeguro.bebidas) || [],
+            menaje: _clonarValorComanda(materialSeguro.menaje) || [],
+            extras: _clonarValorComanda(materialSeguro.extras) || [],
+            catalogoCompleto: window.materialLogistica.catalogoCompleto,
+            isAdmin: window.materialLogistica.isAdmin
+        };
+    }
+    const materialInline = document.getElementById('materialLogisticaInline');
+    if (materialInline) materialInline.style.display = _materialLogisticaTieneItems(materialSeguro) ? 'block' : 'none';
+    if (typeof window.renderMaterialAcumuladoInline === 'function') {
+        window.renderMaterialAcumuladoInline();
+    } else if (typeof window.renderizarMaterialLogisticaActual === 'function') {
+        window.renderizarMaterialLogisticaActual('materialLogisticaInline');
+    }
+}
+
+function _limpiarFormularioMenuParaEdicionNueva() {
+    const st = window.MenusAdicionalesState || {};
+    st.indiceMenuEditando = -1;
+    st.indiceMenuSeleccionadoResumen = -1;
+    window._indiceMenuResumenEditando = -1;
+    window._materialMenuResumenEditando = null;
+    clearTimeout(window._restoreMaterialEdicionTimer);
+    clearTimeout(window._restoreMaterialResumenTimer1);
+    clearTimeout(window._restoreMaterialResumenTimer2);
+
+    const categoria = document.getElementById('categoria');
+    if (categoria) categoria.value = '';
+    const menuSelect = document.getElementById('menu_id');
+    if (menuSelect) menuSelect.innerHTML = '<option value="">Primero selecciona categoría</option>';
+    const pax = document.getElementById('pax');
+    if (pax) pax.value = '';
+
+    window.menuSeleccionado = null;
+    window.pax = 0;
+    window.referenciasSeleccionadas = { gris: [], rojo: [], postres: [], saladas: [] };
+    window.referenciasDesayuno = {};
+
+    if (typeof limpiarSeccionesMenu === 'function') limpiarSeccionesMenu();
+    if (window.materialLogistica) {
+        window.materialLogistica = {
+            bebidas: [],
+            menaje: [],
+            extras: [],
+            catalogoCompleto: window.materialLogistica.catalogoCompleto,
+            isAdmin: window.materialLogistica.isAdmin
+        };
+    }
+
+    const materialInline = document.getElementById('materialLogisticaInline');
+    if (materialInline) {
+        materialInline.style.display = 'none';
+        materialInline.innerHTML = '';
+        delete materialInline.dataset.modoLogistica;
+    }
+    window.modoMaterialLogisticaInline = '';
+
+    const btnWrap = document.getElementById('btnAnadirMenuWrap');
+    if (btnWrap) btnWrap.style.display = 'none';
+    const btn = document.getElementById('btnAnadirMenu');
+    if (btn) btn.textContent = '+ Añadir menú';
+}
+
+function _programarRestauracionMaterialLogisticaEdicion(material) {
+    clearTimeout(window._restoreMaterialEdicionTimer);
+    window._restoreMaterialEdicionTimer = setTimeout(() => {
+        if (window.MenusAdicionalesState?.indiceMenuEditando >= 0 || window._indiceMenuResumenEditando >= 0) return;
+        _restaurarMaterialLogisticaEdicion(material);
+    }, 450);
+}
+
 function _inferirCategoriaMenuEdicion(menu) {
+    if (menu?.categoriaOriginalId) return Number(menu.categoriaOriginalId);
     if (menu?.categoriaId) return Number(menu.categoriaId);
     if (menu?._cat) return Number(menu._cat);
+    if (menu?.referencias_desayuno) return 1;
+    if (menu?.foodbox_lunch) return 4;
+    if (menu?.bandejas) return 5;
+    if (menu?.referencias) return 2;
     const texto = String(menu?.categoria || '').toLowerCase();
     if (texto.includes('servicio')) return 3;
     if (texto.includes('desayuno')) return 1;
@@ -1496,8 +2136,11 @@ function _inferirTipoServicioEdicion(menu) {
 }
 
 function _esMenuServicios(menu) {
-    return Number(menu?.categoriaId || menu?._cat || 0) === 3 ||
-        String(menu?.categoria || '').toLowerCase().includes('servicio') ||
+    const categoria = Number(menu?.categoriaOriginalId || menu?.categoriaId || menu?._cat || 0);
+    if (categoria === 3) return true;
+    if ([1, 2, 4, 5, 6].includes(categoria)) return false;
+    if (menu?.referencias_desayuno || menu?.foodbox_lunch || menu?.bandejas || menu?.referencias) return false;
+    return String(menu?.categoria || '').toLowerCase().includes('servicio') ||
         Boolean(menu?.servicio_categoria);
 }
 
@@ -1520,10 +2163,13 @@ function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
         categoria: menu?.categoria || '',
         pax: Number(menu?.pax || menu?.pax_adicional || (esPrincipal ? comanda?.pax : 0)) || 0,
         tipo_menaje: menu?.tipo_menaje || comanda?.tipo_menaje || null,
-        material: _clonarValorComanda(menu?.material || null)
+        material: _normalizarMaterialLogisticaEdicion(menu?.material || menu?.material_logistica || menu?.materialLogistica || null)
     };
 
     if (esPrincipal) {
+        if (!item.referencias_extras && comanda?.referencias_extras) {
+            item.referencias_extras = _clonarValorComanda(comanda.referencias_extras);
+        }
         if (!item.referencias_desayuno && comanda?.referencias_desayuno) {
             item.referencias_desayuno = _clonarValorComanda(comanda.referencias_desayuno);
         }
@@ -1625,7 +2271,13 @@ function _rehidratarMaterialLogisticaGuardado(actual, guardados) {
 
     const guardado = guardados.find(mat => _materialGuardadoCoincide(mat, actual));
     return guardado
-        ? { ...actual, ...guardado, checked: true, cantidad: Number(guardado.cantidad || 0) }
+        ? {
+            ...actual,
+            ...guardado,
+            checked: guardado.checked !== false && Number(guardado.cantidad || 0) > 0,
+            cantidad: Number(guardado.cantidad || 0),
+            _cantidad_manual_zero: !!guardado._cantidad_manual_zero || Number(guardado.cantidad || 0) === 0
+        }
         : { ...actual, checked: false, cantidad: 0, subitems_selected: [] };
 }
 
@@ -1640,14 +2292,28 @@ function _rehidratarListaMaterialLogistica(actuales, guardados) {
     const rehidratados = actuales.map(actual => _rehidratarMaterialLogisticaGuardado(actual, guardados));
     const guardadosSinCatalogo = guardados
         .filter(guardado => !_materialEstaEnCatalogoLogistica(guardado, actuales))
-        .map(guardado => ({
+        .map(guardado => {
+            const esManual = guardado._manual_otro || guardado.source_table === 'manual';
+            const id = guardado.id || guardado.item_id || `otro_guardado_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            return {
             ...guardado,
+            id,
+            item_id: guardado.item_id || id,
+            tipo: guardado.tipo || '',
+            subcategoria: guardado.subcategoria || (esManual ? 'otros' : ''),
+            source_table: guardado.source_table || (esManual ? 'manual' : ''),
+            _manual_otro: esManual,
             checked: true,
             cantidad: Number(guardado.cantidad || 0),
+            unidad: guardado.unidad_comanda || guardado.unidad || 'ud',
+            unidad_comanda: guardado.unidad_comanda || guardado.unidad || 'ud',
+            unidad_inventario: guardado.unidad_inventario || guardado.unidad || 'ud',
+            conversion_a_stock: Number(guardado.conversion_a_stock || 1),
             subitems: [],
             subitems_selected: [],
             tiene_subitems: false
-        }));
+            };
+        });
 
     return [...rehidratados, ...guardadosSinCatalogo];
 }
@@ -1661,8 +2327,10 @@ function _hidratarReferenciasDesayunoEdicion(menu) {
         window.referenciasDesayuno[refId] = {
             ...refActual,
             ...refGuardada,
-            opcionesDisponibles: refGuardada.opcionesDisponibles || refActual.opcionesDisponibles || [],
-            pulguitasDisponibles: refGuardada.pulguitasDisponibles || refActual.pulguitasDisponibles || []
+            cantidad_manual: refGuardada.cantidad_manual !== false,
+            _cantidad_guardada_edicion: true,
+            opcionesDisponibles: refActual.opcionesDisponibles || refGuardada.opcionesDisponibles || [],
+            pulguitasDisponibles: refActual.pulguitasDisponibles || refGuardada.pulguitasDisponibles || []
         };
 
         const bubble = Array.from(document.querySelectorAll('#referenciasDesayunoGrid .dc-item-bubble'))
@@ -1679,10 +2347,11 @@ function _hidratarReferenciasDesayunoEdicion(menu) {
 }
 
 function _hidratarReferenciasServiciosEdicion(menu) {
-    if (Number(menu?.categoriaId || menu?._cat || 0) !== 3 || !menu?.referencias) return;
+    if (![2, 3].includes(Number(menu?.categoriaId || menu?._cat || 0)) || !menu?.referencias) return;
 
     const saladas = Array.isArray(menu.referencias.saladas) ? menu.referencias.saladas : [];
     const postres = Array.isArray(menu.referencias.postres) ? menu.referencias.postres : [];
+    const extras = Array.isArray(menu.referencias_extras) ? _clonarValorComanda(menu.referencias_extras) : [];
 
     window.referenciasSeleccionadas = window.referenciasSeleccionadas || { gris: [], rojo: [], postres: [] };
     window.referenciasSeleccionadas.gris = saladas.map(ref => ({
@@ -1690,7 +2359,9 @@ function _hidratarReferenciasServiciosEdicion(menu) {
         id: String(ref.id),
         nombre: ref.nombre || '',
         cantidad: Number(ref.cantidad || 0) || 1,
-        unidad: ref.unidad || 'uds'
+        unidad: ref.unidad || 'uds',
+        cantidad_manual: ref.cantidad_manual !== false,
+        _cantidad_guardada_edicion: true
     }));
     window.referenciasSeleccionadas.rojo = [];
     window.referenciasSeleccionadas.postres = postres.map(ref => ({
@@ -1698,7 +2369,20 @@ function _hidratarReferenciasServiciosEdicion(menu) {
         id: String(ref.id),
         nombre: ref.nombre || '',
         cantidad: Number(ref.cantidad || 0) || 1,
-        unidad: ref.unidad || 'uds'
+        unidad: ref.unidad || 'uds',
+        cantidad_manual: ref.cantidad_manual !== false,
+        _cantidad_guardada_edicion: true
+    }));
+    window.referenciasExtras = extras.map(ref => ({
+        ...ref,
+        id: String(ref.id || `extra_carta_${Date.now()}_${Math.floor(Math.random() * 1000)}`),
+        cantidad: Number(ref.cantidad || 0) || 1,
+        unidad: ref.unidad || 'uds',
+        tipo: ref.tipo || (ref.grupo === 'postre' ? 'postres' : 'saladas'),
+        grupo: ref.grupo || (ref.tipo === 'postres' ? 'postre' : 'salado'),
+        extra_carta: ref.extra_carta !== false,
+        cantidad_manual: ref.cantidad_manual !== false,
+        _cantidad_guardada_edicion: true
     }));
 
     if (typeof renderReferenciasPagina === 'function') {
@@ -1706,6 +2390,8 @@ function _hidratarReferenciasServiciosEdicion(menu) {
             if (window.referenciasPaginacion?.[tipo]) renderReferenciasPagina(tipo);
         });
     }
+    if (typeof renderReferenciasFueraCarta === 'function') renderReferenciasFueraCarta();
+    if (typeof renderReferenciasExtras === 'function') renderReferenciasExtras();
     if (typeof actualizarContadoresSeleccion === 'function') actualizarContadoresSeleccion();
 }
 
@@ -1734,61 +2420,92 @@ async function _activarPrimerMenuEdicion(menu) {
     }
 
     categoriaSelect.value = String(categoriaId === 6 ? 5 : categoriaId);
-    if (typeof cargarMenus === 'function') {
-        await cargarMenus();
-    }
+    window._editandoMenuDesdeResumen = true;
+    try {
+        if (typeof cargarMenus === 'function') {
+            await cargarMenus();
+        }
 
-    const nodes = document.querySelectorAll('#menusContainer .menu-option');
-    let nodeEncontrado = null;
-    nodes.forEach(node => {
-        if (nodeEncontrado) return;
-        try {
-            const data = JSON.parse(node.dataset.menu || '{}');
-            const mismoId = menu.id && String(data.id) === String(menu.id);
-            const mismoNombre = (data.nombre || '').trim().toLowerCase() === (menu.nombre || '').trim().toLowerCase();
-            if (mismoId || mismoNombre) nodeEncontrado = node;
-        } catch (error) {}
-    });
+        const nodes = document.querySelectorAll('#menusContainer .menu-option');
+        let nodeEncontrado = null;
+        nodes.forEach(node => {
+            if (nodeEncontrado) return;
+            try {
+                const data = JSON.parse(node.dataset.menu || '{}');
+                const mismoId = menu.id && String(data.id) === String(menu.id);
+                const mismoNombre = (data.nombre || '').trim().toLowerCase() === (menu.nombre || '').trim().toLowerCase();
+                if (mismoId || mismoNombre) nodeEncontrado = node;
+            } catch (error) {}
+        });
 
-    if (nodeEncontrado && typeof seleccionarMenu === 'function') {
-        await seleccionarMenu(menu.id, nodeEncontrado);
-    } else {
-        window.menuSeleccionado = { ...menu, _cat: categoriaId };
-        _rellenarCampoEdicion('menu_id', menu.id || '');
+        if (nodeEncontrado && typeof seleccionarMenu === 'function') {
+            await seleccionarMenu(menu.id, nodeEncontrado);
+        } else {
+            window.menuSeleccionado = { ...menu, _cat: categoriaId };
+            _rellenarCampoEdicion('menu_id', menu.id || '');
+        }
+    } finally {
+        window._editandoMenuDesdeResumen = false;
     }
 
     if (categoriaId === 1) {
         _hidratarReferenciasDesayunoEdicion(menu);
-    } else if (categoriaId === 3) {
+    } else if ([2, 3].includes(categoriaId)) {
         _hidratarReferenciasServiciosEdicion(menu);
     }
+
 }
 
 async function cargarComandaEnFormularioEdicion(comanda) {
+    const comandaEsServicios = typeof _esComandaServicios === 'function' && _esComandaServicios(comanda);
+    window._menusEliminadosEdicion = [];
+    if (typeof window.mostrarCodigoComandaAsignado === 'function') {
+        window.mostrarCodigoComandaAsignado(comanda.codigo || comanda.codigo_comanda || '');
+    }
     _rellenarCampoEdicion('empresa', comanda.empresa || '');
     _rellenarCampoEdicion('responsable', comanda.responsable || '');
     _rellenarCampoEdicion('pax', comanda.pax || '');
     _rellenarCampoEdicion('hora_salida', comanda.hora_salida || '');
     _rellenarCampoEdicion('fecha_evento', (comanda.fecha_evento || '').split('T')[0]);
+    if (typeof window.actualizarDiaFechaEvento === 'function') {
+        window.actualizarDiaFechaEvento();
+    }
     _rellenarCampoEdicion('tipo_menaje', comanda.tipo_menaje || '');
     _rellenarCampoEdicion('alergias_notas', comanda.alergias?.notas || '');
     if (typeof rellenarIntolerancias === 'function') {
         rellenarIntolerancias(comanda.alergias?.intolerancias || {});
     }
 
-    const logistica = comanda.logistica_inline || comanda.logistica || {};
-    _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
-    _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
-    _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
-    _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
-    _rellenarCampoEdicion('log_inline_montaje', logistica.montaje || '');
-    const direccionInline = typeof window.separarDireccionLogistica === 'function'
-        ? window.separarDireccionLogistica(logistica.direccion || '')
-        : { calle: logistica.direccion || '', numero: '' };
-    _rellenarCampoEdicion('log_inline_calle', logistica.calle || direccionInline.calle || '');
-    _rellenarCampoEdicion('log_inline_numero', logistica.numero || direccionInline.numero || '');
-    _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
-    _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
+    const logistica = comandaEsServicios ? {} : (comanda.logistica_inline || comanda.logistica || {});
+    if (comandaEsServicios) {
+        if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
+        const logisticaSection = document.getElementById('logisticaInlineSection');
+        const notasSection = document.getElementById('logisticaInlineNotasSection');
+        const materialInline = document.getElementById('materialLogisticaInline');
+        if (logisticaSection) logisticaSection.style.display = 'none';
+        if (notasSection) notasSection.style.display = 'none';
+        if (materialInline) {
+            materialInline.style.display = 'none';
+            materialInline.innerHTML = '';
+        }
+    } else {
+        _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
+        _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
+        _rellenarCampoEdicion('log_inline_fecha_recogida', logistica.fecha_recogida || '');
+        _rellenarCampoEdicion('log_inline_hora_recogida', logistica.hora_recogida || '');
+        _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
+        _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
+        _rellenarCampoEdicion('log_inline_montaje', logistica.montaje || '');
+        _rellenarCampoEdicion('log_inline_duracion_evento', logistica.duracion_evento || '');
+        _rellenarCampoEdicion('log_inline_cantidad_camareros', logistica.cantidad_camareros || '');
+        const direccionInline = typeof window.separarDireccionLogistica === 'function'
+            ? window.separarDireccionLogistica(logistica.direccion || '')
+            : { calle: logistica.direccion || '', numero: '' };
+        _rellenarCampoEdicion('log_inline_calle', logistica.calle || direccionInline.calle || '');
+        _rellenarCampoEdicion('log_inline_numero', logistica.numero || direccionInline.numero || '');
+        _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
+        _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
+    }
 
     const menus = [];
     if (comanda.menu_principal) {
@@ -1801,15 +2518,16 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     if (!menus.length && comanda.menu_principal?.nombre) {
         menus.push(_normalizarMenuEdicion(comanda.menu_principal, comanda, true));
     }
+    menus.forEach((menu, index) => {
+        menu._edicion_uid = menu._edicion_uid || `edicion_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}`;
+    });
 
     window.MenusAdicionalesState = window.MenusAdicionalesState || { menusAdicionales: [] };
     window.MenusAdicionalesState.menusAdicionales = menus;
+    window.MenusAdicionalesState.indiceMenuEditando = -1;
+    window.MenusAdicionalesState.indiceMenuSeleccionadoResumen = -1;
     window.menusAdicionales = menus;
-    window._materialAcumulado = _clonarValorComanda(comanda.material_logistica) || { bebidas: [], menaje: [], extras: [] };
-
-    if (!window._materialAcumulado.bebidas?.length && !window._materialAcumulado.menaje?.length && !window._materialAcumulado.extras?.length) {
-        window._materialAcumulado = menus.reduce((acc, menu) => _sumarMaterialParaEdicion(acc, menu.material), { bebidas: [], menaje: [], extras: [] });
-    }
+    window._materialAcumulado = _extraerMaterialLogisticaEdicion(comanda, menus);
 
     const paxTotal = menus.reduce((total, menu) => total + (Number(menu.pax) || 0), 0);
     const paxTotalEl = document.getElementById('paxTotalValor');
@@ -1819,15 +2537,26 @@ async function cargarComandaEnFormularioEdicion(comanda) {
 
     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
 
-    try {
-        await _activarPrimerMenuEdicion(menus[0]);
-    } catch (error) {
-        console.warn('No se pudo activar el menu al editar:', error);
-    }
-
     window.MenusAdicionalesState.menusAdicionales = menus;
+    window.MenusAdicionalesState.indiceMenuEditando = -1;
+    window.MenusAdicionalesState.indiceMenuSeleccionadoResumen = -1;
+    window.menusAdicionales = menus;
+    _limpiarFormularioMenuParaEdicionNueva();
+    window.MenusAdicionalesState.menusAdicionales = menus;
+    window.MenusAdicionalesState.indiceMenuSeleccionadoResumen = menus.length ? 0 : -1;
     window.menusAdicionales = menus;
     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
+    if (comandaEsServicios) {
+        const logisticaSection = document.getElementById('logisticaInlineSection');
+        const notasSection = document.getElementById('logisticaInlineNotasSection');
+        const materialInline = document.getElementById('materialLogisticaInline');
+        if (logisticaSection) logisticaSection.style.display = 'none';
+        if (notasSection) notasSection.style.display = 'none';
+        if (materialInline) {
+            materialInline.style.display = 'none';
+            materialInline.innerHTML = '';
+        }
+    }
 }
 
 async function editarComanda() {
@@ -1907,7 +2636,7 @@ function imprimirComanda() {
     }, 80);
 }
 
-function eliminarComanda() {
+async function eliminarComanda() {
     if (window.detalleDocumentoActivo?.tipo === 'logistica') {
         eliminarComandaLogistica();
         return;
@@ -1921,7 +2650,15 @@ function eliminarComanda() {
     const codigo = document.getElementById('detalleCodigo').textContent;
 
     if (confirm(`¿Estás seguro de que deseas eliminar la comanda ${codigo}? Esta acción no se puede deshacer.`)) {
+        const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
         eliminarComandaDelHistorial(codigo);
+        try {
+            await window.marcarComandaEliminadaEnSupabase?.(codigo, pedido);
+        } catch (error) {
+            console.warn('No se pudo marcar la comanda como eliminada en Supabase:', error);
+            alert('La comanda se oculto localmente, pero no se pudo sincronizar la eliminacion con Supabase. Revisa permisos.');
+            return;
+        }
         alert(`Comanda ${codigo} eliminada correctamente`);
 
         if (typeof volverAlHistorial === 'function') {
@@ -1936,7 +2673,17 @@ async function editarComandaLogistica() {
     }
 
     const codigo = window.detalleDocumentoActivo?.codigoCocina || '';
-    const resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+    let resultado = _obtenerComandaLogisticaPorCodigo(codigo);
+    const remota = await _obtenerComandaLogisticaRemotaPorCodigo(codigo);
+    if (remota && (_tieneDatosEntregaLogistica(remota) || _tieneMaterialLogisticaVista(remota.material_logistica))) {
+        _guardarComandaLogisticaHidratadaLocal(codigo, remota);
+        resultado = _obtenerComandaLogisticaPorCodigo(codigo) || {
+            item: remota,
+            index: -1,
+            historial: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]'),
+            hidratada: true
+        };
+    }
     if (!resultado) {
         alert('Comanda de logistica no encontrada.');
         return;
@@ -1956,15 +2703,22 @@ async function editarComandaLogistica() {
         responsable: item.responsable || '',
         pax: item.pax || 0,
         hora_salida: item.hora_salida || '',
-        fecha_evento: item.fecha_evento || ''
+        fecha_evento: item.fecha_evento || '',
+        logistica: item.logistica || item.logistica_inline || {},
+        logistica_inline: item.logistica_inline || item.logistica || {},
+        material_logistica: item.material_logistica || {}
     });
 
     const log = item.logistica || {};
     _rellenarCampoEdicion('log_nombre_contacto', log.nombre_contacto || '');
     _rellenarCampoEdicion('log_telefono_contacto', log.telefono_contacto || '');
     _rellenarCampoEdicion('log_montaje', log.montaje || '');
+    _rellenarCampoEdicion('log_duracion_evento', log.duracion_evento || '');
+    _rellenarCampoEdicion('log_cantidad_camareros', log.cantidad_camareros || '');
     _rellenarCampoEdicion('log_hora_entrega', log.hora_entrega || '');
     _rellenarCampoEdicion('log_hora_evento', log.hora_evento || '');
+    _rellenarCampoEdicion('log_fecha_recogida', log.fecha_recogida || '');
+    _rellenarCampoEdicion('log_hora_recogida', log.hora_recogida || '');
     const direccionLogistica = typeof window.separarDireccionLogistica === 'function'
         ? window.separarDireccionLogistica(log.direccion || '')
         : { calle: log.direccion || '', numero: '' };
@@ -1976,10 +2730,20 @@ async function editarComandaLogistica() {
         await window.actualizarSelectoresContactosCliente(item.empresa || '');
     }
 
-    if (window.materialLogistica && item.material_logistica) {
+    const materialLogisticaGuardado = _normalizarMaterialLogisticaVista(
+        item.material_logistica ||
+        item.materialLogistica ||
+        item.logistica?.material_logistica ||
+        item.logistica?.materialLogistica ||
+        item.logistica_inline?.material_logistica ||
+        item.logistica_inline?.materialLogistica ||
+        {}
+    );
+
+    if (window.materialLogistica && _tieneMaterialLogisticaVista(materialLogisticaGuardado)) {
         ['bebidas', 'menaje', 'extras'].forEach(tipo => {
             const actuales = window.materialLogistica[tipo] || [];
-            const guardados = item.material_logistica[tipo] || [];
+            const guardados = materialLogisticaGuardado[tipo] || [];
             window.materialLogistica[tipo] = _rehidratarListaMaterialLogistica(actuales, guardados);
         });
         if (typeof window.renderizarMaterialLogisticaActual === 'function') {
