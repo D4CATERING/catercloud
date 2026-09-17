@@ -95,6 +95,11 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
     return true;
 }
 
+async function sincronizarAccionesOperativasSupabase(codigo, patch = {}, options = {}) {
+    if (!codigo || !haySesionSupabase()) return false;
+    return sincronizarPayloadOrdenSupabase(codigo, patch, options);
+}
+
 async function obtenerOrdenSupabasePorCodigo(codigo, options = {}) {
     if (!codigo || !haySesionSupabase()) return null;
 
@@ -142,6 +147,7 @@ window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     leerHistorialLogisticaLocal,
     guardarHistorialLogisticaLocal,
     sincronizarPayloadOrdenSupabase,
+    sincronizarAccionesOperativasSupabase,
     obtenerOrdenSupabasePorCodigo
 });
 

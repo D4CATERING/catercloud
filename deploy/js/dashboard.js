@@ -406,10 +406,8 @@ function guardarHistorialCocinaModulo(historial) {
 }
 
 async function sincronizarAccionesOperativasSupabase(codigo, patch) {
-    if (!codigo || !window.supabaseClient || !getUsuarioActualIdDashboard()) return false;
-
     try {
-        return await window.CaterCloudStorage.sincronizarPayloadOrdenSupabase(codigo, patch, {
+        return await window.CaterCloudStorage.sincronizarAccionesOperativasSupabase(codigo, patch, {
             editado_por_nombre: getOperativeActorName()
         });
     } catch (error) {
