@@ -89,6 +89,7 @@ Ver tambien `docs/mapa-codigo.md` para el inventario actual y las zonas de mayor
 - `tools/sync-deploy.ps1`: sincroniza archivos fuente hacia `deploy`; usa `-IncludeSql` cuando tambien deban copiarse cambios SQL.
 - `tools/audit-project.ps1`: muestra metricas locales de tamano y acoplamiento.
 - `tools/check-storage-boundaries.ps1`: evita que los historiales locales se usen fuera de `js/storage.js`.
+- `tools/check-supabase-boundaries.ps1`: evita que `orders` de Supabase se use fuera de `js/storage.js`.
 
 ## Criterio de exito
 

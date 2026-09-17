@@ -51,4 +51,12 @@ if (Test-Path $storageBoundariesScript) {
     }
 }
 
+$supabaseBoundariesScript = Join-Path $PSScriptRoot "check-supabase-boundaries.ps1"
+if (Test-Path $supabaseBoundariesScript) {
+    & powershell -ExecutionPolicy Bypass -File $supabaseBoundariesScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Fallo la validacion de limites de Supabase."
+    }
+}
+
 Write-Host "OK: validacion del proyecto completada."
