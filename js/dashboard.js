@@ -8,6 +8,10 @@ function getFechaLocalHoyDashboard() {
     return `${yyyy}-${mm}-${dd}`;
 }
 
+function getTimestampOperativoDashboard() {
+    return new Date().toISOString();
+}
+
 function sumarDiasFechaLocalDashboard(fechaIso, dias) {
     const [yyyy, mm, dd] = String(fechaIso || '').split('-').map(Number);
     const fecha = new Date(yyyy, (mm || 1) - 1, dd || 1);
@@ -840,7 +844,7 @@ function registrarAccionOperativa(item, area, accion, detalle = '') {
     if (!item) return;
     const key = area === 'logistica' ? 'logistics_action_log' : 'kitchen_action_log';
     const registro = {
-        at: new Date().toISOString(),
+        at: getTimestampOperativoDashboard(),
         by: getOperativeActorName(),
         action: accion,
         detail: detalle
@@ -903,7 +907,7 @@ async function descontarInventarioLogisticaSiHaceFalta(item) {
         if (error) throw error;
     }
 
-    item.inventory_deducted_at = new Date().toISOString();
+    item.inventory_deducted_at = getTimestampOperativoDashboard();
     item.inventory_deducted_by = getOperativeActorName();
     return true;
 }
@@ -1106,13 +1110,13 @@ function marcarCambioOperativoGestionado(key, action = 'dismissed') {
         const payload = JSON.stringify({
             action,
             by: window.currentUser?.email || null,
-            at: new Date().toISOString()
+            at: getTimestampOperativoDashboard()
         });
         localStorage.setItem(getStorageKeyCambioOperativoGlobal(key), payload);
         localStorage.setItem(getStorageKeyCambioOperativo(key), JSON.stringify({
             action,
             by: window.currentUser?.email || null,
-            at: new Date().toISOString()
+            at: getTimestampOperativoDashboard()
         }));
     } catch (_) {
         sessionStorage.setItem(key, action);
@@ -1487,7 +1491,7 @@ function guardarEventoCocinaActivo(evento) {
 
     if (evento.kitchen_ready_at) historial[index].kitchen_ready_at = evento.kitchen_ready_at;
     if (evento.kitchen_ready_by) historial[index].kitchen_ready_by = evento.kitchen_ready_by;
-    historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
+    historial[index].fecha_modificacion = evento.fecha_modificacion || getTimestampOperativoDashboard();
     guardarHistorialCocinaModulo(historial);
     sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
         kitchen_status: historial[index].kitchen_status,
@@ -1812,7 +1816,7 @@ function guardarCambiosProduccionCocina(index, codigo = '') {
 
     if (total > 0 && producidos >= total) {
         item.kitchen_status = 'listo';
-        item.kitchen_ready_at = new Date().toISOString();
+        item.kitchen_ready_at = getTimestampOperativoDashboard();
         item.kitchen_ready_by = item.kitchen_assigned_to || '';
     } else if (producidos > 0) {
         item.kitchen_status = 'en_produccion';
@@ -1838,7 +1842,7 @@ function confirmarCompletadoCocina(index, codigo = '') {
         return;
     }
 
-    const ahora = new Date().toISOString();
+    const ahora = getTimestampOperativoDashboard();
     item.kitchen_status = 'listo';
     item.estado_cocina = 'listo';
     item.kitchen_produced_items = producidos;
@@ -1900,7 +1904,7 @@ function actualizarEstadoCocina(index, value, codigo = '') {
             });
         });
         item.kitchen_produced_items = getTotalItemsProduccionCocina(item);
-        item.kitchen_ready_at = new Date().toISOString();
+        item.kitchen_ready_at = getTimestampOperativoDashboard();
         item.kitchen_ready_by = item.kitchen_assigned_to || '';
     } else if (item.kitchen_status === 'sin_producir') {
         item.kitchen_items_state = {};
@@ -2917,14 +2921,14 @@ async function actualizarEstadoParadaRuta(stopId, status) {
     const estado = normalizarEstadoParadaRuta(status);
     const patch = {
         status: estado,
-        updated_at: new Date().toISOString()
+        updated_at: getTimestampOperativoDashboard()
     };
 
     if (estado === 'in_route') {
-        patch.actual_departure = new Date().toISOString();
+        patch.actual_departure = getTimestampOperativoDashboard();
     }
     if (estado === 'delivered') {
-        patch.actual_arrival = new Date().toISOString();
+        patch.actual_arrival = getTimestampOperativoDashboard();
     }
 
     try {
@@ -3619,7 +3623,7 @@ function guardarEventoLogisticaActivo(evento) {
         historial[index].inventory_deducted_by = evento.inventory_deducted_by || historial[index].inventory_deducted_by || '';
         if (evento.logistics_ready_at) historial[index].logistics_ready_at = evento.logistics_ready_at;
         if (evento.logistics_ready_by) historial[index].logistics_ready_by = evento.logistics_ready_by;
-        historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
+        historial[index].fecha_modificacion = evento.fecha_modificacion || getTimestampOperativoDashboard();
         guardarHistorialCocinaLogistica(historial);
         sincronizarAccionesOperativasSupabase(historial[index].codigo || historial[index].codigo_comanda, {
             material_logistica: historial[index].material_logistica || {},
@@ -3660,7 +3664,7 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_ready_at: evento.logistics_ready_at || historial[index].logistics_ready_at,
         logistics_ready_by: evento.logistics_ready_by || historial[index].logistics_ready_by
     };
-    historial[index].fecha_modificacion = evento.fecha_modificacion || new Date().toISOString();
+    historial[index].fecha_modificacion = evento.fecha_modificacion || getTimestampOperativoDashboard();
     guardarHistorialLogistica(historial);
     sincronizarAccionesOperativasSupabase(historial[index].codigo_cocina || historial[index].codigo_original || historial[index].codigo, {
         material_logistica: historial[index].material_logistica || {},
@@ -4269,7 +4273,7 @@ async function confirmarCompletadoLogistica(index, codigo = '') {
         return;
     }
 
-    const ahora = new Date().toISOString();
+    const ahora = getTimestampOperativoDashboard();
     item.logistics_status = 'listo';
     item.estado = 'listo';
     item.logistics_prepared_items = preparados;
@@ -4314,14 +4318,14 @@ function togglePreparadoLogistica(index, tipo, matIndex, materialKey = '', check
     if (total > 0 && preparados === total) {
         item.logistics_status = 'listo';
         item.estado = 'listo';
-        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_at = getTimestampOperativoDashboard();
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     }
     if (!checked || preparados < total) {
         item.logistics_completed_confirmed_at = null;
         item.logistics_completed_confirmed_by = '';
     }
-    item.fecha_modificacion = new Date().toISOString();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
     guardarEventoLogisticaActivo(item);
     abrirPreparacionLogistica(index, codigo);
 }
@@ -4332,7 +4336,7 @@ function actualizarResponsableLogistica(index, value, codigo = '') {
     const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
     if (!item) return;
     item.logistics_assigned_to = value.trim();
-    item.fecha_modificacion = new Date().toISOString();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
     guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
@@ -4345,9 +4349,9 @@ function actualizarEstadoLogistica(index, value, codigo = '') {
     item.logistics_status = value;
     item.estado = value;
     registrarAccionOperativa(item, 'logistica', 'Estado actualizado', getLabelEstadoLogistica(value));
-    item.fecha_modificacion = new Date().toISOString();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
     if (value === 'listo') {
-        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_at = getTimestampOperativoDashboard();
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     } else {
         item.logistics_completed_confirmed_at = null;
@@ -4371,7 +4375,7 @@ function actualizarPreparadosLogistica(index, value, codigo = '') {
     if (totalMaterial > 0 && preparados >= totalMaterial) {
         item.logistics_status = 'listo';
         item.estado = 'listo';
-        item.logistics_ready_at = new Date().toISOString();
+        item.logistics_ready_at = getTimestampOperativoDashboard();
         item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
     } else if (preparados > 0) {
         item.logistics_status = 'en_preparacion';
@@ -4385,7 +4389,7 @@ function actualizarPreparadosLogistica(index, value, codigo = '') {
         item.logistics_completed_confirmed_by = '';
     }
 
-    item.fecha_modificacion = new Date().toISOString();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
     guardarEventoLogisticaActivo(item);
     renderizarComandasLogistica();
 }
