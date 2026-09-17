@@ -40,10 +40,11 @@ El proyecto funciona, pero tiene deuda tecnica acumulada:
 
 ### Fase 2: Datos y persistencia
 
-- Centralizar lectura/escritura de comandas en un unico modulo.
-- Encapsular `localStorage`.
+- Centralizar lectura/escritura de comandas en un unico modulo. Estado: `orders` y los historiales locales ya estan protegidos por `js/storage.js`.
+- Encapsular `localStorage`. Estado: los historiales principales ya pasan por `window.CaterCloudStorage`.
 - Definir claramente que campos pertenecen a Cocina, Logistica, Rutas y Expediente.
-- Reducir escrituras directas a Supabase fuera de `js/storage.js` o un modulo equivalente.
+- Reducir escrituras directas a Supabase fuera de `js/storage.js` o un modulo equivalente. Estado: `orders` ya tiene guardia automatica.
+- Mantener helpers internos de `js/storage.js` para sesion Supabase, timestamps y usuario actual.
 
 ### Fase 3: Separacion de modulos
 
@@ -90,6 +91,21 @@ Ver tambien `docs/mapa-codigo.md` para el inventario actual y las zonas de mayor
 - `tools/audit-project.ps1`: muestra metricas locales de tamano y acoplamiento.
 - `tools/check-storage-boundaries.ps1`: evita que los historiales locales se usen fuera de `js/storage.js`.
 - `tools/check-supabase-boundaries.ps1`: evita que `orders` de Supabase se use fuera de `js/storage.js`.
+
+## Estado de avance
+
+Completado el 2026-09-17:
+
+- Guardias de codificacion, limites de historiales locales y limites de Supabase `orders`.
+- Sincronizacion reproducible hacia `deploy` con `tools/sync-deploy.ps1`.
+- `window.CaterCloudStorage` como API compartida para historiales locales y helpers de `orders`.
+- Acceso directo a `orders` de Supabase centralizado en `js/storage.js`.
+- Acceso directo a `historialComandas` y `historialComandasLogistica` centralizado en `js/storage.js`.
+- Helpers internos en `js/storage.js` para sesion Supabase, timestamps y usuario actual.
+
+Siguiente frontera recomendada:
+
+- Extraer o aislar alertas operativas de `js/dashboard.js`, porque Cocina y Logistica han mostrado regresiones visuales de tarjetas y estados.
 
 ## Criterio de exito
 

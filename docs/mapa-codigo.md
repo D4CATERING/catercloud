@@ -14,7 +14,7 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 | `js/desayunos.js` | 2314 | Menus de desayuno, referencias, popups de seleccion | Estado de seleccion complejo |
 | `js/menus-adicionales.js` | 2187 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
 | `js/logistics.js` | 1592 | Formulario y selector de material logistico | Material de menus y servicios mezclado en UI |
-| `js/storage.js` | 1348 | Supabase, localStorage, sincronizacion y codigos | Fuente de verdad todavia repartida |
+| `js/storage.js` | 1348+ | Supabase `orders`, localStorage, sincronizacion, codigos, sesion y timestamps | Archivo grande, pero ya actua como frontera principal de persistencia |
 
 ## Archivos CSS mas grandes
 
@@ -46,13 +46,19 @@ Estas metricas no son malas por si solas, pero indican donde hay mas riesgo de r
 
 Todo acceso a comandas debe pasar por un modulo de datos.
 
-Objetivo:
+Estado actual:
 
-- `orders` en Supabase como fuente principal.
-- `localStorage` como cache temporal o recuperacion, no como fuente final.
-- Una funcion clara para guardar comanda.
-- Una funcion clara para leer comandas.
-- Una funcion clara para actualizar estados operativos.
+- `orders` en Supabase ya se consulta/actualiza solo desde `js/storage.js`.
+- Los historiales locales `historialComandas` y `historialComandasLogistica` ya se leen/escriben solo desde `js/storage.js`.
+- `js/storage.js` expone `window.CaterCloudStorage` para accesos locales y helpers de `orders`.
+- La sesion Supabase, timestamps y datos del usuario ya estan centralizados dentro de `js/storage.js`.
+- `localStorage` sigue existiendo como cache/respaldo y para recuperacion.
+
+Pendiente:
+
+- Separar `js/storage.js` internamente en archivos mas pequenos cuando haya una estrategia de carga segura.
+- Crear funciones mas especificas para lectura/actualizacion operativa y reducir wrappers historicos.
+- Mantener `tools/check-storage-boundaries.ps1` y `tools/check-supabase-boundaries.ps1` como barandillas.
 
 ### Cocina
 
@@ -100,7 +106,7 @@ No deberia reconstruir el estado desde el DOM salvo como transicion temporal.
 
 ## Orden sugerido de extraccion
 
-1. `js/storage.js`: crear API interna de comandas y dejar wrappers compatibles.
+1. `js/storage.js`: seguir reduciendo wrappers historicos sin cambiar contrato publico.
 2. `js/dashboard.js`: extraer alertas operativas sin cambiar comportamiento.
 3. `js/dashboard.js`: separar helpers de Cocina.
 4. `js/dashboard.js`: separar helpers de Logistica.
