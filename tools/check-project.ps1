@@ -43,4 +43,12 @@ if (-not $SkipEncoding) {
     }
 }
 
+$storageBoundariesScript = Join-Path $PSScriptRoot "check-storage-boundaries.ps1"
+if (Test-Path $storageBoundariesScript) {
+    & powershell -ExecutionPolicy Bypass -File $storageBoundariesScript
+    if ($LASTEXITCODE -ne 0) {
+        throw "Fallo la validacion de limites de storage."
+    }
+}
+
 Write-Host "OK: validacion del proyecto completada."

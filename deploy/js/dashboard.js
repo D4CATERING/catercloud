@@ -382,16 +382,11 @@ if (!window._alertasOperativasRealtimeBound) {
 }
 
 function getHistorialCocinaModulo() {
-    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
-        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return window.CaterCloudStorage.leerHistorialComandasLocal();
 }
 
 function guardarHistorialCocinaModulo(historial) {
-    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
-        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
-        return;
-    }
-    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+    window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
 }
 
 async function sincronizarAccionesOperativasSupabase(codigo, patch) {
@@ -3472,29 +3467,19 @@ async function eliminarParadaRutaLogistica(stopId) {
 }
 
 function getHistorialLogistica() {
-    return window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
-        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    return window.CaterCloudStorage.leerHistorialLogisticaLocal();
 }
 
 function guardarHistorialLogistica(historial) {
-    if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
-        window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
-        return;
-    }
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
+    window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
 }
 
 function getHistorialCocinaLogistica() {
-    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
-        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return window.CaterCloudStorage.leerHistorialComandasLocal();
 }
 
 function guardarHistorialCocinaLogistica(historial) {
-    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
-        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
-        return;
-    }
-    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+    window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
 }
 
 function getFechaLogisticaItem(item) {

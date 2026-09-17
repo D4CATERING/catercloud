@@ -1,29 +1,19 @@
 // ========== HISTORIAL DE COMANDA ==========
 
 function leerHistorialComandasHistorial() {
-    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
-        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return window.CaterCloudStorage.leerHistorialComandasLocal();
 }
 
 function guardarHistorialComandasHistorial(historial) {
-    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
-        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
-        return;
-    }
-    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+    window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
 }
 
 function leerHistorialLogisticaHistorial() {
-    return window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
-        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    return window.CaterCloudStorage.leerHistorialLogisticaLocal();
 }
 
 function guardarHistorialLogisticaHistorial(historial) {
-    if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
-        window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
-        return;
-    }
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
+    window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
 }
 
 function getEstadoPedidoLabel(estado) {
