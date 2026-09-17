@@ -2032,7 +2032,8 @@ async function guardarComandaLogistica() {
 
 function guardarComandaLogisticaEnHistorial(datosLogistica) {
     try {
-        let historial = JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
+        let historial = window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
+            || JSON.parse(localStorage.getItem('historialComandasLogistica')) || [];
 
         const fecha = new Date();
         const year = fecha.getFullYear().toString().slice(-2);
@@ -2054,7 +2055,11 @@ function guardarComandaLogisticaEnHistorial(datosLogistica) {
             historial.unshift(comandaLogistica);
         }
 
-        localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+        if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
+            window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial);
+        } else {
+            localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+        }
         vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica);
 
         console.log(`Comanda de logistica ${codigo} guardada en historial`);
@@ -2070,7 +2075,8 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
     if (!codigoPedido) return;
 
     try {
-        const historialPrincipal = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+        const historialPrincipal = window.CaterCloudStorage?.leerHistorialComandasLocal?.()
+            || JSON.parse(localStorage.getItem('historialComandas') || '[]');
         const index = historialPrincipal.findIndex(item => item.codigo === codigoPedido);
         if (index === -1) return;
 
@@ -2099,7 +2105,11 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
             fecha_modificacion: new Date().toISOString()
         };
 
-        localStorage.setItem('historialComandas', JSON.stringify(historialPrincipal));
+        if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
+            window.CaterCloudStorage.guardarHistorialComandasLocal(historialPrincipal);
+        } else {
+            localStorage.setItem('historialComandas', JSON.stringify(historialPrincipal));
+        }
     } catch (error) {
         console.warn('No se pudo vincular la comanda de logistica al expediente:', error);
     }
