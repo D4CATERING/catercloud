@@ -81,6 +81,14 @@ El proyecto funciona, pero tiene deuda tecnica acumulada:
 - `js/logistics.js`: formulario y material logistico.
 - `js/menus-adicionales.js`: resumen, seleccion y edicion de menus.
 
+Ver tambien `docs/mapa-codigo.md` para el inventario actual y las zonas de mayor riesgo.
+
+## Herramientas de apoyo
+
+- `tools/check-project.ps1`: valida sintaxis JavaScript y codificacion.
+- `tools/sync-deploy.ps1`: sincroniza archivos fuente hacia `deploy`.
+- `tools/audit-project.ps1`: muestra metricas locales de tamano y acoplamiento.
+
 ## Criterio de exito
 
 Un cambio en Rutas no debe cambiar estados de Cocina o Logistica.
