@@ -8,13 +8,14 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 
 | Archivo | Lineas | Responsabilidad actual | Riesgo principal |
 | --- | ---: | --- | --- |
-| `js/dashboard.js` | 4766 | Dashboard, Cocina, Logistica, Rutas, inventario, alertas operativas | Mezcla de modulos que pueden afectarse entre si |
+| `js/dashboard.js` | 4718 | Dashboard, Cocina, Logistica, Rutas, inventario, alertas operativas | Mezcla de modulos que pueden afectarse entre si |
 | `js/historial.js` | 2829 | Historial, expedientes, impresion, edicion, adjuntos | Edicion y visualizacion comparten demasiado estado |
 | `js/main.js` | 2439 | Flujo principal de guardado, formulario, comanda logistica | Guardado de cocina/logistica acoplado |
 | `js/desayunos.js` | 2314 | Menus de desayuno, referencias, popups de seleccion | Estado de seleccion complejo |
 | `js/menus-adicionales.js` | 2202 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
 | `js/logistics.js` | 1592 | Formulario y selector de material logistico | Material de menus y servicios mezclado en UI |
 | `js/storage.js` | 1517 | Supabase `orders`, localStorage, sincronizacion, codigos, sesion y timestamps | Archivo grande, pero ya actua como frontera principal de persistencia |
+| `js/routes-module.js` | 98 | Decisiones puras del planning automatico de Rutas | Modulo nuevo; debe crecer solo con reglas de Rutas |
 
 ## Archivos CSS mas grandes
 
@@ -31,12 +32,13 @@ Metricas tomadas con `tools/audit-project.ps1`:
 
 | Archivo | `window.*` | handlers inline | `innerHTML` | `localStorage` | Supabase |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `dashboard.js` | 257 | 46 | 29 | 6 | 41 |
+| `dashboard.js` | 260 | 46 | 29 | 6 | 41 |
 | `menus-adicionales.js` | 257 | 16 | 17 | 0 | 0 |
 | `main.js` | 228 | 0 | 8 | 1 | 0 |
 | `historial.js` | 160 | 19 | 32 | 1 | 9 |
 | `desayunos.js` | 168 | 32 | 21 | 0 | 2 |
 | `storage.js` | 118 | 0 | 0 | 8 | 31 |
+| `routes-module.js` | 2 | 0 | 0 | 0 | 0 |
 
 Estas metricas no son malas por si solas, pero indican donde hay mas riesgo de regresion.
 

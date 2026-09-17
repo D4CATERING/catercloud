@@ -104,10 +104,11 @@ Completado el 2026-09-17:
 - Helpers internos en `js/storage.js` para sesion Supabase, timestamps y usuario actual.
 - Sincronizacion de acciones operativas expuesta desde `js/storage.js`.
 - Primer ajuste del reparto automatico de Rutas para aprovechar rutas vacias compatibles antes de seguir cargando una sola ruta.
+- Creado `js/routes-module.js` para sacar del dashboard las decisiones del planning automatico de Rutas.
 
 Siguiente frontera recomendada:
 
-- Crear una prueba/diagnostico simple para Rutas antes de seguir separando el modulo.
+- Crear una prueba/diagnostico simple para Rutas y seguir moviendo reglas del planning a `js/routes-module.js`.
 - Extraer o aislar alertas operativas de `js/dashboard.js`, porque Cocina y Logistica han mostrado regresiones visuales de tarjetas y estados.
 
 ## Criterio de exito

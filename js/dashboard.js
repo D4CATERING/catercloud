@@ -3092,61 +3092,33 @@ function puedeRutaRecibirParadas(route, paradasExtra) {
     return calcularDuracionRutaConParadas(route, paradasExtra) <= capacidad;
 }
 
-function seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta) {
-    const zona = getZonaRutaPedido(item);
-    const bloque = getBloqueHoraRutaPedido(item);
-    const fecha = getFechaRutasLogistica();
-    const candidatos = routes.map(route => {
-        const extras = extrasPorRuta.get(String(route.id)) || [];
-        const paradas = [...getRouteStops(route), ...extras];
-        const zonasRuta = paradas.map(stop => {
-            const pseudoItem = {
-                logistica: {
-                    calle: stop.address_street,
-                    numero: stop.address_number,
-                    codigo_postal: stop.postal_code
-                }
-            };
-            return getZonaRutaPedido(pseudoItem);
-        });
-        const bloquesRuta = paradas
-            .map(stop => parseHoraRutaEnMinutos(stop.planned_arrival || stop.deadline_time || ''))
-            .filter(min => min !== null)
-            .map(min => Math.floor(min / 30));
-        const cercaniaZona = zonasRuta.includes(zona) ? 0 : 2;
-        const cercaniaHora = bloquesRuta.length
-            ? Math.min(...bloquesRuta.map(b => Math.abs(b - bloque)))
-            : 1;
-        const carga = calcularDuracionRutaConParadas(route, extras);
-        const capacidad = getCapacidadRuta(route) || 480;
-        const presionCarga = (paradas.length * 180) + ((carga / Math.max(capacidad, 1)) * 240);
-        return { route, score: (cercaniaZona * 80) + (cercaniaHora * 10) + presionCarga };
-    }).sort((a, b) => a.score - b.score);
+function getRutasPlannerDeps() {
+    return {
+        getZonaRutaPedido,
+        getBloqueHoraRutaPedido,
+        getFechaRutasLogistica,
+        getRouteStops,
+        parseHoraRutaEnMinutos,
+        calcularDuracionRutaConParadas,
+        getCapacidadRuta,
+        crearParadasPedidoRuta,
+        puedeRutaRecibirParadas,
+        getParadasPlanificadasRuta,
+        getHoraObjetivoRutaPedido,
+        normalizarDriverRuta,
+        getDriverRuta,
+        getConductoresOperativosRutas,
+        contarRutasConParadas,
+        getVehiclesCount: () => (window.rutasLogisticaState.vehicles || []).length
+    };
+}
 
-    return candidatos.find(candidato => {
-        const extras = extrasPorRuta.get(String(candidato.route.id)) || [];
-        const nuevasParadas = crearParadasPedidoRuta(item, candidato.route.id, 0, fecha);
-        return puedeRutaRecibirParadas(candidato.route, [...extras, ...nuevasParadas]);
-    })?.route || null;
+function seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta) {
+    return window.CaterCloudRoutes.seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta, getRutasPlannerDeps());
 }
 
 function seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha = getFechaRutasLogistica()) {
-    const horaObjetivo = getHoraObjetivoRutaPedido(item);
-    const candidatos = (routes || []).map(route => {
-        if (getParadasPlanificadasRuta(route, extrasPorRuta).length) return null;
-
-        const nuevasParadas = crearParadasPedidoRuta(item, route.id, 0, fecha);
-        if (!nuevasParadas.length || !puedeRutaRecibirParadas(route, nuevasParadas)) return null;
-
-        const driver = normalizarDriverRuta(getDriverRuta(route));
-        const inicio = parseHoraRutaEnMinutos(driver.work_start || route.starts_at || '08:00') ?? 480;
-        return {
-            route,
-            score: Math.abs(inicio - horaObjetivo)
-        };
-    }).filter(Boolean).sort((a, b) => a.score - b.score);
-
-    return candidatos[0]?.route || null;
+    return window.CaterCloudRoutes.seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha, getRutasPlannerDeps());
 }
 
 function getParadasPlanificadasRuta(route, extrasPorRuta) {
@@ -3183,38 +3155,18 @@ function contarRutasConParadas(routes, extrasPorRuta) {
     ), 0);
 }
 
-function existeConductorDisponibleCompatibleRuta(item, conductoresDisponibles, fecha) {
-    if (!conductoresDisponibles.length) return false;
-    const paradasPrueba = crearParadasPedidoRuta(item, '__nueva_ruta__', 0, fecha);
-    if (!paradasPrueba.length) return false;
-
-    return conductoresDisponibles.some(driver => {
-        const rutaPrueba = {
-            id: '__nueva_ruta__',
-            starts_at: driver.work_start || '08:00',
-            driver,
-            stops: []
-        };
-        return puedeRutaRecibirParadas(rutaPrueba, paradasPrueba);
-    });
-}
-
 function debeAbrirRutaNuevaParaPedido(item, route, routes, extrasPorRuta, vehiculosDisponibles, conductoresDisponibles, totalPedidos, fecha) {
-    if (!route || !vehiculosDisponibles.length || !conductoresDisponibles.length) return false;
-    if (!getParadasPlanificadasRuta(route, extrasPorRuta).length) return false;
-
-    const maxRutasUtiles = Math.min(
-        (window.rutasLogisticaState.vehicles || []).length,
-        getConductoresOperativosRutas(fecha).length,
-        totalPedidos
+    return window.CaterCloudRoutes.debeAbrirRutaNuevaParaPedido(
+        item,
+        route,
+        routes,
+        extrasPorRuta,
+        vehiculosDisponibles,
+        conductoresDisponibles,
+        totalPedidos,
+        fecha,
+        getRutasPlannerDeps()
     );
-    const rutasConParadas = contarRutasConParadas(routes, extrasPorRuta);
-    if (rutasConParadas >= maxRutasUtiles) return false;
-
-    const puedeAbrirRutaCompatible = existeConductorDisponibleCompatibleRuta(item, conductoresDisponibles, fecha);
-    if (!puedeAbrirRutaCompatible) return false;
-
-    return true;
 }
 
 function crearParadasPedidoRuta(item, routeId, stopOrderBase = 0, fecha = getFechaRutasLogistica()) {
