@@ -23,6 +23,10 @@ function guardarJsonLocalStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+function haySesionSupabase() {
+    return Boolean(window.supabaseClient && window.currentUser?.id);
+}
+
 function leerHistorialComandasLocal() {
     return leerJsonLocalStorage(ORDER_STORAGE_KEYS.kitchenHistory, []);
 }
@@ -40,7 +44,7 @@ function guardarHistorialLogisticaLocal(historial) {
 }
 
 async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {}) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    if (!codigo || !haySesionSupabase()) return false;
 
     const { data, error: selectError } = await window.supabaseClient
         .from('orders')
@@ -76,7 +80,7 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
 }
 
 async function obtenerOrdenSupabasePorCodigo(codigo, options = {}) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return null;
+    if (!codigo || !haySesionSupabase()) return null;
 
     const columnasPreferidas = options.select || 'id, codigo, company_name, responsable_name, estado, fecha_evento, hora_salida, pax_total, created_at, updated_at, payload';
     const columnasBase = options.fallbackSelect || 'id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, payload';
@@ -233,7 +237,7 @@ function getMayorNumeroComandaLocal(prefijo = getPrefijoCodigoComanda()) {
 }
 
 async function liberarCodigoComandaReservado(codigo = window.codigoComandaReservado) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    if (!codigo || !haySesionSupabase()) return false;
     try {
         const { error } = await window.supabaseClient.rpc('release_order_code', { code_to_release: codigo });
         if (error) throw error;
@@ -250,7 +254,7 @@ async function liberarCodigoComandaReservado(codigo = window.codigoComandaReserv
 window.liberarCodigoComandaReservado = liberarCodigoComandaReservado;
 
 async function codigoComandaExisteEnSupabase(codigo) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    if (!codigo || !haySesionSupabase()) return false;
     const { data, error } = await window.supabaseClient
         .from('orders')
         .select('id, codigo, payload')
@@ -264,7 +268,7 @@ async function codigoComandaExisteEnSupabase(codigo) {
 }
 
 async function getMayorNumeroComandaSupabase(prefijo = getPrefijoCodigoComanda()) {
-    if (!window.supabaseClient || !window.currentUser?.id) return 0;
+    if (!haySesionSupabase()) return 0;
     const { data, error } = await window.supabaseClient
         .from('orders')
         .select('codigo, payload')
@@ -287,7 +291,7 @@ async function getMayorNumeroComandaSupabase(prefijo = getPrefijoCodigoComanda()
 
 async function reservarCodigoComanda() {
     if (window.codigoComandaReservado) {
-        if (window.supabaseClient && window.currentUser?.id) {
+        if (haySesionSupabase()) {
             try {
                 const yaExiste = await codigoComandaExisteEnSupabase(window.codigoComandaReservado);
                 const prefijo = getPrefijoCodigoComanda();
@@ -310,7 +314,7 @@ async function reservarCodigoComanda() {
         }
     }
 
-    if (window.supabaseClient && window.currentUser?.id) {
+    if (haySesionSupabase()) {
         let ultimoError = null;
         for (let intento = 0; intento < 5; intento += 1) {
             try {
@@ -371,7 +375,7 @@ window.obtenerCodigoComandaParaGuardar = obtenerCodigoComandaParaGuardar;
 
 async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistica = {}) {
   if (!codigoPedido) throw new Error('No se encontro el codigo de cocina para vincular la logistica.');
-  if (!window.supabaseClient || !window.currentUser?.id) {
+  if (!haySesionSupabase()) {
     throw new Error('No hay sesion activa de Supabase. La logistica no se puede guardar para el equipo.');
   }
 
@@ -471,7 +475,7 @@ async function guardarComandaEnHistorial(comandaData) {
   };
 
   // Si NO hay supabase o NO hay login -> guardamos SOLO en local como backup
-  if (!window.supabaseClient || !window.currentUser?.id) {
+  if (!haySesionSupabase()) {
     if (solicitudOrigen?.codigo) {
       reemplazarSolicitudPorComandaLocal(solicitudOrigen.codigo, payload);
     } else {
@@ -734,7 +738,7 @@ function buscarComandaLocalPorCodigo(codigoBuscado) {
 async function recuperarComandaLocalEnSupabase(codigoBuscado) {
     const codigo = String(codigoBuscado || '').trim();
     if (!codigo) throw new Error('Indica el codigo de la comanda que quieres recuperar.');
-    if (!window.supabaseClient || !window.currentUser?.id) {
+    if (!haySesionSupabase()) {
         throw new Error('Necesitas iniciar sesion para recuperar la comanda en Supabase.');
     }
     if (window.AppPermissions && !AppPermissions.canCreateOrders()) {
@@ -844,7 +848,7 @@ window.recuperarComandaLocalEnSupabase = recuperarComandaLocalEnSupabase;
 // ========== STORAGE: solicitudes y actualizaciones ==========
 
 async function sincronizarSolicitudPedido(solicitud) {
-    if (!window.supabaseClient || !window.currentUser?.id) return false;
+    if (!haySesionSupabase()) return false;
 
     try {
         const empresaNombre = (solicitud.empresa || '').toString().trim();
@@ -938,7 +942,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
             version: historial[index].version
         });
 
-        if (window.supabaseClient && window.currentUser?.id) {
+        if (haySesionSupabase()) {
             try {
                 const query = window.supabaseClient
                     .from('orders')
@@ -1215,7 +1219,7 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
 }
 
 async function cargarHistorialRemotoSupabase(options = {}) {
-    if (!window.supabaseClient || !window.currentUser?.id) return false;
+    if (!haySesionSupabase()) return false;
     if (window._cargandoHistorialRemotoSupabase) {
         window._historialRemotoPendiente = true;
         if (window._historialRemotoPromise) {
@@ -1323,7 +1327,7 @@ window.cargarHistorialRemotoSupabase = cargarHistorialRemotoSupabase;
 // ========== STORAGE: realtime y refresco compartido ==========
 
 function iniciarRealtimeHistorialSupabase() {
-    if (!window.supabaseClient || !window.currentUser?.id || window._ordersRealtimeChannel) return;
+    if (!haySesionSupabase() || window._ordersRealtimeChannel) return;
 
     try {
         window._ordersRealtimeChannel = window.supabaseClient
