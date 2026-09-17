@@ -1,5 +1,31 @@
 // ========== HISTORIAL DE COMANDA ==========
 
+function leerHistorialComandasHistorial() {
+    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
+}
+
+function guardarHistorialComandasHistorial(historial) {
+    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
+        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
+        return;
+    }
+    localStorage.setItem('historialComandas', JSON.stringify(historial || []));
+}
+
+function leerHistorialLogisticaHistorial() {
+    return window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+}
+
+function guardarHistorialLogisticaHistorial(historial) {
+    if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
+        window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
+        return;
+    }
+    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
+}
+
 function getEstadoPedidoLabel(estado) {
     const labels = {
         creada: 'Creada',
@@ -148,7 +174,7 @@ function getIconoIntoleranciaSrc(nombre = '') {
 }
 
 function cargarHistorial() {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasHistorial();
     const container = document.getElementById('comandasListHistorial') || document.getElementById('comandasList');
 
     const historialVisible = historial.filter(comanda => comanda.estado !== 'eliminada' && comanda.estado_pedido !== 'eliminada');
@@ -163,7 +189,7 @@ function cargarHistorial() {
 }
 
 function filtrarComandas() {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasHistorial();
     const busqEl = document.getElementById('filtroBusquedaH') || document.getElementById('filtroBusqueda');
     const filtro = busqEl ? busqEl.value.toLowerCase() : '';
     const filtroFecha = document.getElementById('filtroFecha').value;
@@ -496,11 +522,11 @@ async function eliminarCarpetaDesdeExpediente(codigo) {
         eliminarComandaDelHistorial(codigo);
     }
 
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historialLogistica = leerHistorialLogisticaHistorial();
     const filtradoLogistica = historialLogistica.filter(item =>
         (item.codigo_cocina || item.codigo_original || item.codigo) !== codigo
     );
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(filtradoLogistica));
+    guardarHistorialLogisticaHistorial(filtradoLogistica);
 
     if (window.supabaseClient) {
         try {
@@ -540,14 +566,14 @@ async function guardarAnotacionesPedido(codigo) {
 }
 
 function _pedidoTieneComandaLogistica(codigo) {
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historialLogistica = leerHistorialLogisticaHistorial();
     if (historialLogistica.some(item => (item.codigo_cocina || item.codigo_original || item.codigo) === codigo)) return true;
     const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
     return Boolean(pedido?.tiene_comanda_logistica || pedido?.documentos?.logistica || pedido?.logistica_creada || pedido?.logistica_inline || pedido?.material_logistica);
 }
 
 function _obtenerComandaLogisticaPorCodigo(codigo) {
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historialLogistica = leerHistorialLogisticaHistorial();
     const index = historialLogistica.findIndex(item => (item.codigo_cocina || item.codigo_original || item.codigo) === codigo || item.codigo === codigo);
     const pedido = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
     if (index >= 0) {
@@ -728,7 +754,7 @@ async function _obtenerComandaLogisticaRemotaPorCodigo(codigo) {
 function _guardarComandaLogisticaHidratadaLocal(codigo, item) {
     if (!codigo || !item) return;
 
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasHistorial();
     const idxPedido = historial.findIndex(pedido => (pedido.codigo || pedido.codigo_cocina || pedido.codigo_original) === codigo);
     if (idxPedido >= 0) {
         const previo = historial[idxPedido] || {};
@@ -751,10 +777,10 @@ function _guardarComandaLogisticaHidratadaLocal(codigo, item) {
             },
             fecha_modificacion: item.fecha_modificacion || previo.fecha_modificacion
         };
-        localStorage.setItem('historialComandas', JSON.stringify(historial));
+        guardarHistorialComandasHistorial(historial);
     }
 
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historialLogistica = leerHistorialLogisticaHistorial();
     const idxLogistica = historialLogistica.findIndex(log =>
         (log.codigo_cocina || log.codigo_original || log.codigo) === codigo || log.codigo === item.codigo
     );
@@ -774,7 +800,7 @@ function _guardarComandaLogisticaHidratadaLocal(codigo, item) {
     } else {
         historialLogistica.unshift(item);
     }
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(historialLogistica));
+    guardarHistorialLogisticaHistorial(historialLogistica);
 }
 
 function _renderArchivosSolicitud(comanda) {
@@ -848,7 +874,7 @@ async function abrirComandaLogisticaDesdeExpediente(codigo) {
             resultado = {
                 item: remota,
                 index: -1,
-                historial: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]'),
+                historial: leerHistorialLogisticaHistorial(),
                 hidratada: true
             };
         }
@@ -2680,7 +2706,7 @@ async function editarComandaLogistica() {
         resultado = _obtenerComandaLogisticaPorCodigo(codigo) || {
             item: remota,
             index: -1,
-            historial: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]'),
+            historial: leerHistorialLogisticaHistorial(),
             hidratada: true
         };
     }
@@ -2768,9 +2794,9 @@ function eliminarComandaLogistica() {
     if (!confirm(`Eliminar la comanda de logistica ${resultado.item.codigo || codigo}? Esta accion no se puede deshacer.`)) return;
 
     const historial = resultado.historial.filter((_, index) => index !== resultado.index);
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(historial));
+    guardarHistorialLogisticaHistorial(historial);
 
-    const historialPrincipal = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historialPrincipal = leerHistorialComandasHistorial();
     const idx = historialPrincipal.findIndex(item => item.codigo === codigo);
     if (idx >= 0) {
         const documentos = { ...(historialPrincipal[idx].documentos || {}) };
@@ -2781,7 +2807,7 @@ function eliminarComandaLogistica() {
             logistica_creada: false,
             fecha_modificacion: new Date().toISOString()
         };
-        localStorage.setItem('historialComandas', JSON.stringify(historialPrincipal));
+        guardarHistorialComandasHistorial(historialPrincipal);
     }
 
     if (typeof cargarCalendario === 'function') cargarCalendario();
