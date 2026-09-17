@@ -1104,20 +1104,20 @@ function cambioOperativoYaGestionado(key) {
     }
 }
 
+function crearPayloadCambioOperativoGestionado(action) {
+    return JSON.stringify({
+        action,
+        by: window.currentUser?.email || null,
+        at: getTimestampOperativoDashboard()
+    });
+}
+
 function marcarCambioOperativoGestionado(key, action = 'dismissed') {
     if (!key) return;
     try {
-        const payload = JSON.stringify({
-            action,
-            by: window.currentUser?.email || null,
-            at: getTimestampOperativoDashboard()
-        });
+        const payload = crearPayloadCambioOperativoGestionado(action);
         localStorage.setItem(getStorageKeyCambioOperativoGlobal(key), payload);
-        localStorage.setItem(getStorageKeyCambioOperativo(key), JSON.stringify({
-            action,
-            by: window.currentUser?.email || null,
-            at: getTimestampOperativoDashboard()
-        }));
+        localStorage.setItem(getStorageKeyCambioOperativo(key), payload);
     } catch (_) {
         sessionStorage.setItem(key, action);
     }
