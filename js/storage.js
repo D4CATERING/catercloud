@@ -1,4 +1,4 @@
-// ========== STORAGE (LOCALSTORAGE) ==========
+// ========== STORAGE: claves y acceso local ==========
 
 const ORDER_STORAGE_KEYS = Object.freeze({
     kitchenHistory: 'historialComandas',
@@ -111,6 +111,8 @@ async function obtenerOrdenSupabasePorCodigo(codigo, options = {}) {
     return row;
 }
 
+// ========== STORAGE: API publica del modulo ==========
+
 window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     keys: ORDER_STORAGE_KEYS,
     leerJsonLocalStorage,
@@ -122,6 +124,8 @@ window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     sincronizarPayloadOrdenSupabase,
     obtenerOrdenSupabasePorCodigo
 });
+
+// ========== STORAGE: auditoria y avisos realtime ==========
 
 function getAuditActionForUpdate(nuevosDatos = {}) {
     if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'estado')) {
@@ -178,6 +182,8 @@ function crearErrorGuardadoRemoto(mensaje, codigo, causa) {
   if (causa) error.cause = causa;
   return error;
 }
+
+// ========== STORAGE: codigos de comanda ==========
 
 function getPrefijoCodigoComanda(fecha = new Date()) {
     return `D4${fecha.getFullYear().toString().slice(-2)}`;
@@ -361,6 +367,8 @@ async function obtenerCodigoComandaParaGuardar(comandaData = {}) {
 
 window.obtenerCodigoComandaParaGuardar = obtenerCodigoComandaParaGuardar;
 
+// ========== STORAGE: logistica vinculada a una comanda ==========
+
 async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistica = {}) {
   if (!codigoPedido) throw new Error('No se encontro el codigo de cocina para vincular la logistica.');
   if (!window.supabaseClient || !window.currentUser?.id) {
@@ -426,6 +434,8 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
 }
 
 window.sincronizarComandaLogisticaEnSupabase = sincronizarComandaLogisticaEnSupabase;
+
+// ========== STORAGE: guardado principal de comandas ==========
 
 /**
  * Guarda una comanda en Supabase (multiusuario)
@@ -642,6 +652,8 @@ async function guardarComandaEnHistorial(comandaData) {
  * @param {Object} comandaData - Datos de la comanda
  * @returns {string} Código generado
  */
+// ========== STORAGE: respaldo local y recuperacion ==========
+
 function guardarComandaEnHistorialLocal(comandaData) {
     const historial = leerHistorialComandasLocal();
     // Usar el código que ya viene en el payload, NO generar uno nuevo
@@ -828,6 +840,8 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
 
 window.buscarComandaLocalPorCodigo = buscarComandaLocalPorCodigo;
 window.recuperarComandaLocalEnSupabase = recuperarComandaLocalEnSupabase;
+
+// ========== STORAGE: solicitudes y actualizaciones ==========
 
 async function sincronizarSolicitudPedido(solicitud) {
     if (!window.supabaseClient || !window.currentUser?.id) return false;
@@ -1051,6 +1065,8 @@ window.marcarComandaEliminadaEnSupabase = marcarComandaEliminadaEnSupabase;
  * Obtiene todo el historial de comandas
  * @returns {Array} Lista de comandas
  */
+// ========== STORAGE: lectura, fusion y normalizacion remota ==========
+
 function obtenerHistorialCompleto() {
     return leerHistorialComandasLocal();
 }
@@ -1304,6 +1320,8 @@ async function cargarHistorialRemotoSupabase(options = {}) {
 
 window.cargarHistorialRemotoSupabase = cargarHistorialRemotoSupabase;
 
+// ========== STORAGE: realtime y refresco compartido ==========
+
 function iniciarRealtimeHistorialSupabase() {
     if (!window.supabaseClient || !window.currentUser?.id || window._ordersRealtimeChannel) return;
 
@@ -1385,6 +1403,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// ========== STORAGE: compatibilidad con funciones historicas ==========
+
 /**
  * Genera un código único para la comanda
  * MODIFICADO: Año de 2 dígitos en lugar de 4
@@ -1419,7 +1439,7 @@ function cargarEventosCalendario() {
     return leerJsonLocalStorage(ORDER_STORAGE_KEYS.calendarEvents, {});
 }
 
-// ====== SUPABASE HELPERS ======
+// ========== STORAGE: helpers de Supabase ==========
 
 async function getOrCreateCompanyIdByName(nombreEmpresa) {
   const name = (nombreEmpresa || '').trim();
