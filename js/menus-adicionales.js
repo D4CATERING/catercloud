@@ -734,17 +734,21 @@
     const categoriaDirecta = Number(menu?.categoriaId || menu?._cat || 0);
     if (categoriaDirecta) return categoriaDirecta;
 
+    const bandejas = menu?.bandejas || null;
+    if (bandejas?.saladas || bandejas?.postres) return 6;
+
     const categoriaTexto = String(menu?.categoria || '').toLowerCase();
     if (categoriaTexto.includes('servicio')) return 3;
     if (categoriaTexto.includes('desayuno')) return 1;
     if (categoriaTexto.includes('lunch')) return 4;
+    if (categoriaTexto.includes('foodbox') && (categoriaTexto.includes('diy') || categoriaTexto.includes('yourself') || categoriaTexto.includes('bandeja'))) return 6;
     if (categoriaTexto.includes('bandeja') || categoriaTexto.includes('diy')) return 5;
     if (categoriaTexto.includes('foodbox') || categoriaTexto.includes('comida')) return 2;
 
     if (menu?.referencias_desayuno) return 1;
     if (menu?.foodbox_lunch) return 4;
     if (menu?.referencias) return 2;
-    if (menu?.bandejas) return 5;
+    if (bandejas) return 5;
     return 0;
   }
 
@@ -1143,7 +1147,24 @@
   function setModoEdicionResumenActivo(activo) {
     const btn = document.getElementById('btnAnadirMenu');
     if (!btn) return;
-    btn.textContent = activo ? 'Actualizar menú' : '+ Añadir menú';
+    btn.textContent = activo && getIndiceMenuEditandoResumen() >= 0 ? 'Actualizar menú' : '+ Añadir menú';
+  }
+
+  function getIndiceMenuEditandoResumen() {
+    const st = window.MenusAdicionalesState;
+    const total = st.menusAdicionales.length;
+    const indiceFormulario = Number(st.indiceMenuEditando ?? -1);
+    const indiceResumen = Number(window._indiceMenuResumenEditando ?? -1);
+
+    const formularioValido = indiceFormulario >= 0 && indiceFormulario < total;
+    const resumenValido = indiceResumen >= 0 && indiceResumen < total;
+
+    if (!formularioValido && indiceFormulario >= 0) st.indiceMenuEditando = -1;
+    if (!resumenValido && indiceResumen >= 0) window._indiceMenuResumenEditando = -1;
+
+    if (formularioValido) return indiceFormulario;
+    if (resumenValido) return indiceResumen;
+    return -1;
   }
 
   function getIndiceMenuSeleccionadoResumen() {
@@ -1159,10 +1180,8 @@
   }
 
   function getAccionResumenPrincipal() {
-    const st = window.MenusAdicionalesState;
-    const editandoFormulario = Number(st.indiceMenuEditando ?? -1) >= 0 ||
-      Number(window._indiceMenuResumenEditando ?? -1) >= 0;
-    if (editandoFormulario) {
+    const editandoFormulario = getIndiceMenuEditandoResumen();
+    if (editandoFormulario >= 0) {
       return {
         label: 'Actualizar menú',
         disabled: false,
@@ -1461,11 +1480,7 @@
     }
 
     // Guardar o reemplazar el menu editado
-    const indiceEditando = Number(
-      st.indiceMenuEditando >= 0
-        ? st.indiceMenuEditando
-        : (window._indiceMenuResumenEditando ?? -1)
-    );
+    const indiceEditando = getIndiceMenuEditandoResumen();
     const editandoMenuExistente = indiceEditando >= 0 && indiceEditando < st.menusAdicionales.length;
     if (editandoMenuExistente) {
       st.menusAdicionales[indiceEditando] = item;
@@ -1802,6 +1817,7 @@
 
     const hayMenus = menus.length > 0;
     const hayDIY   = diyItems.length > 0;
+    setModoEdicionResumenActivo(getIndiceMenuEditandoResumen() >= 0);
 
     if (!hayMenus && !hayDIY) {
       body.innerHTML = `
@@ -2025,7 +2041,7 @@
 
   window.seleccionarMenuResumenParaEditar = function(index) {
     const st = window.MenusAdicionalesState;
-    if (Number(st.indiceMenuEditando ?? -1) >= 0 || Number(window._indiceMenuResumenEditando ?? -1) >= 0) return;
+    if (getIndiceMenuEditandoResumen() >= 0) return;
     const actual = getIndiceMenuSeleccionadoResumen();
     st.indiceMenuSeleccionadoResumen = actual === index ? -1 : index;
     actualizarResumenLateral();
@@ -2053,8 +2069,7 @@
       return;
     }
 
-    const editandoFormulario = Number(st.indiceMenuEditando ?? -1) >= 0 ||
-      Number(window._indiceMenuResumenEditando ?? -1) >= 0;
+    const editandoFormulario = getIndiceMenuEditandoResumen() >= 0;
     const seleccionado = getIndiceMenuSeleccionadoResumen();
     const confirmar = confirm(
       editandoFormulario || seleccionado >= 0

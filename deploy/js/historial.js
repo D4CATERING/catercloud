@@ -2102,17 +2102,20 @@ function _programarRestauracionMaterialLogisticaEdicion(material) {
 }
 
 function _inferirCategoriaMenuEdicion(menu) {
-    if (menu?.categoriaOriginalId) return Number(menu.categoriaOriginalId);
-    if (menu?.categoriaId) return Number(menu.categoriaId);
     if (menu?._cat) return Number(menu._cat);
+    if (menu?.categoriaId) return Number(menu.categoriaId);
+    const bandejas = menu?.bandejas || null;
+    if (bandejas?.saladas || bandejas?.postres) return 6;
+    if (menu?.categoriaOriginalId) return Number(menu.categoriaOriginalId);
     if (menu?.referencias_desayuno) return 1;
     if (menu?.foodbox_lunch) return 4;
-    if (menu?.bandejas) return 5;
+    if (bandejas) return 5;
     if (menu?.referencias) return 2;
     const texto = String(menu?.categoria || '').toLowerCase();
     if (texto.includes('servicio')) return 3;
     if (texto.includes('desayuno')) return 1;
     if (texto.includes('foodbox lunch')) return 4;
+    if (texto.includes('foodbox') && (texto.includes('diy') || texto.includes('yourself') || texto.includes('bandeja'))) return 6;
     if (texto.includes('bandeja') || texto.includes('diy')) return 5;
     if (texto.includes('foodbox') || texto.includes('comida')) return 2;
     return Number(document.getElementById('categoria')?.value) || 0;
@@ -2434,6 +2437,11 @@ async function _activarPrimerMenuEdicion(menu) {
         } else {
             window.menuSeleccionado = { ...menu, _cat: categoriaId };
             _rellenarCampoEdicion('menu_id', menu.id || '');
+            if (categoriaId === 6 && typeof window.cargarDIYFoodbox === 'function') {
+                await window.cargarDIYFoodbox();
+            } else if (categoriaId === 5 && typeof window.cargarDIYDesayunos === 'function') {
+                await window.cargarDIYDesayunos();
+            }
         }
     } finally {
         window._editandoMenuDesdeResumen = false;

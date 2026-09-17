@@ -797,6 +797,15 @@ window._activarPrimerMenuEdicion = async function(menu) {
 
         if (opcion && typeof seleccionarMenu === 'function') {
             await seleccionarMenu(menu.id, opcion);
+        } else {
+            window.menuSeleccionado = { ...menu, _cat: categoriaId };
+            const menuIdInput = document.getElementById('menu_id');
+            if (menuIdInput) menuIdInput.value = menu.id || '';
+            if (categoriaId === 6 && typeof window.cargarDIYFoodbox === 'function') {
+                await window.cargarDIYFoodbox();
+            } else if (categoriaId === 5 && typeof window.cargarDIYDesayunos === 'function') {
+                await window.cargarDIYDesayunos();
+            }
         }
     } finally {
         window._editandoMenuDesdeResumen = false;
