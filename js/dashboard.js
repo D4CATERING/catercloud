@@ -3130,6 +3130,25 @@ function seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta) {
     })?.route || null;
 }
 
+function seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha = getFechaRutasLogistica()) {
+    const horaObjetivo = getHoraObjetivoRutaPedido(item);
+    const candidatos = (routes || []).map(route => {
+        if (getParadasPlanificadasRuta(route, extrasPorRuta).length) return null;
+
+        const nuevasParadas = crearParadasPedidoRuta(item, route.id, 0, fecha);
+        if (!nuevasParadas.length || !puedeRutaRecibirParadas(route, nuevasParadas)) return null;
+
+        const driver = normalizarDriverRuta(getDriverRuta(route));
+        const inicio = parseHoraRutaEnMinutos(driver.work_start || route.starts_at || '08:00') ?? 480;
+        return {
+            route,
+            score: Math.abs(inicio - horaObjetivo)
+        };
+    }).filter(Boolean).sort((a, b) => a.score - b.score);
+
+    return candidatos[0]?.route || null;
+}
+
 function getParadasPlanificadasRuta(route, extrasPorRuta) {
     return [
         ...getRouteStops(route),
@@ -3359,7 +3378,8 @@ async function generarRutasLogisticaDia() {
             });
 
         for (const item of pedidosOrdenados) {
-            let route = seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta);
+            let route = seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha)
+                || seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta);
             if (debeAbrirRutaNuevaParaPedido(
                 item,
                 route,
