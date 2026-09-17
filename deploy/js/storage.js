@@ -27,6 +27,10 @@ function haySesionSupabase() {
     return Boolean(window.supabaseClient && window.currentUser?.id);
 }
 
+function fechaHoraIso() {
+    return new Date().toISOString();
+}
+
 function leerHistorialComandasLocal() {
     return leerJsonLocalStorage(ORDER_STORAGE_KEYS.kitchenHistory, []);
 }
@@ -60,7 +64,7 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
     const payload = {
         ...payloadActual,
         ...patch,
-        fecha_modificacion: options.fecha_modificacion || new Date().toISOString(),
+        fecha_modificacion: options.fecha_modificacion || fechaHoraIso(),
         editado_por_id: options.editado_por_id || window.currentUser.id,
         editado_por_nombre: options.editado_por_nombre || getResponsableFromUser(),
         editado_por_email: options.editado_por_email || window.currentUser.email || ''
@@ -71,7 +75,7 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
         .update({
             payload,
             updated_by: window.currentUser.id,
-            updated_at: new Date().toISOString()
+            updated_at: fechaHoraIso()
         })
         .eq('codigo', codigo);
 
@@ -164,7 +168,7 @@ function emitirCambioHistorialCompartido(action, codigo, details = {}) {
                 action,
                 codigo: codigo || null,
                 by: window.currentUser?.email || null,
-                at: new Date().toISOString(),
+                at: fechaHoraIso(),
                 details
             }
         });
@@ -403,7 +407,7 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
     logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
     logistics_prepared_items: Number(datosLogistica.logistics_prepared_items || 0),
     tiene_comanda_logistica: true,
-    fecha_modificacion: new Date().toISOString(),
+    fecha_modificacion: fechaHoraIso(),
     version,
     editado_por_id: window.currentUser.id,
     editado_por_nombre: getResponsableFromUser(),
@@ -417,7 +421,7 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
       estado: payload.estado || 'creada',
       version,
       updated_by: window.currentUser.id,
-      updated_at: new Date().toISOString()
+      updated_at: fechaHoraIso()
     })
     .eq('id', order.id);
 
@@ -459,8 +463,8 @@ async function guardarComandaEnHistorial(comandaData) {
     codigo_solicitud_origen: solicitudOrigen?.codigo || comandaData.codigo_solicitud_origen || '',
     adjuntos: comandaData.adjuntos || solicitudOrigen?.adjuntos || [],
     documentos: comandaData.documentos || solicitudOrigen?.documentos || {},
-    fecha_creacion: solicitudOrigen?.fecha_creacion || comandaData.fecha_creacion || new Date().toISOString(),
-    fecha_modificacion: new Date().toISOString(),
+    fecha_creacion: solicitudOrigen?.fecha_creacion || comandaData.fecha_creacion || fechaHoraIso(),
+    fecha_modificacion: fechaHoraIso(),
     estado: 'creada',
     estado_confirmacion: solicitudOrigen
       ? (solicitudOrigen.estado === 'confirmado' ? 'confirmado' : 'por_confirmar')
@@ -542,7 +546,7 @@ async function guardarComandaEnHistorial(comandaData) {
         estado: payload.estado,
         version: payload.version,
         updated_by: window.currentUser.id,
-        updated_at: new Date().toISOString(),
+        updated_at: fechaHoraIso(),
         payload
       }).select('id');
 
@@ -666,8 +670,8 @@ function guardarComandaEnHistorialLocal(comandaData) {
     const comandaCompleta = {
         ...comandaData,
         codigo,
-        fecha_creacion: comandaData.fecha_creacion || new Date().toISOString(),
-        fecha_modificacion: new Date().toISOString(),
+        fecha_creacion: comandaData.fecha_creacion || fechaHoraIso(),
+        fecha_modificacion: fechaHoraIso(),
         estado: comandaData.estado || 'creada',
         version: comandaData.version || 1
     };
@@ -688,7 +692,7 @@ function guardarComandaEnHistorialLocal(comandaData) {
 function reemplazarSolicitudPorComandaLocal(codigoSolicitud, comandaData) {
     const historial = leerHistorialComandasLocal();
     const codigoComanda = comandaData.codigo || comandaData.codigo_comanda || '';
-    const ahora = new Date().toISOString();
+    const ahora = fechaHoraIso();
     const solicitudLocal = historial.find(item =>
         String(item.codigo || item.codigo_comanda || '') === String(codigoSolicitud || '')
     );
@@ -764,7 +768,7 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
         || window.currentUser.email
         || 'Usuario';
 
-    const ahora = new Date().toISOString();
+    const ahora = fechaHoraIso();
     const payload = {
         ...local,
         codigo,
@@ -926,7 +930,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
             ...historial[index],
             ...nuevosDatos,
             ...(idParaActualizar ? { orden_id: idParaActualizar, supabase_order_id: idParaActualizar } : {}),
-            fecha_modificacion: new Date().toISOString(),
+            fecha_modificacion: fechaHoraIso(),
             version: versionActual + 1,
             editado_por: getResponsableFromUser(),
             editado_por_id: window.currentUser?.id || null,
@@ -954,7 +958,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
                         estado: historial[index].estado || 'editada',
                         version: historial[index].version,
                         updated_by: window.currentUser.id,
-                        updated_at: new Date().toISOString()
+                        updated_at: fechaHoraIso()
                     });
                 const { error } = idParaActualizar
                     ? await query.eq('id', idParaActualizar)
@@ -1013,7 +1017,7 @@ function obtenerComandaDelHistorial(codigo) {
  */
 function eliminarComandaDelHistorial(codigo) {
     const historial = leerHistorialComandasLocal();
-    const ahora = new Date().toISOString();
+    const ahora = fechaHoraIso();
     const comanda = historial.find(c => String(c.codigo || c.codigo_comanda || '') === String(codigo || ''));
     const nuevoHistorial = historial.map(c => {
         if (String(c.codigo || c.codigo_comanda || '') !== String(codigo || '')) return c;
@@ -1037,7 +1041,7 @@ function eliminarComandaDelHistorial(codigo) {
 async function marcarComandaEliminadaEnSupabase(codigo, pedido = null) {
     if (!window.supabaseClient || !codigo) return false;
 
-    const ahora = new Date().toISOString();
+    const ahora = fechaHoraIso();
     const payloadBase = pedido || obtenerComandaDelHistorial(codigo) || {};
     const payloadEliminado = {
         ...payloadBase,
@@ -1269,7 +1273,7 @@ async function cargarHistorialRemotoSupabase(options = {}) {
         });
 
         window._ultimoHistorialRemotoOk = {
-            at: new Date().toISOString(),
+            at: fechaHoraIso(),
             total: data.length,
             comandas: comandasRemotas.length,
             logisticas: logisticasRemotas.length,
@@ -1304,7 +1308,7 @@ async function cargarHistorialRemotoSupabase(options = {}) {
         return true;
     } catch (error) {
         window._ultimoHistorialRemotoError = {
-            at: new Date().toISOString(),
+            at: fechaHoraIso(),
             message: error?.message || String(error)
         };
         console.warn('No se pudo cargar el historial compartido desde Supabase:', error);
@@ -1334,7 +1338,7 @@ function iniciarRealtimeHistorialSupabase() {
             .channel('catercloud-orders-realtime')
             .on('broadcast', { event: 'orders_changed' }, payload => {
                 window._ultimoBroadcastOrders = {
-                    at: new Date().toISOString(),
+                    at: fechaHoraIso(),
                     payload: payload?.payload || null
                 };
                 if (typeof window.cargarHistorialRemotoSupabase === 'function') {
@@ -1353,7 +1357,7 @@ function iniciarRealtimeHistorialSupabase() {
             .subscribe(status => {
                 window._ordersRealtimeStatus = {
                     status,
-                    at: new Date().toISOString()
+                    at: fechaHoraIso()
                 };
                 if (status === 'SUBSCRIBED') {
                     window.cargarHistorialRemotoSupabase?.({ render: true });
