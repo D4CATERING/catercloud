@@ -75,6 +75,42 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
     return true;
 }
 
+async function obtenerOrdenSupabasePorCodigo(codigo, options = {}) {
+    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return null;
+
+    const columnasPreferidas = options.select || 'id, codigo, company_name, responsable_name, estado, fecha_evento, hora_salida, pax_total, created_at, updated_at, payload';
+    const columnasBase = options.fallbackSelect || 'id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, payload';
+
+    let respuesta = await window.supabaseClient
+        .from('orders')
+        .select(columnasPreferidas)
+        .eq('codigo', codigo)
+        .limit(1);
+
+    if (respuesta.error && /updated_at|company_name|responsable_name/i.test(String(respuesta.error.message || ''))) {
+        respuesta = await window.supabaseClient
+            .from('orders')
+            .select(columnasBase)
+            .eq('codigo', codigo)
+            .limit(1);
+    }
+
+    if (respuesta.error) throw respuesta.error;
+
+    let row = (respuesta.data || [])[0] || null;
+    if (!row && options.searchPayload !== false) {
+        const fallback = await window.supabaseClient
+            .from('orders')
+            .select(columnasPreferidas)
+            .filter('payload->>codigo', 'eq', codigo)
+            .limit(1);
+        if (fallback.error) throw fallback.error;
+        row = (fallback.data || [])[0] || null;
+    }
+
+    return row;
+}
+
 window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     keys: ORDER_STORAGE_KEYS,
     leerJsonLocalStorage,
@@ -83,7 +119,8 @@ window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     guardarHistorialComandasLocal,
     leerHistorialLogisticaLocal,
     guardarHistorialLogisticaLocal,
-    sincronizarPayloadOrdenSupabase
+    sincronizarPayloadOrdenSupabase,
+    obtenerOrdenSupabasePorCodigo
 });
 
 function getAuditActionForUpdate(nuevosDatos = {}) {

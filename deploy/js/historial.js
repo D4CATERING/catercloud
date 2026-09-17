@@ -707,38 +707,13 @@ function _normalizarComandaLogisticaRemota(row, codigoBuscado) {
 async function _obtenerComandaLogisticaRemotaPorCodigo(codigo) {
     if (!codigo || !window.supabaseClient || !window.currentUser?.id) return null;
 
-    const selectBase = 'id, codigo, company_name, responsable_name, estado, fecha_evento, hora_salida, pax_total, created_at, updated_at, payload';
-    let respuesta = await window.supabaseClient
-        .from('orders')
-        .select(selectBase)
-        .eq('codigo', codigo)
-        .limit(1);
-
-    if (respuesta.error && /updated_at|company_name|responsable_name/i.test(String(respuesta.error.message || ''))) {
-        respuesta = await window.supabaseClient
-            .from('orders')
-            .select('id, codigo, estado, fecha_evento, hora_salida, pax_total, created_at, payload')
-            .eq('codigo', codigo)
-            .limit(1);
-    }
-
-    if (respuesta.error) {
-        console.warn('No se pudo consultar la comanda logistica en Supabase:', respuesta.error);
+    try {
+        const row = await window.CaterCloudStorage.obtenerOrdenSupabasePorCodigo(codigo);
+        return row ? _normalizarComandaLogisticaRemota(row, codigo) : null;
+    } catch (error) {
+        console.warn('No se pudo consultar la comanda logistica en Supabase:', error);
         return null;
     }
-
-    let row = (respuesta.data || [])[0] || null;
-    if (!row) {
-        const fallback = await window.supabaseClient
-            .from('orders')
-            .select(selectBase)
-            .filter('payload->>codigo', 'eq', codigo)
-            .limit(1);
-
-        if (!fallback.error) row = (fallback.data || [])[0] || null;
-    }
-
-    return row ? _normalizarComandaLogisticaRemota(row, codigo) : null;
 }
 
 function _guardarComandaLogisticaHidratadaLocal(codigo, item) {
@@ -2810,15 +2785,12 @@ async function verDetalleComandaPorCodigo(codigo) {
 
     if (window.supabaseClient && window.currentUser?.id) {
         try {
-            const { data, error } = await window.supabaseClient
-                .from('orders')
-                .select('payload')
-                .eq('codigo', codigo)
-                .limit(1);
-
-            if (!error && data && data.length > 0) {
-                comanda = data[0].payload;
-            }
+            const row = await window.CaterCloudStorage.obtenerOrdenSupabasePorCodigo(codigo, {
+                select: 'payload',
+                fallbackSelect: 'payload',
+                searchPayload: false
+            });
+            if (row?.payload) comanda = row.payload;
         } catch (e) {
             // fallback a localStorage
         }
