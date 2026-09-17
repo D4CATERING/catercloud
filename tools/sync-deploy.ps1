@@ -1,3 +1,7 @@
+param(
+    [switch]$IncludeSql
+)
+
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $deploy = Join-Path $root "deploy"
@@ -19,9 +23,12 @@ $directories = @(
     "assets",
     "css",
     "js",
-    "sql",
     "vendor"
 )
+
+if ($IncludeSql) {
+    $directories += "sql"
+}
 
 foreach ($dir in $directories) {
     $source = Join-Path $root $dir

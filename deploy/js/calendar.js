@@ -124,8 +124,10 @@ function generarCodigoSolicitudPedido() {
 }
 
 function getEventosPorFecha() {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historial = window.CaterCloudStorage?.leerHistorialComandasLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historialLogistica = window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
     const codigosConLogistica = new Set(historialLogistica.map(item => item.codigo_cocina || item.codigo).filter(Boolean));
     const map = {};
 
@@ -444,11 +446,16 @@ async function eliminarCarpetaPedido(codigo) {
         eliminarComandaDelHistorial(codigo);
     }
 
-    const historialLogistica = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    const historialLogistica = window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
     const filtradoLogistica = historialLogistica.filter(item =>
         (item.codigo_cocina || item.codigo_original || item.codigo) !== codigo
     );
-    localStorage.setItem('historialComandasLogistica', JSON.stringify(filtradoLogistica));
+    if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
+        window.CaterCloudStorage.guardarHistorialLogisticaLocal(filtradoLogistica);
+    } else {
+        localStorage.setItem('historialComandasLogistica', JSON.stringify(filtradoLogistica));
+    }
 
     if (window.supabaseClient) {
         try {

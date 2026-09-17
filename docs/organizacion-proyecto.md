@@ -86,7 +86,7 @@ Ver tambien `docs/mapa-codigo.md` para el inventario actual y las zonas de mayor
 ## Herramientas de apoyo
 
 - `tools/check-project.ps1`: valida sintaxis JavaScript y codificacion.
-- `tools/sync-deploy.ps1`: sincroniza archivos fuente hacia `deploy`.
+- `tools/sync-deploy.ps1`: sincroniza archivos fuente hacia `deploy`; usa `-IncludeSql` cuando tambien deban copiarse cambios SQL.
 - `tools/audit-project.ps1`: muestra metricas locales de tamano y acoplamiento.
 
 ## Criterio de exito
