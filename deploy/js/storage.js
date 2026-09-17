@@ -1,5 +1,44 @@
 // ========== STORAGE (LOCALSTORAGE) ==========
 
+const ORDER_STORAGE_KEYS = Object.freeze({
+    kitchenHistory: 'historialComandas',
+    logisticsHistory: 'historialComandasLogistica',
+    localCounter: 'contadorComandas',
+    localCounterYear: 'ultimoAñoComandas',
+    calendarEvents: 'calendarioEventos'
+});
+
+function leerJsonLocalStorage(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        return JSON.parse(raw);
+    } catch (error) {
+        console.warn(`No se pudo leer ${key} desde localStorage:`, error);
+        return fallback;
+    }
+}
+
+function guardarJsonLocalStorage(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+
+function leerHistorialComandasLocal() {
+    return leerJsonLocalStorage(ORDER_STORAGE_KEYS.kitchenHistory, []);
+}
+
+function guardarHistorialComandasLocal(historial) {
+    guardarJsonLocalStorage(ORDER_STORAGE_KEYS.kitchenHistory, historial || []);
+}
+
+function leerHistorialLogisticaLocal() {
+    return leerJsonLocalStorage(ORDER_STORAGE_KEYS.logisticsHistory, []);
+}
+
+function guardarHistorialLogisticaLocal(historial) {
+    guardarJsonLocalStorage(ORDER_STORAGE_KEYS.logisticsHistory, historial || []);
+}
+
 function getAuditActionForUpdate(nuevosDatos = {}) {
     if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'estado')) {
         if (nuevosDatos.estado === 'anulada') return 'pedido_anulado';
@@ -71,22 +110,22 @@ function getSiguienteCodigoLocal() {
     const prefijo = getPrefijoCodigoComanda();
     const añoCompleto = new Date().getFullYear();
     const historial = [
-        ...JSON.parse(localStorage.getItem('historialComandas') || '[]'),
-        ...JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+        ...leerHistorialComandasLocal(),
+        ...leerHistorialLogisticaLocal()
     ];
     const numerosUsados = historial
         .map(item => extraerNumeroCodigoComanda(item?.codigo || item?.codigo_cocina || item?.codigo_original, prefijo))
         .filter(numero => numero > 0);
     const siguiente = Math.max(0, ...numerosUsados) + 1;
-    localStorage.setItem('contadorComandas', String(siguiente));
-    localStorage.setItem('ultimoAñoComandas', String(añoCompleto));
+    localStorage.setItem(ORDER_STORAGE_KEYS.localCounter, String(siguiente));
+    localStorage.setItem(ORDER_STORAGE_KEYS.localCounterYear, String(añoCompleto));
     return `${prefijo}${String(siguiente).padStart(4, '0')}`;
 }
 
 function getMayorNumeroComandaLocal(prefijo = getPrefijoCodigoComanda()) {
     const historial = [
-        ...JSON.parse(localStorage.getItem('historialComandas') || '[]'),
-        ...JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+        ...leerHistorialComandasLocal(),
+        ...leerHistorialLogisticaLocal()
     ];
     return historial.reduce((maximo, item) => {
         const codigos = [
@@ -520,7 +559,7 @@ async function guardarComandaEnHistorial(comandaData) {
  * @returns {string} Código generado
  */
 function guardarComandaEnHistorialLocal(comandaData) {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasLocal();
     // Usar el código que ya viene en el payload, NO generar uno nuevo
     const codigo = comandaData.codigo || generarCodigoComanda();
     
@@ -542,12 +581,12 @@ function guardarComandaEnHistorialLocal(comandaData) {
     } else {
         historial.push(comandaCompleta);
     }
-    localStorage.setItem('historialComandas', JSON.stringify(historial));
+    guardarHistorialComandasLocal(historial);
     return codigo;
 }
 
 function reemplazarSolicitudPorComandaLocal(codigoSolicitud, comandaData) {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasLocal();
     const codigoComanda = comandaData.codigo || comandaData.codigo_comanda || '';
     const ahora = new Date().toISOString();
     const solicitudLocal = historial.find(item =>
@@ -570,7 +609,7 @@ function reemplazarSolicitudPorComandaLocal(codigoSolicitud, comandaData) {
     };
 
     historialSinDuplicados.push(comandaCompleta);
-    localStorage.setItem('historialComandas', JSON.stringify(historialSinDuplicados));
+    guardarHistorialComandasLocal(historialSinDuplicados);
     return codigoComanda;
 }
 
@@ -579,8 +618,8 @@ function buscarComandaLocalPorCodigo(codigoBuscado) {
     if (!codigo) return null;
 
     const historiales = [
-        JSON.parse(localStorage.getItem('historialComandas') || '[]'),
-        JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]')
+        leerHistorialComandasLocal(),
+        leerHistorialLogisticaLocal()
     ];
 
     return historiales
@@ -767,7 +806,7 @@ async function sincronizarSolicitudPedido(solicitud) {
  * @returns {boolean} True si se actualizó correctamente
  */
 async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasLocal();
     const idSupabase = nuevosDatos?.supabase_order_id || nuevosDatos?.orden_id || null;
     const coincidencias = historial
         .map((item, index) => ({ item, index }))
@@ -793,7 +832,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
             editado_por_email: window.currentUser?.email || ''
         };
         
-        localStorage.setItem('historialComandas', JSON.stringify(historial));
+        guardarHistorialComandasLocal(historial);
         const auditAction = getAuditActionForUpdate(nuevosDatos);
         logActividadApp(auditAction, codigo, {
             cambios: Object.keys(nuevosDatos || {}),
@@ -856,7 +895,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
  * @returns {Object|null} Comanda o null
  */
 function obtenerComandaDelHistorial(codigo) {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasLocal();
     const coincidencias = historial.filter(c => String(c.codigo || c.codigo_comanda || '') === String(codigo || ''));
     if (!coincidencias.length) return null;
     return coincidencias.sort((a, b) => {
@@ -871,7 +910,7 @@ function obtenerComandaDelHistorial(codigo) {
  * @param {string} codigo - Código de la comanda
  */
 function eliminarComandaDelHistorial(codigo) {
-    const historial = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historial = leerHistorialComandasLocal();
     const ahora = new Date().toISOString();
     const comanda = historial.find(c => String(c.codigo || c.codigo_comanda || '') === String(codigo || ''));
     const nuevoHistorial = historial.map(c => {
@@ -886,7 +925,7 @@ function eliminarComandaDelHistorial(codigo) {
             eliminado_por_email: window.currentUser?.email || ''
         };
     });
-    localStorage.setItem('historialComandas', JSON.stringify(nuevoHistorial));
+    guardarHistorialComandasLocal(nuevoHistorial);
     logActividadApp('pedido_eliminado_local', codigo, {
         empresa: comanda?.empresa || comanda?.company_name || '',
         fecha_evento: comanda?.fecha_evento || null
@@ -929,7 +968,7 @@ window.marcarComandaEliminadaEnSupabase = marcarComandaEliminadaEnSupabase;
  * @returns {Array} Lista de comandas
  */
 function obtenerHistorialCompleto() {
-    return JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return leerHistorialComandasLocal();
 }
 
 function normalizarComandaRemota(row) {
@@ -1137,14 +1176,14 @@ async function cargarHistorialRemotoSupabase(options = {}) {
             }, {})).filter(([, count]) => count > 1).slice(0, 12)
         };
 
-        const comandasLocales = JSON.parse(localStorage.getItem('historialComandas') || '[]');
-        const logisticasLocales = JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+        const comandasLocales = leerHistorialComandasLocal();
+        const logisticasLocales = leerHistorialLogisticaLocal();
 
         const comandasFusionadas = fusionarHistorialRemoto(comandasLocales, comandasRemotas);
         const logisticasFusionadas = fusionarHistorialRemoto(logisticasLocales, logisticasRemotas);
 
-        localStorage.setItem('historialComandas', JSON.stringify(comandasFusionadas));
-        localStorage.setItem('historialComandasLogistica', JSON.stringify(logisticasFusionadas));
+        guardarHistorialComandasLocal(comandasFusionadas);
+        guardarHistorialLogisticaLocal(logisticasFusionadas);
 
         window._ultimoHistorialRemotoOk.comandasLocales = comandasFusionadas.length;
         window._ultimoHistorialRemotoOk.logisticasLocales = logisticasFusionadas.length;
@@ -1230,8 +1269,8 @@ window.verificarRealtimeCaterCloud = async function verificarRealtimeCaterCloud(
         lecturaOk,
         ultimaLectura: window._ultimoHistorialRemotoOk || null,
         ultimoError: window._ultimoHistorialRemotoError || null,
-        comandasLocales: JSON.parse(localStorage.getItem('historialComandas') || '[]').length,
-        logisticasLocales: JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]').length
+        comandasLocales: leerHistorialComandasLocal().length,
+        logisticasLocales: leerHistorialLogisticaLocal().length
     };
 };
 
@@ -1275,8 +1314,8 @@ function generarCodigoComanda() {
  * Inicializa el contador si no existe
  */
 function inicializarContador() {
-    if (!localStorage.getItem('contadorComandas')) {
-        localStorage.setItem('contadorComandas', '0');
+    if (!localStorage.getItem(ORDER_STORAGE_KEYS.localCounter)) {
+        localStorage.setItem(ORDER_STORAGE_KEYS.localCounter, '0');
     }
 }
 
@@ -1285,7 +1324,7 @@ function inicializarContador() {
  * @param {Object} eventos - Eventos del calendario
  */
 function guardarEventosCalendario(eventos) {
-    localStorage.setItem('calendarioEventos', JSON.stringify(eventos));
+    guardarJsonLocalStorage(ORDER_STORAGE_KEYS.calendarEvents, eventos || {});
 }
 
 /**
@@ -1293,7 +1332,7 @@ function guardarEventosCalendario(eventos) {
  * @returns {Object} Eventos del calendario
  */
 function cargarEventosCalendario() {
-    return JSON.parse(localStorage.getItem('calendarioEventos') || '{}');
+    return leerJsonLocalStorage(ORDER_STORAGE_KEYS.calendarEvents, {});
 }
 
 // ====== SUPABASE HELPERS ======
