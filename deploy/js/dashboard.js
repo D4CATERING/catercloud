@@ -382,10 +382,15 @@ if (!window._alertasOperativasRealtimeBound) {
 }
 
 function getHistorialCocinaModulo() {
-    return JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
 }
 
 function guardarHistorialCocinaModulo(historial) {
+    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
+        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
+        return;
+    }
     localStorage.setItem('historialComandas', JSON.stringify(historial || []));
 }
 
@@ -3467,18 +3472,28 @@ async function eliminarParadaRutaLogistica(stopId) {
 }
 
 function getHistorialLogistica() {
-    return JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
+    return window.CaterCloudStorage?.leerHistorialLogisticaLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandasLogistica') || '[]');
 }
 
 function guardarHistorialLogistica(historial) {
+    if (window.CaterCloudStorage?.guardarHistorialLogisticaLocal) {
+        window.CaterCloudStorage.guardarHistorialLogisticaLocal(historial || []);
+        return;
+    }
     localStorage.setItem('historialComandasLogistica', JSON.stringify(historial || []));
 }
 
 function getHistorialCocinaLogistica() {
-    return JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    return window.CaterCloudStorage?.leerHistorialComandasLocal?.()
+        || JSON.parse(localStorage.getItem('historialComandas') || '[]');
 }
 
 function guardarHistorialCocinaLogistica(historial) {
+    if (window.CaterCloudStorage?.guardarHistorialComandasLocal) {
+        window.CaterCloudStorage.guardarHistorialComandasLocal(historial || []);
+        return;
+    }
     localStorage.setItem('historialComandas', JSON.stringify(historial || []));
 }
 
@@ -3770,7 +3785,7 @@ function getCodigosLogistica(historial) {
 
 function getComandasServicioSinLogistica(historialLogistica) {
     const codigosLogistica = getCodigosLogistica(historialLogistica);
-    const historialCocina = JSON.parse(localStorage.getItem('historialComandas') || '[]');
+    const historialCocina = getHistorialCocinaLogistica();
 
     return historialCocina.filter(item => {
         if (esPedidoAnulado(item)) return false;

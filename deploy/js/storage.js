@@ -39,6 +39,16 @@ function guardarHistorialLogisticaLocal(historial) {
     guardarJsonLocalStorage(ORDER_STORAGE_KEYS.logisticsHistory, historial || []);
 }
 
+window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
+    keys: ORDER_STORAGE_KEYS,
+    leerJsonLocalStorage,
+    guardarJsonLocalStorage,
+    leerHistorialComandasLocal,
+    guardarHistorialComandasLocal,
+    leerHistorialLogisticaLocal,
+    guardarHistorialLogisticaLocal
+});
+
 function getAuditActionForUpdate(nuevosDatos = {}) {
     if (Object.prototype.hasOwnProperty.call(nuevosDatos, 'estado')) {
         if (nuevosDatos.estado === 'anulada') return 'pedido_anulado';
