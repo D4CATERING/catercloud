@@ -25,7 +25,15 @@ if (-not $node) {
 }
 
 Write-Host "Validando JavaScript con $node"
-$jsFiles = Get-ChildItem -Path (Join-Path $root "js") -Filter "*.js" -File | Sort-Object Name
+$jsRoots = @(
+    (Join-Path $root "js"),
+    (Join-Path $root "deploy\js")
+) | Where-Object { Test-Path $_ }
+
+$jsFiles = $jsRoots |
+    ForEach-Object { Get-ChildItem -Path $_ -Filter "*.js" -File } |
+    Sort-Object FullName
+
 foreach ($file in $jsFiles) {
     & $node --check $file.FullName
     if ($LASTEXITCODE -ne 0) {

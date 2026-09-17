@@ -86,11 +86,11 @@ Ver tambien `docs/mapa-codigo.md` para el inventario actual y las zonas de mayor
 
 ## Herramientas de apoyo
 
-- `tools/check-project.ps1`: valida sintaxis JavaScript y codificacion.
+- `tools/check-project.ps1`: valida sintaxis JavaScript en `js` y `deploy/js`, codificacion y limites de persistencia.
 - `tools/sync-deploy.ps1`: sincroniza archivos fuente hacia `deploy`; usa `-IncludeSql` cuando tambien deban copiarse cambios SQL.
 - `tools/audit-project.ps1`: muestra metricas locales de tamano y acoplamiento.
-- `tools/check-storage-boundaries.ps1`: evita que los historiales locales se usen fuera de `js/storage.js`.
-- `tools/check-supabase-boundaries.ps1`: evita que `orders` de Supabase se use fuera de `js/storage.js`.
+- `tools/check-storage-boundaries.ps1`: evita que los historiales locales se usen fuera de `storage.js`, tanto en `js` como en `deploy/js`.
+- `tools/check-supabase-boundaries.ps1`: evita que `orders` de Supabase se use fuera de `storage.js`, tanto en `js` como en `deploy/js`.
 
 ## Estado de avance
 
