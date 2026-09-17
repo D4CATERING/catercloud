@@ -1560,12 +1560,13 @@ function renderizarComandasCocina() {
         const fecha = item.fecha_evento || item.fecha_creacion || '';
         const horaSalida = getHoraSalidaItem(item);
         const menuResumen = getResumenMenusConPax(item);
-        const alertaSalida = getAlertaSalidaHtml(item, estado);
+        const tieneAlertaSalida = pedidoTieneAlertaSalida(item, estado);
+        const alertaSalida = tieneAlertaSalida ? getAlertaSalidaHtml(item, estado) : '';
         const confirmado = pedidoOperativoConfirmado(item);
         const puedeOperar = canEdit && confirmado;
 
         return `
-            <article class="logistics-event-card kitchen-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirProduccionCocina(${index}, ${codigoArg})">
+            <article class="logistics-event-card kitchen-event-card ${tieneAlertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirProduccionCocina(${index}, ${codigoArg})">
                 <div class="logistics-event-main">
                     <div>
                         <div class="logistics-event-title-row">
@@ -3510,6 +3511,10 @@ function getAlertaSalidaData(item, estado) {
     return { minutos, texto };
 }
 
+function pedidoTieneAlertaSalida(item, estado) {
+    return Boolean(getAlertaSalidaData(item, estado));
+}
+
 function getAlertaSalidaHtml(item, estado) {
     const alerta = getAlertaSalidaData(item, estado);
     if (!alerta) return '';
@@ -3851,12 +3856,13 @@ function renderizarComandasLogistica() {
         const menuResumen = getResumenMenusConPax(item);
         const origen = item._logisticaSource === 'cocina' ? 'Material de menú' : 'Comanda logística';
 
-        const alertaSalida = getAlertaSalidaHtml(item, estado);
+        const tieneAlertaSalida = pedidoTieneAlertaSalida(item, estado);
+        const alertaSalida = tieneAlertaSalida ? getAlertaSalidaHtml(item, estado) : '';
         const confirmado = pedidoOperativoConfirmado(item);
         const puedeOperar = canEdit && confirmado;
 
         return `
-            <article class="logistics-event-card ${alertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index}, ${codigoArg})">
+            <article class="logistics-event-card ${tieneAlertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index}, ${codigoArg})">
                 <div class="logistics-event-main">
                     <div>
                         <div class="logistics-event-title-row">
