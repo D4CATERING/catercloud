@@ -3496,11 +3496,10 @@ function getMinutosHastaSalida(item) {
     return Math.ceil((salida.getTime() - Date.now()) / 60000);
 }
 
-function getAlertaSalidaHtml(item, estado) {
-    if (estado === 'listo') return '';
-
+function getAlertaSalidaData(item, estado) {
+    if (estado === 'listo') return null;
     const minutos = getMinutosHastaSalida(item);
-    if (minutos === null || minutos > 15) return '';
+    if (minutos === null || minutos > 15) return null;
 
     const texto = minutos < 0
         ? `Salida vencida hace ${Math.abs(minutos)} min`
@@ -3508,10 +3507,17 @@ function getAlertaSalidaHtml(item, estado) {
             ? 'Salida ahora'
             : `Salida en ${minutos} min`;
 
+    return { minutos, texto };
+}
+
+function getAlertaSalidaHtml(item, estado) {
+    const alerta = getAlertaSalidaData(item, estado);
+    if (!alerta) return '';
+
     return `
         <div class="logistics-departure-alert" role="status" aria-live="polite">
             <span>!</span>
-            <strong>${escapeLogisticaHtml(texto)}</strong>
+            <strong>${escapeLogisticaHtml(alerta.texto)}</strong>
             <small>Pedido aun no marcado como listo</small>
         </div>
     `;
