@@ -3687,6 +3687,28 @@ function normalizarEstadoLogistica(estado) {
     return estado || 'sin_preparar';
 }
 
+function getTotalMaterialLogistica(item = {}) {
+    const material = item.material_logistica || {};
+    return ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
+}
+
+function getPreparadosLogistica(item = {}) {
+    const preparadosMarcados = getMaterialLogisticaPlano(item.material_logistica || {}).filter(mat => mat.preparado).length;
+    return Math.max(preparadosMarcados, Number(item.logistics_prepared_items || 0) || 0);
+}
+
+function getEstadoLogisticaOperativo(item = {}) {
+    const total = getTotalMaterialLogistica(item);
+    const preparados = Math.min(getPreparadosLogistica(item), total);
+    const estadoOperativo = normalizarEstadoLogistica(item.logistics_status || item.estado);
+
+    if (!total) return estadoOperativo;
+    if (preparados >= total) return 'listo';
+    if (preparados > 0 && estadoOperativo === 'sin_preparar') return 'en_preparacion';
+    if (estadoOperativo === 'listo') return preparados > 0 ? 'en_preparacion' : 'sin_preparar';
+    return estadoOperativo;
+}
+
 function getLabelEstadoLogistica(estado) {
     const labels = {
         sin_preparar: 'Sin preparar',
@@ -3845,10 +3867,9 @@ function renderizarComandasLogistica() {
     cont.innerHTML = eventosFiltrados.slice(0, 30).map((item, index) => {
         const codigoArg = getCodigoOperativoJsArg(item);
         const fecha = item.fecha_evento || item.fecha_creacion || '';
-        const material = item.material_logistica || {};
-        const totalMaterial = ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
-        const preparados = Number(item.logistics_prepared_items || 0);
-        const estado = normalizarEstadoLogistica(item.logistics_status || item.estado);
+        const totalMaterial = getTotalMaterialLogistica(item);
+        const preparados = Math.min(getPreparadosLogistica(item), totalMaterial);
+        const estado = getEstadoLogisticaOperativo(item);
         const responsable = item.logistics_assigned_to || '';
         const progreso = totalMaterial ? Math.min(100, Math.round((preparados / totalMaterial) * 100)) : 0;
         const horaSalida = getHoraSalidaItem(item);
