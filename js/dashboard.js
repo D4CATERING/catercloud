@@ -1300,6 +1300,27 @@ function descartarCambioOperativoDesdeTarjeta(key) {
     cerrarTarjetaCambioOperativo();
 }
 
+function crearTarjetaCambioOperativoHtml({ key, areaVista, index, claseTipo = '', kicker, titulo, subtitulo, detalle, accion }) {
+    const clase = claseTipo ? ` operational-change-overlay--${claseTipo}` : '';
+    return {
+        clase,
+        html: `
+        <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
+            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
+                onclick="descartarCambioOperativoDesdeTarjeta('${key}')">×</button>
+            <button type="button" class="operational-change-body"
+                onclick="abrirCambioOperativoDesdeTarjeta('${areaVista}', ${index}, '${key}')">
+                <span class="operational-change-kicker">${escapeLogisticaHtml(kicker)}</span>
+                <strong>${escapeLogisticaHtml(titulo)}</strong>
+                <span>${escapeLogisticaHtml(subtitulo)}</span>
+                <small>${escapeLogisticaHtml(detalle)}</small>
+                <em>${escapeLogisticaHtml(accion)}</em>
+            </button>
+        </article>
+    `
+    };
+}
+
 function mostrarTarjetaCambioOperativo(areaVista, eventos) {
     const cambios = getCambiosOperativosPendientes(areaVista, eventos);
     if (!cambios.length) {
@@ -1319,20 +1340,16 @@ function mostrarTarjetaCambioOperativo(areaVista, eventos) {
     overlay.id = 'operationalChangeOverlay';
     overlay.className = 'operational-change-overlay';
     overlay.dataset.key = cambio.key;
-    overlay.innerHTML = `
-        <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
-            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
-                onclick="descartarCambioOperativoDesdeTarjeta('${cambio.key}')">×</button>
-            <button type="button" class="operational-change-body"
-                onclick="abrirCambioOperativoDesdeTarjeta('${areaVista}', ${cambio.index}, '${cambio.key}')">
-                <span class="operational-change-kicker">Cambio para ${escapeLogisticaHtml(tituloArea)}</span>
-                <strong>Comanda modificada · ${escapeLogisticaHtml(cambio.codigo || 'Sin codigo')}</strong>
-                <span>${escapeLogisticaHtml(cambio.empresa)} · afecta ${escapeLogisticaHtml(cambio.label)}</span>
-                <small>${escapeLogisticaHtml(detalle)}</small>
-                <em>${escapeLogisticaHtml(accion)}</em>
-            </button>
-        </article>
-    `;
+    overlay.innerHTML = crearTarjetaCambioOperativoHtml({
+        key: cambio.key,
+        areaVista,
+        index: cambio.index,
+        kicker: `Cambio para ${tituloArea}`,
+        titulo: `Comanda modificada · ${cambio.codigo || 'Sin codigo'}`,
+        subtitulo: `${cambio.empresa} · afecta ${cambio.label}`,
+        detalle,
+        accion
+    }).html;
     document.body.appendChild(overlay);
 }
 
@@ -1353,23 +1370,21 @@ function mostrarTarjetaCambioOperativoGlobal() {
     cerrarTarjetaCambioOperativo();
 
     const overlay = document.createElement('div');
+    const tarjeta = crearTarjetaCambioOperativoHtml({
+        key: cambio.key,
+        areaVista: cambio.areaVista,
+        index: cambio.index,
+        claseTipo: cambio.tipo,
+        kicker: tituloTipo,
+        titulo: cambio.codigo || 'Sin codigo',
+        subtitulo: `${cambio.empresa} · aviso para ${tituloArea}`,
+        detalle,
+        accion
+    });
     overlay.id = 'operationalChangeOverlay';
-    overlay.className = `operational-change-overlay operational-change-overlay--${cambio.tipo}`;
+    overlay.className = `operational-change-overlay${tarjeta.clase}`;
     overlay.dataset.key = cambio.key;
-    overlay.innerHTML = `
-        <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
-            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
-                onclick="descartarCambioOperativoDesdeTarjeta('${cambio.key}')">×</button>
-            <button type="button" class="operational-change-body"
-                onclick="abrirCambioOperativoDesdeTarjeta('${cambio.areaVista}', ${cambio.index}, '${cambio.key}')">
-                <span class="operational-change-kicker">${escapeLogisticaHtml(tituloTipo)}</span>
-                <strong>${escapeLogisticaHtml(cambio.codigo || 'Sin codigo')}</strong>
-                <span>${escapeLogisticaHtml(cambio.empresa)} · aviso para ${escapeLogisticaHtml(tituloArea)}</span>
-                <small>${escapeLogisticaHtml(detalle)}</small>
-                <em>${escapeLogisticaHtml(accion)}</em>
-            </button>
-        </article>
-    `;
+    overlay.innerHTML = tarjeta.html;
     document.body.appendChild(overlay);
     reproducirSonidoCambioOperativo(cambio.key);
 }
