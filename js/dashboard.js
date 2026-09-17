@@ -393,37 +393,9 @@ async function sincronizarAccionesOperativasSupabase(codigo, patch) {
     if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
 
     try {
-        const { data, error: selectError } = await window.supabaseClient
-            .from('orders')
-            .select('payload')
-            .eq('codigo', codigo)
-            .maybeSingle();
-
-        if (selectError || !data) {
-            throw selectError || new Error(`No se encontro la comanda ${codigo} en Supabase.`);
-        }
-
-        const payloadActual = data.payload || {};
-        const payload = {
-            ...payloadActual,
-            ...patch,
-            fecha_modificacion: new Date().toISOString(),
-            editado_por_id: window.currentUser.id,
-            editado_por_nombre: getOperativeActorName(),
-            editado_por_email: window.currentUser.email || ''
-        };
-
-        const { error: updateError } = await window.supabaseClient
-            .from('orders')
-            .update({
-                payload,
-                updated_by: window.currentUser.id,
-                updated_at: new Date().toISOString()
-            })
-            .eq('codigo', codigo);
-
-        if (updateError) throw updateError;
-        return true;
+        return await window.CaterCloudStorage.sincronizarPayloadOrdenSupabase(codigo, patch, {
+            editado_por_nombre: getOperativeActorName()
+        });
     } catch (error) {
         console.warn('No se pudo sincronizar la actividad operativa con Supabase:', error);
         if (typeof mostrarMensaje === 'function') {
