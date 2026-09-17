@@ -102,9 +102,12 @@ Completado el 2026-09-17:
 - Acceso directo a `orders` de Supabase centralizado en `js/storage.js`.
 - Acceso directo a `historialComandas` y `historialComandasLogistica` centralizado en `js/storage.js`.
 - Helpers internos en `js/storage.js` para sesion Supabase, timestamps y usuario actual.
+- Sincronizacion de acciones operativas expuesta desde `js/storage.js`.
+- Primer ajuste del reparto automatico de Rutas para aprovechar rutas vacias compatibles antes de seguir cargando una sola ruta.
 
 Siguiente frontera recomendada:
 
+- Crear una prueba/diagnostico simple para Rutas antes de seguir separando el modulo.
 - Extraer o aislar alertas operativas de `js/dashboard.js`, porque Cocina y Logistica han mostrado regresiones visuales de tarjetas y estados.
 
 ## Criterio de exito
