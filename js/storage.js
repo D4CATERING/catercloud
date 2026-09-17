@@ -23,8 +23,20 @@ function guardarJsonLocalStorage(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getUsuarioActual() {
+    return window.currentUser || {};
+}
+
+function getUsuarioActualId() {
+    return getUsuarioActual().id || null;
+}
+
+function getUsuarioActualEmail() {
+    return getUsuarioActual().email || '';
+}
+
 function haySesionSupabase() {
-    return Boolean(window.supabaseClient && window.currentUser?.id);
+    return Boolean(window.supabaseClient && getUsuarioActualId());
 }
 
 function fechaHoraIso() {
@@ -65,16 +77,16 @@ async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {})
         ...payloadActual,
         ...patch,
         fecha_modificacion: options.fecha_modificacion || fechaHoraIso(),
-        editado_por_id: options.editado_por_id || window.currentUser.id,
+        editado_por_id: options.editado_por_id || getUsuarioActualId(),
         editado_por_nombre: options.editado_por_nombre || getResponsableFromUser(),
-        editado_por_email: options.editado_por_email || window.currentUser.email || ''
+        editado_por_email: options.editado_por_email || getUsuarioActualEmail()
     };
 
     const { error: updateError } = await window.supabaseClient
         .from('orders')
         .update({
             payload,
-            updated_by: window.currentUser.id,
+            updated_by: getUsuarioActualId(),
             updated_at: fechaHoraIso()
         })
         .eq('codigo', codigo);
@@ -167,7 +179,7 @@ function emitirCambioHistorialCompartido(action, codigo, details = {}) {
             payload: {
                 action,
                 codigo: codigo || null,
-                by: window.currentUser?.email || null,
+                by: getUsuarioActualEmail() || null,
                 at: fechaHoraIso(),
                 details
             }
@@ -409,9 +421,9 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
     tiene_comanda_logistica: true,
     fecha_modificacion: fechaHoraIso(),
     version,
-    editado_por_id: window.currentUser.id,
+    editado_por_id: getUsuarioActualId(),
     editado_por_nombre: getResponsableFromUser(),
-    editado_por_email: window.currentUser.email || ''
+    editado_por_email: getUsuarioActualEmail()
   };
 
   const { error: updateError } = await window.supabaseClient
@@ -420,7 +432,7 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
       payload,
       estado: payload.estado || 'creada',
       version,
-      updated_by: window.currentUser.id,
+      updated_by: getUsuarioActualId(),
       updated_at: fechaHoraIso()
     })
     .eq('id', order.id);
@@ -470,9 +482,9 @@ async function guardarComandaEnHistorial(comandaData) {
       ? (solicitudOrigen.estado === 'confirmado' ? 'confirmado' : 'por_confirmar')
       : (comandaData.estado_confirmacion || comandaData.confirmation_status || 'por_confirmar'),
     version: 1,
-    creado_por_id: window.currentUser?.id || comandaData.creado_por_id || null,
+    creado_por_id: getUsuarioActualId() || comandaData.creado_por_id || null,
     creado_por_nombre: comandaData.creado_por_nombre || usuarioNombre,
-    creado_por_email: window.currentUser?.email || comandaData.creado_por_email || '',
+    creado_por_email: getUsuarioActualEmail() || comandaData.creado_por_email || '',
     editado_por_id: null,
     editado_por_nombre: null,
     editado_por_email: null
@@ -545,7 +557,7 @@ async function guardarComandaEnHistorial(comandaData) {
         pax_total: paxTotal,
         estado: payload.estado,
         version: payload.version,
-        updated_by: window.currentUser.id,
+        updated_by: getUsuarioActualId(),
         updated_at: fechaHoraIso(),
         payload
       }).select('id');
@@ -590,7 +602,7 @@ async function guardarComandaEnHistorial(comandaData) {
     }
 
     const { data: insertedOrder, error } = await window.supabaseClient.from('orders').insert([{
-      created_by: window.currentUser.id,
+      created_by: getUsuarioActualId(),
       company_id,
       company_name: company_name || (empresaNombre || null),
       responsable_name: responsable,
@@ -600,7 +612,7 @@ async function guardarComandaEnHistorial(comandaData) {
       pax_total: paxTotal,
       estado: payload.estado,
       version: payload.version,
-      updated_by: window.currentUser.id,
+      updated_by: getUsuarioActualId(),
       payload
     }]).select('id').single();
 
@@ -765,7 +777,7 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
 
     const responsable = getResponsableFromUser()
         || (local.responsable || local.responsable_nombre || local.creado_por_nombre || '').toString().trim()
-        || window.currentUser.email
+        || getUsuarioActualEmail()
         || 'Usuario';
 
     const ahora = fechaHoraIso();
@@ -776,12 +788,12 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
         estado: local.estado && local.estado !== 'eliminada' ? local.estado : 'creada',
         fecha_creacion: local.fecha_creacion || local.created_at || ahora,
         fecha_modificacion: ahora,
-        creado_por_id: local.creado_por_id || window.currentUser.id,
+        creado_por_id: local.creado_por_id || getUsuarioActualId(),
         creado_por_nombre: local.creado_por_nombre || responsable,
-        creado_por_email: local.creado_por_email || window.currentUser.email || '',
-        editado_por_id: window.currentUser.id,
+        creado_por_email: local.creado_por_email || getUsuarioActualEmail(),
+        editado_por_id: getUsuarioActualId(),
         editado_por_nombre: responsable,
-        editado_por_email: window.currentUser.email || ''
+        editado_por_email: getUsuarioActualEmail()
     };
 
     const { data: existente, error: selectError } = await window.supabaseClient
@@ -802,7 +814,7 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
         pax_total: Number(payload.pax || payload.pax_total || 0) || null,
         estado: payload.estado,
         version: Number(payload.version || 1) || 1,
-        updated_by: window.currentUser.id,
+        updated_by: getUsuarioActualId(),
         updated_at: ahora,
         payload
     };
@@ -817,7 +829,7 @@ async function recuperarComandaLocalEnSupabase(codigoBuscado) {
     } else {
         const { data: insertada, error: insertError } = await window.supabaseClient
             .from('orders')
-            .insert([{ ...datosOrder, created_by: window.currentUser.id }])
+            .insert([{ ...datosOrder, created_by: getUsuarioActualId() }])
             .select('id')
             .single();
         if (insertError) throw insertError;
@@ -869,12 +881,12 @@ async function sincronizarSolicitudPedido(solicitud) {
             || (solicitud.responsable || '').toString().trim()
             || 'Pendiente';
 
-        solicitud.creado_por_id = window.currentUser.id;
+        solicitud.creado_por_id = getUsuarioActualId();
         solicitud.creado_por_nombre = responsable;
-        solicitud.creado_por_email = window.currentUser.email || '';
+        solicitud.creado_por_email = getUsuarioActualEmail();
 
         const { error } = await window.supabaseClient.from('orders').insert([{
-            created_by: window.currentUser.id,
+            created_by: getUsuarioActualId(),
             company_id,
             company_name,
             responsable_name: responsable,
@@ -884,7 +896,7 @@ async function sincronizarSolicitudPedido(solicitud) {
             pax_total: Number(solicitud.pax || solicitud.pax_total || 0) || null,
             estado: solicitud.estado || 'negociacion',
             version: solicitud.version || 1,
-            updated_by: window.currentUser.id,
+            updated_by: getUsuarioActualId(),
             payload: solicitud
         }]);
 
@@ -933,9 +945,9 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
             fecha_modificacion: fechaHoraIso(),
             version: versionActual + 1,
             editado_por: getResponsableFromUser(),
-            editado_por_id: window.currentUser?.id || null,
+            editado_por_id: getUsuarioActualId(),
             editado_por_nombre: getResponsableFromUser(),
-            editado_por_email: window.currentUser?.email || ''
+            editado_por_email: getUsuarioActualEmail()
         };
         
         guardarHistorialComandasLocal(historial);
@@ -957,7 +969,7 @@ async function actualizarComandaEnHistorial(codigo, nuevosDatos) {
                         pax_total: Number(historial[index].pax || historial[index].pax_total || 0) || null,
                         estado: historial[index].estado || 'editada',
                         version: historial[index].version,
-                        updated_by: window.currentUser.id,
+                        updated_by: getUsuarioActualId(),
                         updated_at: fechaHoraIso()
                     });
                 const { error } = idParaActualizar
@@ -1027,8 +1039,8 @@ function eliminarComandaDelHistorial(codigo) {
             estado_pedido: 'eliminada',
             fecha_modificacion: ahora,
             eliminado_en: ahora,
-            eliminado_por_id: window.currentUser?.id || null,
-            eliminado_por_email: window.currentUser?.email || ''
+            eliminado_por_id: getUsuarioActualId(),
+            eliminado_por_email: getUsuarioActualEmail()
         };
     });
     guardarHistorialComandasLocal(nuevoHistorial);
@@ -1050,15 +1062,15 @@ async function marcarComandaEliminadaEnSupabase(codigo, pedido = null) {
         estado_pedido: 'eliminada',
         fecha_modificacion: ahora,
         eliminado_en: ahora,
-        eliminado_por_id: window.currentUser?.id || null,
-        eliminado_por_email: window.currentUser?.email || ''
+        eliminado_por_id: getUsuarioActualId(),
+        eliminado_por_email: getUsuarioActualEmail()
     };
 
     const { error } = await window.supabaseClient
         .from('orders')
         .update({
             estado: 'eliminada',
-            updated_by: window.currentUser?.id || null,
+            updated_by: getUsuarioActualId(),
             payload: payloadEliminado
         })
         .eq('codigo', codigo);
@@ -1373,7 +1385,7 @@ window.iniciarRealtimeHistorialSupabase = iniciarRealtimeHistorialSupabase;
 window.verificarRealtimeCaterCloud = async function verificarRealtimeCaterCloud() {
     const lecturaOk = await cargarHistorialRemotoSupabase({ render: true });
     return {
-        usuario: window.currentUser?.email || null,
+        usuario: getUsuarioActualEmail() || null,
         realtime: window._ordersRealtimeStatus || null,
         ultimoBroadcast: window._ultimoBroadcastOrders || null,
         lecturaOk,
@@ -1387,7 +1399,7 @@ window.verificarRealtimeCaterCloud = async function verificarRealtimeCaterCloud(
 function iniciarRefrescoHistorialCompartido() {
     if (window._historialCompartidoTimer) clearInterval(window._historialCompartidoTimer);
     window._historialCompartidoTimer = setInterval(() => {
-        if (!document.hidden && window.currentUser?.id && typeof window.cargarHistorialRemotoSupabase === 'function') {
+        if (!document.hidden && getUsuarioActualId() && typeof window.cargarHistorialRemotoSupabase === 'function') {
             window.cargarHistorialRemotoSupabase({ render: true });
         }
     }, 3000);
@@ -1466,12 +1478,12 @@ async function getOrCreateCompanyIdByName(nombreEmpresa) {
   }
 
   // 2) Crear
-  const user = window.currentUser;
-  if (!user?.id) throw new Error('Usuario no autenticado');
+  const userId = getUsuarioActualId();
+  if (!userId) throw new Error('Usuario no autenticado');
 
   const { data: inserted, error: insError } = await window.supabaseClient
     .from('companies')
-    .insert([{ name, created_by: user.id }])
+    .insert([{ name, created_by: userId }])
     .select('id,name')
     .single();
 
@@ -1493,6 +1505,6 @@ async function getOrCreateCompanyIdByName(nombreEmpresa) {
 }
 
 function getResponsableFromUser() {
-  const u = window.currentUser;
+  const u = getUsuarioActual();
   return (u?.user_metadata?.full_name || u?.email || '').toString();
 }
