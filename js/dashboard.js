@@ -12,6 +12,18 @@ function getTimestampOperativoDashboard() {
     return new Date().toISOString();
 }
 
+function getUsuarioActualDashboard() {
+    return window.currentUser || {};
+}
+
+function getUsuarioActualEmailDashboard() {
+    return getUsuarioActualDashboard().email || '';
+}
+
+function getUsuarioActualIdDashboard() {
+    return getUsuarioActualDashboard().id || null;
+}
+
 function sumarDiasFechaLocalDashboard(fechaIso, dias) {
     const [yyyy, mm, dd] = String(fechaIso || '').split('-').map(Number);
     const fecha = new Date(yyyy, (mm || 1) - 1, dd || 1);
@@ -394,7 +406,7 @@ function guardarHistorialCocinaModulo(historial) {
 }
 
 async function sincronizarAccionesOperativasSupabase(codigo, patch) {
-    if (!codigo || !window.supabaseClient || !window.currentUser?.id) return false;
+    if (!codigo || !window.supabaseClient || !getUsuarioActualIdDashboard()) return false;
 
     try {
         return await window.CaterCloudStorage.sincronizarPayloadOrdenSupabase(codigo, patch, {
@@ -1082,7 +1094,7 @@ function getKeyCambioOperativo(areaVista, item, tipo, notice) {
 }
 
 function getUsuarioKeyCambioOperativo() {
-    return String(window.currentUser?.id || window.currentUser?.email || 'usuario-local')
+    return String(getUsuarioActualIdDashboard() || getUsuarioActualEmailDashboard() || 'usuario-local')
         .replace(/[^a-z0-9@._-]/gi, '_');
 }
 
@@ -1107,7 +1119,7 @@ function cambioOperativoYaGestionado(key) {
 function crearPayloadCambioOperativoGestionado(action) {
     return JSON.stringify({
         action,
-        by: window.currentUser?.email || null,
+        by: getUsuarioActualEmailDashboard() || null,
         at: getTimestampOperativoDashboard()
     });
 }
@@ -1403,7 +1415,7 @@ window.verificarNotificacionesOperativas = async function verificarNotificacione
     const areas = getAreasAvisoOperativoPorRol();
     const pendientes = getCambiosOperativosPendientesGlobales();
     return {
-        usuario: window.currentUser?.email || null,
+        usuario: getUsuarioActualEmailDashboard() || null,
         rol: window.AppPermissions?.role || null,
         areas,
         pendientes: pendientes.length,
@@ -1460,7 +1472,7 @@ window.verificarCocinaCaterCloud = async function verificarCocinaCaterCloud() {
     });
 
     return {
-        usuario: window.currentUser?.email || null,
+        usuario: getUsuarioActualEmailDashboard() || null,
         lecturaSupabase: window._ultimoHistorialRemotoOk || null,
         errorSupabase: window._ultimoHistorialRemotoError || null,
         filtroPeriodoCocina: periodo,
