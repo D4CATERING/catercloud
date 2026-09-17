@@ -4319,7 +4319,7 @@ function togglePreparadoLogistica(index, tipo, matIndex, materialKey = '', check
         item.logistics_status = 'listo';
         item.estado = 'listo';
         item.logistics_ready_at = getTimestampOperativoDashboard();
-        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+        item.logistics_ready_by = getOperativeActorName();
     }
     if (!checked || preparados < total) {
         item.logistics_completed_confirmed_at = null;
@@ -4352,7 +4352,7 @@ function actualizarEstadoLogistica(index, value, codigo = '') {
     item.fecha_modificacion = getTimestampOperativoDashboard();
     if (value === 'listo') {
         item.logistics_ready_at = getTimestampOperativoDashboard();
-        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+        item.logistics_ready_by = getOperativeActorName();
     } else {
         item.logistics_completed_confirmed_at = null;
         item.logistics_completed_confirmed_by = '';
@@ -4376,7 +4376,7 @@ function actualizarPreparadosLogistica(index, value, codigo = '') {
         item.logistics_status = 'listo';
         item.estado = 'listo';
         item.logistics_ready_at = getTimestampOperativoDashboard();
-        item.logistics_ready_by = window.currentUser?.user_metadata?.full_name || window.currentUser?.email || '';
+        item.logistics_ready_by = getOperativeActorName();
     } else if (preparados > 0) {
         item.logistics_status = 'en_preparacion';
         item.estado = 'en_preparacion';
