@@ -299,6 +299,7 @@ async function cargarCatalogoServiciosDesdeSupabase(servicioTipo) {
 async function cargarCatalogoReferenciasMenuDesdeSupabase(categoriaId) {
     if (!window.supabaseClient) throw new Error('Supabase no inicializado');
 
+    const menuLegacyId = Number(window.menuSeleccionado?.id || 0);
     const { data, error } = await window.supabaseClient
         .from('menu_reference_items')
         .select('*')
@@ -308,7 +309,14 @@ async function cargarCatalogoReferenciasMenuDesdeSupabase(categoriaId) {
 
     if (error) throw error;
 
-    const items = (data || []).map(item => ({
+    const filas = data || [];
+    const referenciasMenu = menuLegacyId
+        ? filas.filter(item => Number(item.menu_legacy_id || 0) === menuLegacyId)
+        : [];
+    const referenciasGenerales = filas.filter(item => Number(item.menu_legacy_id || 0) === 0);
+    const filasActivas = referenciasMenu.length ? referenciasMenu : referenciasGenerales;
+
+    const items = filasActivas.map(item => ({
         id: item.legacy_id || item.id,
         nombre: item.name,
         grupo: item.item_group || 'gris',

@@ -356,7 +356,7 @@ async function cargarMenus() {
             { id: 5,  nombre: 'ECONÓMICO', descripcion: '5 ref. grises + 2 ref. rojas + 1 postre', items_gris_max: 5, items_rojo_max: 2, items_postres_min: 1, items_postres_max: 1, mult_postres: 1 },
             { id: 6,  nombre: 'MEDIO', descripcion: '6 ref. grises + 4 ref. rojas + 2 postres', items_gris_max: 6, items_rojo_max: 4, items_postres_min: 2, items_postres_max: 2, mult_postres: 1 },
             { id: 7,  nombre: 'MUYTOP', descripcion: '8 ref. grises + 7 ref. rojas + 3 postres', items_gris_max: 8, items_rojo_max: 7, items_postres_min: 3, items_postres_max: 3, mult_postres: 0.75 },
-            { id: 8,  nombre: 'VEGGIE', descripcion: '6 ref. grises sin rojas', items_gris_max: 6, items_rojo_max: 0, items_postres_min: 0, items_postres_max: 0, mult_postres: 1 }
+            { id: 8,  nombre: 'VEGGIE', descripcion: '6 referencias + postre opcional', items_gris_max: 6, items_rojo_max: 0, items_postres_min: 0, items_postres_max: 1, mult_postres: 1 }
         ];
     }
     else if (!menusDesdeSupabase && categoriaId == 3) {
@@ -475,7 +475,7 @@ function mostrarMenusPrincipales(menus) {
             ${menu.items_salados_min > 0 ?
                 `<p style="font-size: 0.75rem; color: #64748b; margin-top: 3px;">
                     📋 ${menu.items_salados_min}-${menu.items_salados_max} salados
-                    ${menu.items_postres_min > 0 ? `, ${menu.items_postres_min}-${menu.items_postres_max} postres` : ''}
+                    ${menu.items_postres_max > 0 ? `, ${menu.items_postres_min || 0}-${menu.items_postres_max} postres` : ''}
                 </p>` : ''
             }
             </div>
@@ -648,9 +648,9 @@ async function seleccionarMenu(menuId, element) {
         }
 
         // Mostrar/ocultar sección de postres
-        if ((window.menuSeleccionado.items_postres_min || 0) > 0) {
+        if ((window.menuSeleccionado.items_postres_max || 0) > 0) {
             document.getElementById('referenciasPostresGroup').style.display = 'block';
-            document.getElementById('minPostres').textContent = window.menuSeleccionado.items_postres_min;
+            document.getElementById('minPostres').textContent = window.menuSeleccionado.items_postres_min || 0;
             document.getElementById('maxPostres').textContent = window.menuSeleccionado.items_postres_max;
         } else {
             document.getElementById('referenciasPostresGroup').style.display = 'none';
