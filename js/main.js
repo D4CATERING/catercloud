@@ -364,78 +364,49 @@ function validarRecogidaOpcionalLogistica(prefix) {
 }
 
 function validarLogisticaInline() {
-    const seccion = document.getElementById('logisticaInlineSection');
-    if (!seccion || seccion.style.display === 'none') return true;
-
-    let valido = true;
-    const requeridos = [
-        { id: 'log_inline_hora_entrega',      label: 'Hora de entrega' },
-        { id: 'log_inline_hora_evento',        label: 'Hora del evento' },
-        { id: 'log_inline_nombre_contacto',    label: 'Nombre de contacto' },
-        { id: 'log_inline_telefono_contacto',  label: 'Teléfono de contacto' },
-        { id: 'log_inline_duracion_evento',    label: 'Duración evento' },
-        { id: 'log_inline_cantidad_camareros', label: 'Cantidad camareros' },
-        { id: 'log_inline_calle',              label: 'Calle' },
-        { id: 'log_inline_numero',             label: 'Número / portal' },
-        { id: 'log_inline_codigo_postal',      label: 'Código postal' }
-    ];
-
-    requeridos.forEach(({ id, label }) => {
-        const input = document.getElementById(id);
-        const errEl = document.getElementById(id + '_err');
-        if (!input) return;
-        if (!input.value.trim()) {
-            input.style.borderColor = '#dc2626';
-            if (errEl) errEl.textContent = `${label} es obligatorio`;
-            valido = false;
-        } else {
-            input.style.borderColor = '#cbd5e1';
-            if (errEl) errEl.textContent = '';
-        }
+    const categoriaId = parseInt(document.getElementById('categoria')?.value || 0);
+    const menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+        ? window.obtenerMenusAcumulados()
+        : [];
+    const required = window.CaterCloudLogisticsDelivery?.requiresInlineDelivery({
+        categoriaId,
+        catPrincipal: window.menuSeleccionado?._cat || window.menuSeleccionado?.categoriaId || categoriaId,
+        menuPrincipal: window.menuSeleccionado,
+        menusAcumulados,
+        serviciosMode: window.serviciosMode
     });
 
-    // Validar formato teléfono
-    const tel = document.getElementById('log_inline_telefono_contacto');
-    if (tel && tel.value.trim() && !/^[0-9\s\+\-]{6,20}$/.test(tel.value.trim())) {
-        tel.style.borderColor = '#dc2626';
-        const errEl = document.getElementById('log_inline_telefono_contacto_err');
-        if (errEl) errEl.textContent = 'Formato de teléfono no válido';
-        valido = false;
+    if (required) {
+        const seccion = document.getElementById('logisticaInlineSection');
+        const notas = document.getElementById('logisticaInlineNotasSection');
+        if (seccion) seccion.style.display = '';
+        if (notas) notas.style.display = '';
     }
 
-    if (!validarHorariosLogistica('log_inline', document.getElementById('hora_salida')?.value || '')) {
-        valido = false;
-    }
-
-    if (!validarRecogidaOpcionalLogistica('log_inline')) valido = false;
-
-    return valido;
+    return window.CaterCloudLogisticsDelivery?.validateDom('log_inline', {
+        required,
+        horaSalida: document.getElementById('hora_salida')?.value || ''
+    }) ?? true;
 }
 
 /**
  * Recoge los datos de logística inline del formulario
  */
 function obtenerDatosLogisticaInline() {
-    const seccion = document.getElementById('logisticaInlineSection');
-    if (!seccion || seccion.style.display === 'none') return null;
-    const calle = document.getElementById('log_inline_calle')?.value.trim() || '';
-    const numero = document.getElementById('log_inline_numero')?.value.trim() || '';
-    return {
-        hora_entrega:      document.getElementById('log_inline_hora_entrega')?.value || '',
-        hora_evento:       document.getElementById('log_inline_hora_evento')?.value || '',
-        fecha_recogida:    document.getElementById('log_inline_fecha_recogida')?.value || '',
-        hora_recogida:     document.getElementById('log_inline_hora_recogida')?.value || '',
-        nombre_contacto:   document.getElementById('log_inline_nombre_contacto')?.value.trim() || '',
-        telefono_contacto: document.getElementById('log_inline_telefono_contacto')?.value.trim() || '',
-        montaje:           document.getElementById('log_inline_montaje')?.value.trim() || '',
-        duracion_evento:   document.getElementById('log_inline_duracion_evento')?.value.trim() || '',
-        cantidad_camareros: document.getElementById('log_inline_cantidad_camareros')?.value.trim() || '',
-        calle,
-        numero,
-        direccion:         componerDireccionLogistica(calle, numero),
-        codigo_postal:     document.getElementById('log_inline_codigo_postal')?.value.trim() || '',
-        notas_logistica:   document.getElementById('log_inline_notas')?.value.trim() || ''
-    };
+    const categoriaId = parseInt(document.getElementById('categoria')?.value || 0);
+    const menusAcumulados = typeof window.obtenerMenusAcumulados === 'function'
+        ? window.obtenerMenusAcumulados()
+        : [];
+    const required = window.CaterCloudLogisticsDelivery?.requiresInlineDelivery({
+        categoriaId,
+        catPrincipal: window.menuSeleccionado?._cat || window.menuSeleccionado?.categoriaId || categoriaId,
+        menuPrincipal: window.menuSeleccionado,
+        menusAcumulados,
+        serviciosMode: window.serviciosMode
+    });
+    const data = window.CaterCloudLogisticsDelivery?.readFromDom('log_inline') || {};
+    if (!required && !window.CaterCloudLogisticsDelivery?.hasAnyDeliveryData(data)) return null;
+    return data;
 }
 
 
@@ -1829,7 +1800,10 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
         const el = document.getElementById(id);
         if (el) el.value = value || '';
     };
-    const logisticaGuardada = datosBase.logistica_inline || datosBase.logistica || {};
+    const logisticaGuardada = window.CaterCloudLogisticsDelivery?.getFromOrder(datosBase) ||
+        datosBase.logistica_inline ||
+        datosBase.logistica ||
+        {};
     const direccionGuardada = (!logisticaGuardada.calle && logisticaGuardada.direccion && typeof separarDireccionLogistica === 'function')
         ? separarDireccionLogistica(logisticaGuardada.direccion)
         : { calle: '', numero: '' };
@@ -1879,54 +1853,15 @@ function volverDesdeCancelLogistica() {
 }
 
 function validarComandaLogisticaPage() {
-    let valido = true;
-    const requeridos = [
-        { id: 'log_nombre_contacto', label: 'Nombre de contacto' },
-        { id: 'log_telefono_contacto', label: 'Telefono de contacto' },
-        { id: 'log_duracion_evento', label: 'Duracion evento' },
-        { id: 'log_cantidad_camareros', label: 'Cantidad camareros' },
-        { id: 'log_hora_entrega', label: 'Hora de entrega' },
-        { id: 'log_hora_evento', label: 'Hora del evento' },
-        { id: 'log_calle', label: 'Calle' },
-        { id: 'log_numero', label: 'Número / portal' },
-        { id: 'log_codigo_postal', label: 'Codigo postal' }
-    ];
-
-    requeridos.forEach(({ id, label }) => {
-        const input = document.getElementById(id);
-        const errEl = document.getElementById(id + '_err');
-        if (!input) return;
-
-        if (!input.value.trim()) {
-            input.style.borderColor = '#dc2626';
-            if (errEl) errEl.textContent = `${label} es obligatorio`;
-            valido = false;
-        } else {
-            input.style.borderColor = '#cbd5e1';
-            if (errEl) errEl.textContent = '';
-        }
-    });
-
-    const tel = document.getElementById('log_telefono_contacto');
-    if (tel && tel.value.trim() && !/^[0-9\s\+\-]{6,20}$/.test(tel.value.trim())) {
-        tel.style.borderColor = '#dc2626';
-        const errEl = document.getElementById('log_telefono_contacto_err');
-        if (errEl) errEl.textContent = 'Formato de telefono no valido';
-        valido = false;
-    }
-
     const salida = window._logisticaBase?.hora_salida ||
         document.getElementById('log_hora_salida')?.textContent ||
         document.getElementById('hora_salida')?.value ||
         '';
 
-    if (!validarHorariosLogistica('log', salida)) {
-        valido = false;
-    }
-
-    if (!validarRecogidaOpcionalLogistica('log')) valido = false;
-
-    return valido;
+    return window.CaterCloudLogisticsDelivery?.validateDom('log', {
+        required: true,
+        horaSalida: salida
+    }) ?? true;
 }
 
 async function guardarComandaLogistica() {
@@ -1947,8 +1882,7 @@ async function guardarComandaLogistica() {
     if (!validarComandaLogisticaPage()) return;
 
     const base = window._logisticaBase || {};
-    const calle = document.getElementById('log_calle')?.value.trim() || '';
-    const numero = document.getElementById('log_numero')?.value.trim() || '';
+    const datosEntrega = window.CaterCloudLogisticsDelivery?.readFromDom('log') || {};
     const materialSeleccionado = typeof obtenerMaterialSeleccionado === 'function'
         ? obtenerMaterialSeleccionado('materialLogisticaPage')
         : null;
@@ -1966,22 +1900,7 @@ async function guardarComandaLogistica() {
         menu_principal: base.menu_principal || null,
         menus_adicionales: base.menus_adicionales || [],
         menu_nombre: base.menu_nombre || '',
-        logistica: {
-            nombre_contacto: document.getElementById('log_nombre_contacto')?.value.trim() || '',
-            telefono_contacto: document.getElementById('log_telefono_contacto')?.value.trim() || '',
-            montaje: document.getElementById('log_montaje')?.value.trim() || '',
-            duracion_evento: document.getElementById('log_duracion_evento')?.value.trim() || '',
-            cantidad_camareros: document.getElementById('log_cantidad_camareros')?.value || '',
-            hora_entrega: document.getElementById('log_hora_entrega')?.value || '',
-            hora_evento: document.getElementById('log_hora_evento')?.value || '',
-            fecha_recogida: document.getElementById('log_fecha_recogida')?.value || '',
-            hora_recogida: document.getElementById('log_hora_recogida')?.value || '',
-            calle,
-            numero,
-            direccion: componerDireccionLogistica(calle, numero),
-            codigo_postal: document.getElementById('log_codigo_postal')?.value.trim() || '',
-            notas_logistica: document.getElementById('log_page_notas')?.value.trim() || ''
-        },
+        logistica: datosEntrega,
         material_logistica: materialSeleccionado,
         logistics_status: estadoPrevio.logistics_status || estadoPrevio.estado || 'sin_preparar',
         logistics_assigned_to: estadoPrevio.logistics_assigned_to || '',
