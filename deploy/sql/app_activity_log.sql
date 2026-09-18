@@ -40,6 +40,68 @@ for insert
 to authenticated
 with check (auth.uid() = user_id);
 
+create or replace function public.register_app_activity(
+    p_action text,
+    p_area text default null,
+    p_entity_type text default 'pedido',
+    p_entity_code text default null,
+    p_entity_id uuid default null,
+    p_details jsonb default '{}'::jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_id uuid;
+    v_email text;
+    v_name text;
+begin
+    if auth.uid() is null then
+        raise exception 'Usuario no autenticado';
+    end if;
+
+    select
+        u.email,
+        coalesce(
+            u.raw_user_meta_data->>'full_name',
+            u.raw_user_meta_data->>'name',
+            u.raw_user_meta_data->>'display_name',
+            u.email
+        )
+    into v_email, v_name
+    from auth.users u
+    where u.id = auth.uid();
+
+    insert into public.app_activity_log (
+        user_id,
+        user_email,
+        user_name,
+        action,
+        area,
+        entity_type,
+        entity_code,
+        entity_id,
+        details
+    )
+    values (
+        auth.uid(),
+        coalesce(v_email, ''),
+        coalesce(v_name, v_email, ''),
+        p_action,
+        p_area,
+        coalesce(p_entity_type, 'pedido'),
+        p_entity_code,
+        p_entity_id,
+        coalesce(p_details, '{}'::jsonb)
+    )
+    returning id into v_id;
+
+    return v_id;
+end;
+$$;
+
 create or replace view public.app_activity_report
 with (security_invoker = true)
 as
@@ -64,6 +126,7 @@ left join public.orders o
 
 grant select, insert on public.app_activity_log to authenticated;
 grant select on public.app_activity_report to authenticated;
+grant execute on function public.register_app_activity(text, text, text, text, uuid, jsonb) to authenticated;
 
 -- Consulta sugerida:
 -- select *

@@ -1,6 +1,8 @@
 -- Numeracion reutilizable de comandas.
--- Regla: si se elimina una comanda, su numero queda disponible otra vez.
--- Ejemplo: si existen D4260001 y D4260003, la siguiente reserva sera D4260002.
+-- Regla actual:
+-- - Si el codigo existe en orders, NO se reutiliza aunque el pedido este eliminado.
+-- - Si el codigo solo estaba reservado y se cancelo/libero, SI puede reutilizarse.
+-- Ejemplo: si existe D4260001 en orders y D4260002 solo estaba reservado, la siguiente reserva sera D4260002.
 
 create table if not exists public.order_code_reservations (
   codigo text primary key,
