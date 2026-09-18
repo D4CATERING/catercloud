@@ -314,7 +314,16 @@ async function cargarCatalogoReferenciasMenuDesdeSupabase(categoriaId) {
         ? filas.filter(item => Number(item.menu_legacy_id || 0) === menuLegacyId)
         : [];
     const referenciasGenerales = filas.filter(item => Number(item.menu_legacy_id || 0) === 0);
-    const filasActivas = referenciasMenu.length ? referenciasMenu : referenciasGenerales;
+    const seleccionarFilasPorGrupo = (grupo) => {
+        const especificas = referenciasMenu.filter(item => (item.item_group || 'gris') === grupo);
+        if (especificas.length) return especificas;
+        return referenciasGenerales.filter(item => (item.item_group || 'gris') === grupo);
+    };
+    const filasActivas = [
+        ...seleccionarFilasPorGrupo('gris'),
+        ...seleccionarFilasPorGrupo('rojo'),
+        ...seleccionarFilasPorGrupo('postre')
+    ];
 
     const items = filasActivas.map(item => ({
         id: item.legacy_id || item.id,
