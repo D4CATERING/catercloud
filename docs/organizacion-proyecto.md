@@ -105,6 +105,7 @@ Completado el 2026-09-17:
 - Sincronizacion de acciones operativas expuesta desde `js/storage.js`.
 - Primer ajuste del reparto automatico de Rutas para aprovechar rutas vacias compatibles antes de seguir cargando una sola ruta.
 - Creado `js/routes-module.js` para sacar del dashboard las decisiones del planning automatico de Rutas.
+- Movidas a `js/routes-module.js` utilidades puras de hora, duracion y estado de parada.
 
 Siguiente frontera recomendada:
 

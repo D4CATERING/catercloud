@@ -1,6 +1,43 @@
 // ========== ROUTES MODULE: planificacion automatica ==========
 
 (function initCaterCloudRoutesModule() {
+    function parseHoraRutaEnMinutos(hora) {
+        const [h, m] = String(hora || '').split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h * 60 + m;
+    }
+
+    function formatearMinutosRuta(total) {
+        if (!Number.isFinite(total)) return '-';
+        const normalizado = ((Math.round(total) % 1440) + 1440) % 1440;
+        const h = Math.floor(normalizado / 60);
+        const m = normalizado % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function formatearDuracionRuta(minutos) {
+        const total = Math.max(0, Math.round(Number(minutos) || 0));
+        const h = Math.floor(total / 60);
+        const m = total % 60;
+        if (!h) return `${m} min`;
+        if (!m) return `${h} h`;
+        return `${h} h ${m} min`;
+    }
+
+    function normalizarEstadoParadaRuta(status) {
+        const value = String(status || 'pending').toLowerCase();
+        if (['in_route', 'en_ruta', 'ruta'].includes(value)) return 'in_route';
+        if (['delivered', 'entregado', 'completed', 'completado'].includes(value)) return 'delivered';
+        return 'pending';
+    }
+
+    function getLabelEstadoParadaRuta(status) {
+        const estado = normalizarEstadoParadaRuta(status);
+        if (estado === 'in_route') return 'En ruta';
+        if (estado === 'delivered') return 'Entregado';
+        return 'Pendiente';
+    }
+
     function seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta, deps) {
         const zona = deps.getZonaRutaPedido(item);
         const bloque = deps.getBloqueHoraRutaPedido(item);
@@ -90,6 +127,11 @@
     }
 
     window.CaterCloudRoutes = Object.assign(window.CaterCloudRoutes || {}, {
+        parseHoraRutaEnMinutos,
+        formatearMinutosRuta,
+        formatearDuracionRuta,
+        normalizarEstadoParadaRuta,
+        getLabelEstadoParadaRuta,
         seleccionarMejorRutaParaPedido,
         seleccionarRutaVaciaCompatibleParaPedido,
         debeAbrirRutaNuevaParaPedido
