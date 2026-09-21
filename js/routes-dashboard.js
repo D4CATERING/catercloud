@@ -1154,6 +1154,19 @@ function contarRutasConParadas(routes, extrasPorRuta) {
     ), 0);
 }
 
+function getMaxRutasAutomaticasLogistica(vehicles, drivers, totalPedidos) {
+    return Math.min(
+        (vehicles || []).length,
+        (drivers || []).length,
+        Number(totalPedidos || 0)
+    );
+}
+
+function debeCrearRutaAutomaticaAntesDeReusar(routes, extrasPorRuta, vehiculosDisponibles, conductoresDisponibles, maxRutasAutomaticas) {
+    if (!vehiculosDisponibles.length || !conductoresDisponibles.length) return false;
+    return contarRutasConParadas(routes, extrasPorRuta) < maxRutasAutomaticas;
+}
+
 function debeAbrirRutaNuevaParaPedido(item, route, routes, extrasPorRuta, vehiculosDisponibles, conductoresDisponibles, totalPedidos, fecha) {
     return window.CaterCloudRoutes.debeAbrirRutaNuevaParaPedido(
         item,
@@ -1327,26 +1340,49 @@ async function generarRutasLogisticaDia() {
                 if (bloqueA !== bloqueB) return bloqueA - bloqueB;
                 return getZonaRutaPedido(a).localeCompare(getZonaRutaPedido(b));
             });
+        const maxRutasAutomaticas = getMaxRutasAutomaticasLogistica(vehicles, drivers, pedidosOrdenados.length);
 
         for (const item of pedidosOrdenados) {
-            let route = seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha)
-                || seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta);
-            if (debeAbrirRutaNuevaParaPedido(
-                item,
-                route,
-                routes,
-                extrasPorRuta,
-                vehiculosDisponibles,
-                conductoresDisponibles,
-                pedidosOrdenados.length,
-                fecha
-            )) {
-                route = null;
-            }
+            let route = seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha);
             let nuevasParadas = route
                 ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0)
                 : crearParadasPedidoRuta(item, '__nueva_ruta__', 0);
             if (!nuevasParadas.length) continue;
+
+            if (!route && debeCrearRutaAutomaticaAntesDeReusar(
+                routes,
+                extrasPorRuta,
+                vehiculosDisponibles,
+                conductoresDisponibles,
+                maxRutasAutomaticas
+            )) {
+                route = await crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponibles, conductoresDisponibles, nuevasParadas, startsAt);
+                if (route) {
+                    routes.push(route);
+                    stopOrders.set(String(route.id), 0);
+                    extrasPorRuta.set(String(route.id), []);
+                    nuevasParadas = crearParadasPedidoRuta(item, route.id, 0);
+                }
+            }
+
+            if (!route) {
+                route = seleccionarMejorRutaParaPedido(item, routes, extrasPorRuta);
+                if (debeAbrirRutaNuevaParaPedido(
+                    item,
+                    route,
+                    routes,
+                    extrasPorRuta,
+                    vehiculosDisponibles,
+                    conductoresDisponibles,
+                    pedidosOrdenados.length,
+                    fecha
+                )) {
+                    route = null;
+                }
+                nuevasParadas = route
+                    ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0)
+                    : nuevasParadas;
+            }
 
             if (!route) {
                 route = await crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponibles, conductoresDisponibles, nuevasParadas, startsAt);
