@@ -753,12 +753,14 @@ function getTipoSeleccionFueraCarta(tipo) {
 
 function getMaxReferenciasPorTipoSeleccion(tipoSeleccion) {
     if (tipoSeleccion === 'postres') return window.menuSeleccionado?.items_postres_max || 0;
-    return (window.menuSeleccionado?.items_gris_max || window.menuSeleccionado?.items_salados_max || 0)
-        + (window.menuSeleccionado?.items_rojo_max || 0);
+    if (tipoSeleccion === 'rojo') return window.menuSeleccionado?.items_rojo_max || 0;
+    return window.menuSeleccionado?.items_gris_max || window.menuSeleccionado?.items_salados_max || 0;
 }
 
 function contarReferenciasSeleccionadas(tipoGrupo) {
     if (tipoGrupo === 'postres') return (window.referenciasSeleccionadas?.postres || []).length;
+    if (tipoGrupo === 'gris') return (window.referenciasSeleccionadas?.gris || []).length;
+    if (tipoGrupo === 'rojo') return (window.referenciasSeleccionadas?.rojo || []).length;
 
     const ids = new Set();
     ['gris', 'rojo'].forEach(tipo => {
@@ -802,7 +804,7 @@ function agregarReferenciaFueraCarta() {
         alert('Este menú no requiere postres.');
         return;
     }
-    const totalActual = contarReferenciasSeleccionadas(tipoSeleccion === 'postres' ? 'postres' : 'saladas');
+    const totalActual = contarReferenciasSeleccionadas(tipoSeleccion);
     if (max > 0 && totalActual >= max) {
         alert(`Ya tienes seleccionadas las ${max} referencias permitidas para este grupo.`);
         return;
@@ -991,9 +993,7 @@ function seleccionarReferenciaPrincipal(refId, refNombre, tipo, element, cantida
         return;
     }
 
-    const totalActual = tipo === 'postres'
-        ? contarReferenciasSeleccionadas('postres')
-        : (tipo === 'rojo' ? seleccionadas.length : contarReferenciasSeleccionadas('saladas'));
+    const totalActual = contarReferenciasSeleccionadas(tipo);
     if (max > 0 && totalActual >= max) {
         const label = tipo === 'gris' ? 'grises' : tipo === 'rojo' ? 'rojas' : 'postres';
         alert(`Solo puedes seleccionar hasta ${max} referencias ${label}`);
@@ -1011,7 +1011,7 @@ function actualizarContadoresSeleccion() {
     const rojoMax    = window.menuSeleccionado?.items_rojo_max    || 0;
     const postresMax = window.menuSeleccionado?.items_postres_max || 0;
 
-    const grisCount    = contarReferenciasSeleccionadas('saladas');
+    const grisCount    = contarReferenciasSeleccionadas('gris');
     const rojoCount    = (window.referenciasSeleccionadas?.rojo    || []).length;
     const postresCount = (window.referenciasSeleccionadas?.postres || []).length;
 
