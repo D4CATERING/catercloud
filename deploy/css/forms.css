@@ -7496,9 +7496,8 @@ h3 {
 }
 
 .routes-stop-vehicle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+  display: grid;
+  gap: 3px;
   color: #64748b;
   font-size: 0.68rem;
   font-weight: 800;
@@ -7506,7 +7505,8 @@ h3 {
 }
 
 .routes-stop-vehicle select {
-  min-width: 170px;
+  width: 100%;
+  min-width: 0;
 }
 
 .routes-stop-vehicle-wrap {
@@ -7514,7 +7514,7 @@ h3 {
   gap: 3px;
 }
 
-.routes-stop-vehicle-wrap small {
+.routes-stop-bottom-controls small {
   color: #53657f;
   font-size: 0.68rem;
   font-weight: 700;
@@ -7622,9 +7622,9 @@ h3 {
 
 .routes-stop-row {
   display: grid;
-  grid-template-columns: 28px minmax(180px, 1fr) minmax(190px, auto) 76px minmax(250px, auto);
+  grid-template-columns: 28px minmax(220px, 1fr) minmax(390px, 0.9fr);
   gap: 8px;
-  align-items: center;
+  align-items: start;
   border: 1px solid #eef2f7;
   border-radius: 7px;
   background: #f8fafc;
@@ -7645,7 +7645,6 @@ h3 {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  margin-top: 4px;
   border-radius: 999px;
   padding: 2px 7px;
   font-size: .68rem;
@@ -7674,13 +7673,54 @@ h3 {
   gap: 5px;
 }
 
+.routes-stop-controls {
+  display: grid;
+  gap: 6px;
+}
+
+.routes-stop-top-controls,
+.routes-stop-bottom-controls {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 104px;
+  gap: 8px;
+}
+
+.routes-stop-top-controls {
+  align-items: end;
+}
+
+.routes-stop-bottom-controls {
+  align-items: center;
+}
+
 .routes-stop-duration {
+  display: grid;
+  gap: 3px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.routes-stop-duration-input {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #64748b;
   font-size: 0.72rem;
   font-weight: 700;
+  text-transform: none;
+}
+
+.routes-stop-info {
+  display: grid;
+  gap: 4px;
+}
+
+.routes-stop-time-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .routes-stop-duration input {
@@ -8043,10 +8083,16 @@ h3 {
 }
 
 .routes-stop-row {
-  grid-template-columns: 24px minmax(180px, 1fr) minmax(170px, auto) 68px minmax(230px, auto);
+  grid-template-columns: 24px minmax(180px, 1fr) minmax(330px, 0.9fr);
   gap: 6px;
   border-radius: 6px;
   padding: 6px;
+}
+
+.routes-stop-top-controls,
+.routes-stop-bottom-controls {
+  grid-template-columns: minmax(170px, 1fr) 96px;
+  gap: 6px;
 }
 
 .routes-stop-order {
@@ -8099,6 +8145,10 @@ h3 {
   .routes-route-header-actions {
     justify-content: flex-start;
   }
+
+  .routes-stop-actions {
+    justify-content: flex-start;
+  }
 }
 
 @media (min-width: 901px) and (max-width: 1180px) {
@@ -8138,8 +8188,9 @@ h3 {
     flex-wrap: wrap;
   }
 
-  .routes-stop-duration {
-    justify-content: flex-start;
+  .routes-stop-top-controls,
+  .routes-stop-bottom-controls {
+    grid-template-columns: 1fr;
   }
 
   .routes-stop-row button:not(.routes-icon-btn) {

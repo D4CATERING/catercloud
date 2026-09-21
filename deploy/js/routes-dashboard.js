@@ -620,6 +620,11 @@ function getVehiculoParadaRuta(stop, route) {
         || {};
 }
 
+function getContactoParadaRuta(stop) {
+    const match = String(stop.notes || '').match(/contacto:([^|]+)/);
+    return match?.[1]?.trim() || '';
+}
+
 function renderSelectorVehiculoParadaRuta(stop, route) {
     const selectedId = stop.vehicle_id || route.vehicle_id || route.vehicle?.id || route.route_vehicles?.id || '';
     return `
@@ -676,28 +681,40 @@ function renderizarPlanningRutas() {
                         const tiempo = timelinePorStop.get(String(stop.id)) || {};
                         const estadoParada = normalizarEstadoParadaRuta(stop.status);
                         const vehiculoParada = getVehiculoParadaRuta(stop, route);
+                        const contacto = getContactoParadaRuta(stop);
                         return `
                         <div class="routes-stop-row routes-stop-row--${estadoParada}">
                             <span class="routes-stop-order">${Number(stop.stop_order || 0)}</span>
-                            <div>
-                                <strong>${stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega'} · ${escapeLogisticaHtml(stop.company_name || 'Sin empresa')}</strong>
+                            <div class="routes-stop-info">
+                                <strong>${stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega'} · ${escapeLogisticaHtml(stop.company_name || 'Sin empresa')}${contacto ? ` · ${escapeLogisticaHtml(contacto)}` : ''}</strong>
                                 <small>${escapeLogisticaHtml(stop.address_street || '')} ${escapeLogisticaHtml(stop.address_number || '')} · ${escapeLogisticaHtml(stop.postal_code || '')}</small>
-                                <small>${escapeLogisticaHtml(getResumenHoraStopRuta(stop, tiempo))}</small>
-                                <span class="routes-stop-status routes-stop-status--${estadoParada}">${getLabelEstadoParadaRuta(estadoParada)}</span>
+                                <div class="routes-stop-time-line">
+                                    <small>${escapeLogisticaHtml(getResumenHoraStopRuta(stop, tiempo))}</small>
+                                    <span class="routes-stop-status routes-stop-status--${estadoParada}">${getLabelEstadoParadaRuta(estadoParada)}</span>
+                                </div>
                             </div>
-                            <div class="routes-stop-vehicle-wrap">
-                                ${renderSelectorVehiculoParadaRuta(stop, route)}
-                                <small>${escapeLogisticaHtml(vehiculoParada.plate || vehiculoParada.name || '')}</small>
-                            </div>
-                            <label class="routes-stop-duration">
-                                <input type="number" id="rutaStopDuration_${stop.id}" min="0" step="5" value="${escapeLogisticaHtml(getDuracionParadaRuta(stop))}">
-                                <span>min</span>
-                            </label>
-                            <div class="routes-stop-actions">
-                                <button type="button" ${estadoParada === 'in_route' || estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'in_route')">En ruta</button>
-                                <button type="button" ${estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'delivered')">Entregado</button>
-                                <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="guardarDuracionParadaRuta('${stop.id}')">Guardar</button>
-                                <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="eliminarParadaRutaLogistica('${stop.id}')">×</button>
+                            <div class="routes-stop-controls">
+                                <div class="routes-stop-top-controls">
+                                    <div class="routes-stop-vehicle-wrap">
+                                        ${renderSelectorVehiculoParadaRuta(stop, route)}
+                                    </div>
+                                    <label class="routes-stop-duration">
+                                        <span>Duracion parada</span>
+                                        <span class="routes-stop-duration-input">
+                                            <input type="number" id="rutaStopDuration_${stop.id}" min="0" step="5" value="${escapeLogisticaHtml(getDuracionParadaRuta(stop))}">
+                                            <span>min</span>
+                                        </span>
+                                    </label>
+                                </div>
+                                <div class="routes-stop-bottom-controls">
+                                    <small>${escapeLogisticaHtml(vehiculoParada.plate || vehiculoParada.name || '')}</small>
+                                    <div class="routes-stop-actions">
+                                        <button type="button" ${estadoParada === 'in_route' || estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'in_route')">En ruta</button>
+                                        <button type="button" ${estadoParada === 'delivered' || !puedeEditarLogistica() ? 'disabled' : ''} onclick="actualizarEstadoParadaRuta('${stop.id}', 'delivered')">Entregado</button>
+                                        <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="guardarDuracionParadaRuta('${stop.id}')">Guardar</button>
+                                        <button type="button" ${puedeEditarLogistica() ? '' : 'disabled'} onclick="eliminarParadaRutaLogistica('${stop.id}')">×</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `}).join('') : '<div class="routes-empty routes-empty--small">Sin paradas.</div>'}
