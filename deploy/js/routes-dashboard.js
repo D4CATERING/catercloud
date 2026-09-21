@@ -595,12 +595,6 @@ function renderEditorRutaLogistica(route, vehicle, driver) {
     return `
         <div class="routes-route-editor">
             <label>
-                Furgoneta
-                <select id="editRutaVehiculo_${route.id}">
-                    ${renderOptionsVehiculosRuta(route.vehicle_id || vehicle.id)}
-                </select>
-            </label>
-            <label>
                 Conductor
                 <select id="editRutaConductor_${route.id}">
                     ${renderOptionsConductoresRuta(route.driver_id || driver.id)}
@@ -615,6 +609,31 @@ function renderEditorRutaLogistica(route, vehicle, driver) {
                 <button type="button" class="routes-icon-btn routes-icon-btn--muted" onclick="cancelarEdicionRutaLogistica()">Cancelar</button>
             </div>
         </div>
+    `;
+}
+
+function getVehiculoParadaRuta(stop, route) {
+    const vehicleId = stop.vehicle_id || route.vehicle_id || route.vehicle?.id || route.route_vehicles?.id || '';
+    return (window.rutasLogisticaState.vehicles || []).find(vehicle => String(vehicle.id) === String(vehicleId))
+        || route.vehicle
+        || route.route_vehicles
+        || {};
+}
+
+function renderSelectorVehiculoParadaRuta(stop, route) {
+    const selectedId = stop.vehicle_id || route.vehicle_id || route.vehicle?.id || route.route_vehicles?.id || '';
+    return `
+        <label class="routes-stop-vehicle">
+            <span>Furgoneta</span>
+            <select
+                id="rutaStopVehicle_${stop.id}"
+                class="routes-mini-select"
+                ${puedeEditarLogistica() ? '' : 'disabled'}
+                onchange="actualizarVehiculoParadaRuta('${stop.id}')"
+            >
+                ${renderOptionsVehiculosRuta(selectedId)}
+            </select>
+        </label>
     `;
 }
 
@@ -639,7 +658,7 @@ function renderizarPlanningRutas() {
                 <header>
                     <div>
                         <strong>${escapeLogisticaHtml(route.name || vehicle.plate || 'Ruta')}</strong>
-                        <span>${escapeLogisticaHtml(vehicle.name || 'Furgoneta')} ${escapeLogisticaHtml(vehicle.plate || '')} · ${escapeLogisticaHtml(driver.name || 'Sin conductor')}</span>
+                        <span>${escapeLogisticaHtml(driver.name || 'Sin conductor')}</span>
                         <small class="routes-route-time-summary">
                             Total ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalRuta))}
                             · Servicio ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalServicio))}
@@ -656,6 +675,7 @@ function renderizarPlanningRutas() {
                     ${stops.length ? stops.map(stop => {
                         const tiempo = timelinePorStop.get(String(stop.id)) || {};
                         const estadoParada = normalizarEstadoParadaRuta(stop.status);
+                        const vehiculoParada = getVehiculoParadaRuta(stop, route);
                         return `
                         <div class="routes-stop-row routes-stop-row--${estadoParada}">
                             <span class="routes-stop-order">${Number(stop.stop_order || 0)}</span>
@@ -664,6 +684,10 @@ function renderizarPlanningRutas() {
                                 <small>${escapeLogisticaHtml(stop.address_street || '')} ${escapeLogisticaHtml(stop.address_number || '')} · ${escapeLogisticaHtml(stop.postal_code || '')}</small>
                                 <small>${escapeLogisticaHtml(getResumenHoraStopRuta(stop, tiempo))}</small>
                                 <span class="routes-stop-status routes-stop-status--${estadoParada}">${getLabelEstadoParadaRuta(estadoParada)}</span>
+                            </div>
+                            <div class="routes-stop-vehicle-wrap">
+                                ${renderSelectorVehiculoParadaRuta(stop, route)}
+                                <small>${escapeLogisticaHtml(vehiculoParada.plate || vehiculoParada.name || '')}</small>
                             </div>
                             <label class="routes-stop-duration">
                                 <input type="number" id="rutaStopDuration_${stop.id}" min="0" step="5" value="${escapeLogisticaHtml(getDuracionParadaRuta(stop))}">
@@ -730,11 +754,9 @@ function crearTextoPlanningRutasWhatsApp() {
 
     routes.forEach(({ route, stops }, routeIndex) => {
         const driver = route.driver || route.route_drivers || {};
-        const vehicle = route.vehicle || route.route_vehicles || {};
         const conductor = driver.name || 'Sin conductor';
-        const vehiculo = vehicle.plate || vehicle.name || 'Ruta';
         if (routes.length > 1) {
-            lineas.push(`${routeIndex + 1}. ${vehiculo} - ${conductor}`);
+            lineas.push(`${routeIndex + 1}. ${conductor}`);
         }
 
         stops
@@ -811,7 +833,8 @@ async function guardarEdicionRutaLogistica(routeId) {
         return;
     }
 
-    const vehicleId = document.getElementById(`editRutaVehiculo_${routeId}`)?.value || null;
+    const route = (window.rutasLogisticaState.routes || []).find(item => String(item.id) === String(routeId));
+    const vehicleId = route?.vehicle_id || route?.vehicle?.id || route?.route_vehicles?.id || null;
     const driverId = document.getElementById(`editRutaConductor_${routeId}`)?.value || null;
     const startsAt = document.getElementById(`editRutaSalida_${routeId}`)?.value || '08:00';
     if (!vehicleId || !driverId) {
@@ -837,6 +860,39 @@ async function guardarEdicionRutaLogistica(routeId) {
     } catch (error) {
         console.error('Error editando ruta:', error);
         mostrarMensajeRutasLogistica(`No se pudo editar la ruta: ${error.message || error}`, 'error');
+    }
+}
+
+async function actualizarVehiculoParadaRuta(stopId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
+    if (!window.supabaseClient) {
+        mostrarMensajeRutasLogistica('Supabase no esta disponible.', 'error');
+        return;
+    }
+
+    const vehicleId = document.getElementById(`rutaStopVehicle_${stopId}`)?.value || null;
+    if (!vehicleId) {
+        mostrarMensajeRutasLogistica('Selecciona una furgoneta valida para el pedido.', 'error');
+        return;
+    }
+
+    const vehiculo = (window.rutasLogisticaState.vehicles || []).find(v => String(v.id) === String(vehicleId));
+    if (!vehiculo) {
+        mostrarMensajeRutasLogistica('La furgoneta seleccionada ya no esta disponible. Recarga rutas e intenta de nuevo.', 'error');
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_stops')
+            .update({ vehicle_id: vehicleId, updated_at: getTimestampOperativoDashboard() })
+            .eq('id', stopId);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Furgoneta actualizada para este pedido.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error actualizando furgoneta de parada:', error);
+        mostrarMensajeRutasLogistica(`No se pudo actualizar la furgoneta: ${error.message || error}`, 'error');
     }
 }
 
@@ -1181,15 +1237,19 @@ function debeAbrirRutaNuevaParaPedido(item, route, routes, extrasPorRuta, vehicu
     );
 }
 
-function crearParadasPedidoRuta(item, routeId, stopOrderBase = 0, fecha = getFechaRutasLogistica()) {
+function getVehicleIdRuta(route) {
+    return route?.vehicle_id || route?.vehicle?.id || route?.route_vehicles?.id || null;
+}
+
+function crearParadasPedidoRuta(item, routeId, stopOrderBase = 0, fecha = getFechaRutasLogistica(), vehicleId = null) {
     const paradas = [];
     const entregaOrder = stopOrderBase + 1;
     if (getFechaLogisticaItem(item) === fecha) {
-        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'delivery', entregaOrder));
+        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'delivery', entregaOrder, vehicleId));
     }
 
     if (getFechaRecogidaRutaItem(item) === fecha && getHoraRecogidaClienteRutaItem(item)) {
-        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'pickup', stopOrderBase + paradas.length + 1));
+        paradas.push(crearPayloadParadaRutaLogistica(item, routeId, 'pickup', stopOrderBase + paradas.length + 1, vehicleId));
     }
 
     return paradas;
@@ -1256,7 +1316,7 @@ async function crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponible
     return crearRutaAutomaticaLogistica(fecha, vehicle, driver, startsAt);
 }
 
-function crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder) {
+function crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder, vehicleId = null) {
     const codigo = getCodigoRutaPedido(item);
     const log = item.logistica || item.logistica_inline || {};
     const direccion = getDireccionRutaPedido(item);
@@ -1267,6 +1327,7 @@ function crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder) {
     return {
         route_id: routeId,
         order_id: null,
+        vehicle_id: vehicleId,
         stop_type: tipo,
         stop_order: stopOrder,
         company_name: item.empresa || item.company_name || '',
@@ -1345,7 +1406,7 @@ async function generarRutasLogisticaDia() {
         for (const item of pedidosOrdenados) {
             let route = seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha);
             let nuevasParadas = route
-                ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0)
+                ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0, fecha, getVehicleIdRuta(route))
                 : crearParadasPedidoRuta(item, '__nueva_ruta__', 0);
             if (!nuevasParadas.length) continue;
 
@@ -1361,7 +1422,7 @@ async function generarRutasLogisticaDia() {
                     routes.push(route);
                     stopOrders.set(String(route.id), 0);
                     extrasPorRuta.set(String(route.id), []);
-                    nuevasParadas = crearParadasPedidoRuta(item, route.id, 0);
+                    nuevasParadas = crearParadasPedidoRuta(item, route.id, 0, fecha, getVehicleIdRuta(route));
                 }
             }
 
@@ -1380,7 +1441,7 @@ async function generarRutasLogisticaDia() {
                     route = null;
                 }
                 nuevasParadas = route
-                    ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0)
+                    ? crearParadasPedidoRuta(item, route.id, stopOrders.get(String(route.id)) || 0, fecha, getVehicleIdRuta(route))
                     : nuevasParadas;
             }
 
@@ -1393,7 +1454,7 @@ async function generarRutasLogisticaDia() {
                 routes.push(route);
                 stopOrders.set(String(route.id), 0);
                 extrasPorRuta.set(String(route.id), []);
-                nuevasParadas = crearParadasPedidoRuta(item, route.id, 0);
+                nuevasParadas = crearParadasPedidoRuta(item, route.id, 0, fecha, getVehicleIdRuta(route));
             }
 
             const routeKey = String(route.id);
@@ -1401,6 +1462,7 @@ async function generarRutasLogisticaDia() {
                 const order = (stopOrders.get(routeKey) || 0) + 1;
                 parada.route_id = route.id;
                 parada.stop_order = order;
+                parada.vehicle_id = parada.vehicle_id || getVehicleIdRuta(route);
                 stopOrders.set(routeKey, order);
                 stopsPayload.push(parada);
                 extrasPorRuta.get(routeKey)?.push(parada);
@@ -1428,12 +1490,6 @@ async function generarRutasLogisticaDia() {
 
 async function agregarParadaRutaLogistica(codigo, tipo) {
     if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar rutas.')) return;
-    const select = document.getElementById(`rutaDestino_${codigo}`);
-    const routeId = select?.value;
-    if (!routeId) {
-        mostrarMensajeRutasLogistica('Crea o selecciona una ruta antes de añadir paradas.', 'error');
-        return;
-    }
     const item = getPedidosRutasDelDia().find(pedido => String(getCodigoRutaPedido(pedido)) === String(codigo));
     if (!item) {
         mostrarMensajeRutasLogistica('No se encontro el pedido seleccionado.', 'error');
@@ -1446,11 +1502,19 @@ async function agregarParadaRutaLogistica(codigo, tipo) {
         return;
     }
 
-    const route = (window.rutasLogisticaState.routes || []).find(r => String(r.id) === String(routeId));
-    const stopOrder = getRouteStops(route).length + 1;
-    const payload = crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder);
-
     try {
+        const select = document.getElementById(`rutaDestino_${codigo}`);
+        const routeId = select?.value || null;
+        const route = routeId
+            ? (window.rutasLogisticaState.routes || []).find(r => String(r.id) === String(routeId))
+            : null;
+        if (!route) {
+            mostrarMensajeRutasLogistica('Selecciona una ruta creada para añadir la parada.', 'error');
+            return;
+        }
+
+        const stopOrder = getRouteStops(route).length + 1;
+        const payload = crearPayloadParadaRutaLogistica(item, routeId, tipo, stopOrder, getVehicleIdRuta(route));
         const { error } = await window.supabaseClient.from('route_stops').insert(payload);
         if (error) throw error;
         mostrarMensajeRutasLogistica('Parada añadida a la ruta.', 'success');

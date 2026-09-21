@@ -7495,6 +7495,31 @@ h3 {
   gap: 6px;
 }
 
+.routes-stop-vehicle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.routes-stop-vehicle select {
+  min-width: 170px;
+}
+
+.routes-stop-vehicle-wrap {
+  display: grid;
+  gap: 3px;
+}
+
+.routes-stop-vehicle-wrap small {
+  color: #53657f;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
 .routes-icon-btn {
   display: inline-flex;
   align-items: center;
@@ -7543,7 +7568,7 @@ h3 {
 
 .routes-route-editor {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) 105px auto;
+  grid-template-columns: minmax(150px, 1fr) 105px auto;
   gap: 8px;
   align-items: end;
   border: 1px solid #e2e8f0;
@@ -7597,7 +7622,7 @@ h3 {
 
 .routes-stop-row {
   display: grid;
-  grid-template-columns: 28px minmax(180px, 1fr) 76px minmax(250px, auto);
+  grid-template-columns: 28px minmax(180px, 1fr) minmax(190px, auto) 76px minmax(250px, auto);
   gap: 8px;
   align-items: center;
   border: 1px solid #eef2f7;
@@ -8018,7 +8043,7 @@ h3 {
 }
 
 .routes-stop-row {
-  grid-template-columns: 24px minmax(180px, 1fr) 68px minmax(230px, auto);
+  grid-template-columns: 24px minmax(180px, 1fr) minmax(170px, auto) 68px minmax(230px, auto);
   gap: 6px;
   border-radius: 6px;
   padding: 6px;
