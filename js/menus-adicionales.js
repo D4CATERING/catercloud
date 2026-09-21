@@ -1231,14 +1231,18 @@
     const saladas = menu.referencias.saladas || [];
     const postres = menu.referencias.postres || [];
     const rojasIds = new Set((window.referenciasPaginacion?.rojo?.items || []).map(ref => String(ref.id)));
+    const esRojaGuardada = ref => ref?.tipoSeleccion === 'rojo'
+      || ref?.grupo === 'rojo'
+      || ref?.item_group === 'rojo'
+      || rojasIds.has(String(ref?.id));
     const marcarCantidadGuardada = ref => ({
       ...ref,
       cantidad_manual: ref.cantidad_manual !== false,
       _cantidad_guardada_edicion: true
     });
     window.referenciasSeleccionadas = {
-      gris: saladas.filter(ref => !rojasIds.has(String(ref.id))).map(marcarCantidadGuardada),
-      rojo: saladas.filter(ref => rojasIds.has(String(ref.id))).map(marcarCantidadGuardada),
+      gris: saladas.filter(ref => !esRojaGuardada(ref)).map(marcarCantidadGuardada),
+      rojo: saladas.filter(esRojaGuardada).map(marcarCantidadGuardada),
       postres: postres.map(marcarCantidadGuardada)
     };
     Object.defineProperty(window.referenciasSeleccionadas, 'saladas', {

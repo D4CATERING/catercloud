@@ -704,7 +704,8 @@ function asegurarReferenciasFueraCartaSection() {
             <div class="fuera-carta-form">
                 <input type="text" id="fueraCartaNombre" class="dc-input" placeholder="Nombre de la referencia">
                 <select id="fueraCartaTipo" class="dc-input">
-                    <option value="saladas">Salada</option>
+                    <option value="gris">Gris</option>
+                    <option value="rojo">Roja</option>
                     <option value="postres">Postre</option>
                 </select>
                 <input type="number" id="fueraCartaCantidad" class="dc-input" min="0.1" step="0.5" placeholder="Auto">
@@ -748,7 +749,28 @@ function asegurarReferenciasFueraCartaSection() {
 }
 
 function getTipoSeleccionFueraCarta(tipo) {
-    return tipo === 'postres' ? 'postres' : 'gris';
+    if (tipo === 'postres') return 'postres';
+    if (tipo === 'rojo') return 'rojo';
+    return 'gris';
+}
+
+function getGrupoReferenciaFueraCarta(tipoSeleccion) {
+    if (tipoSeleccion === 'postres') return 'postre';
+    if (tipoSeleccion === 'rojo') return 'rojo';
+    return 'gris';
+}
+
+function getTipoSeleccionReferenciaFueraCarta(ref = {}) {
+    if (ref.tipoSeleccion === 'postres' || ref.grupo === 'postre' || ref.tipo === 'postres') return 'postres';
+    if (ref.tipoSeleccion === 'rojo' || ref.grupo === 'rojo' || ref.item_group === 'rojo') return 'rojo';
+    return 'gris';
+}
+
+function getEtiquetaReferenciaFueraCarta(ref = {}) {
+    const tipoSeleccion = getTipoSeleccionReferenciaFueraCarta(ref);
+    if (tipoSeleccion === 'postres') return 'Postre';
+    if (tipoSeleccion === 'rojo') return 'Roja';
+    return 'Gris';
 }
 
 function getMaxReferenciasPorTipoSeleccion(tipoSeleccion) {
@@ -770,9 +792,11 @@ function contarReferenciasSeleccionadas(tipoGrupo) {
 }
 
 function calcularCantidadFueraCarta(tipo) {
+    const tipoSeleccion = getTipoSeleccionFueraCarta(tipo);
     return calcularCantidad({
         fuera_carta: true,
-        grupo: tipo === 'postres' ? 'postre' : 'salado'
+        grupo: getGrupoReferenciaFueraCarta(tipoSeleccion),
+        tipoSeleccion
     }, window.pax || 0);
 }
 
@@ -819,7 +843,8 @@ function agregarReferenciaFueraCarta() {
         unidad,
         fuera_carta: true,
         cantidad_manual: cantidadManual,
-        grupo: tipo === 'postres' ? 'postre' : 'salado'
+        tipoSeleccion,
+        grupo: getGrupoReferenciaFueraCarta(tipoSeleccion)
     };
 
     window.referenciasSeleccionadas[tipoSeleccion].push(ref);
@@ -872,7 +897,7 @@ function renderReferenciasFueraCarta() {
 
     window.referenciasFueraCarta = items.map(ref => ({
         ...ref,
-        tipoSeleccion: ref.grupo === 'postre' ? 'postres' : 'gris'
+        tipoSeleccion: getTipoSeleccionReferenciaFueraCarta(ref)
     }));
 
     if (contador) contador.textContent = String(items.length);
@@ -885,7 +910,7 @@ function renderReferenciasFueraCarta() {
         <div class="fuera-carta-item">
             <div class="fuera-carta-name">
                 <strong>${ref.nombre}</strong>
-                <span>${ref.grupo === 'postre' ? 'Postre' : 'Salada'}</span>
+                <span>${getEtiquetaReferenciaFueraCarta(ref)}</span>
             </div>
             <input type="number" min="0.1" step="0.5" value="${ref.cantidad || 1}"
                 oninput="actualizarCantidadFueraCarta('${String(ref.id).replace(/'/g, "\\'")}', this.value)">
