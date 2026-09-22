@@ -16,6 +16,7 @@ El proyecto funciona, pero tiene deuda tecnica acumulada:
 - Mucha logica aun vive en archivos grandes como `js/dashboard.js`, `js/historial.js`, `js/desayunos.js` y `js/menus-adicionales.js`.
 - Rutas ya salio de `js/dashboard.js` hacia `js/routes-dashboard.js`, con reglas puras en `js/routes-module.js`.
 - Alertas operativas ya salieron de `js/dashboard.js` hacia `js/operational-alerts.js`.
+- Helpers puros de Cocina ya salieron de `js/dashboard.js` hacia `js/kitchen-module.js`.
 - Varias zonas leen y escriben `historialComandas` y `historialComandasLogistica` directamente en `localStorage`.
 - Supabase `orders` y `localStorage` conviven como fuentes de datos.
 - El directorio `deploy` duplica archivos de raiz y requiere copia manual.
@@ -126,6 +127,11 @@ Actualizado despues:
 
 - `js/dashboard.js` queda en 2841 lineas tras extraer alertas operativas.
 - `js/operational-alerts.js` concentra avisos de cambios/revisiones, sonido, tarjetas y marcas vistas.
+
+Actualizado despues:
+
+- `js/dashboard.js` queda en 2463 lineas tras extraer helpers puros de Cocina.
+- `js/kitchen-module.js` concentra estados, totales, items de produccion e intolerancias de Cocina sin tocar Supabase, `localStorage` ni render principal.
 
 ## Criterio de exito
 

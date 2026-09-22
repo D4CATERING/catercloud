@@ -8,7 +8,7 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 
 | Archivo | Lineas | Responsabilidad actual | Riesgo principal |
 | --- | ---: | --- | --- |
-| `js/dashboard.js` | 2841 | Dashboard, Cocina, Logistica e inventario | Cocina y Logistica aun conviven en un archivo grande |
+| `js/dashboard.js` | 2463 | Dashboard, vistas operativas, Logistica e inventario | Logistica aun convive en un archivo grande; Cocina ya empezo a separarse |
 | `js/historial.js` | 2829 | Historial, expedientes, impresion, edicion, adjuntos | Edicion y visualizacion comparten demasiado estado |
 | `js/desayunos.js` | 2314 | Menus de desayuno, referencias, popups de seleccion | Estado de seleccion complejo |
 | `js/menus-adicionales.js` | 2206 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
@@ -18,6 +18,7 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 | `js/main.js` | 1477 | Flujo principal de guardado, formulario, comanda logistica | Guardado de cocina/logistica acoplado |
 | `js/referencias.js` | 1097 | Referencias de menus y catalogos auxiliares | Consultas y render de referencias conviven |
 | `js/operational-alerts.js` | 398 | Alertas operativas de cambios, tarjetas, sonido y marcas vistas | Debe limitarse a avisos de revision; no debe renderizar listas de Cocina/Logistica |
+| `js/kitchen-module.js` | 381 | Helpers puros de Cocina: estados, items de produccion, intolerancias y totales | Debe mantenerse sin Supabase, sin `localStorage` y sin render de dashboard |
 | `js/routes-module.js` | 162 | Utilidades puras y decisiones del planning automatico de Rutas | Debe crecer solo con reglas puras de Rutas |
 
 ## Archivos CSS mas grandes
@@ -43,6 +44,7 @@ Metricas tomadas con `tools/audit-project.ps1`:
 | `routes-dashboard.js` | 105 | 14 | 8 | 2 | 34 |
 | `main.js` | 212 | 0 | 8 | 1 | 0 |
 | `operational-alerts.js` | 22 | 2 | 2 | 4 | 0 |
+| `kitchen-module.js` | 0 | 0 | 0 | 0 | 0 |
 | `routes-module.js` | 2 | 0 | 0 | 0 | 0 |
 
 Estas metricas no son malas por si solas, pero indican donde hay mas riesgo de regresion.
@@ -77,6 +79,11 @@ Cocina debe controlar solo:
 - Alertas de salida relacionadas con produccion.
 
 No debe abrir ni modificar formularios de Logistica salvo en el flujo explicito de servicios.
+
+Estado actual:
+
+- `js/kitchen-module.js` ya contiene helpers puros de estado, totales, items de produccion e intolerancias.
+- `js/dashboard.js` todavia renderiza las tarjetas de Cocina y ejecuta guardados/acciones operativas.
 
 ### Logistica
 
@@ -115,7 +122,7 @@ No deberia reconstruir el estado desde el DOM salvo como transicion temporal.
 
 1. `js/storage.js`: seguir reduciendo wrappers historicos sin cambiar contrato publico.
 2. `js/operational-alerts.js`: mantener aisladas las alertas operativas y agregar diagnostico cuando se cambie su comportamiento.
-3. `js/dashboard.js`: separar helpers de Cocina.
+3. `js/dashboard.js`: seguir separando Cocina; helpers puros ya viven en `js/kitchen-module.js`.
 4. `js/dashboard.js`: separar helpers de Logistica.
 5. `js/routes-dashboard.js`: seguir separando reglas de planificacion pura hacia `js/routes-module.js` y, despues, considerar separar UI de datos.
 6. `js/historial.js`: separar impresion/expediente de edicion.
