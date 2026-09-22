@@ -7125,10 +7125,14 @@ h3 {
 
 .routes-toolbar {
   display: grid;
-  grid-template-columns: 145px minmax(160px, 1fr) minmax(160px, 1fr) auto auto auto auto;
+  grid-template-columns: 145px auto auto auto auto;
   gap: 8px;
   align-items: end;
   margin-bottom: 12px;
+}
+
+.routes-toolbar-hidden-select {
+  display: none !important;
 }
 
 .routes-toolbar label {
@@ -7234,18 +7238,18 @@ h3 {
 
 .routes-drivers-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 8px;
-  padding: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px;
+  padding: 8px;
 }
 
 .routes-driver-card {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #fff;
-  padding: 10px;
+  padding: 8px;
 }
 
 .routes-driver-card--off {
@@ -7256,6 +7260,7 @@ h3 {
 .routes-driver-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 8px;
 }
 
@@ -7273,7 +7278,7 @@ h3 {
 .routes-driver-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
 }
 
 .routes-driver-fields label,
@@ -7410,7 +7415,7 @@ h3 {
 }
 
 .routes-pending-main,
-.routes-route-card header > div {
+.routes-route-title {
   display: grid;
   gap: 2px;
 }
@@ -7493,6 +7498,11 @@ h3 {
   align-items: center;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.routes-route-header-actions small {
+  line-height: 28px;
+  white-space: nowrap;
 }
 
 .routes-stop-vehicle {
@@ -7668,7 +7678,7 @@ h3 {
 
 .routes-stop-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   gap: 5px;
 }
@@ -7690,7 +7700,10 @@ h3 {
 }
 
 .routes-stop-bottom-controls {
+  display: flex;
   align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
 }
 
 .routes-stop-duration {
@@ -7767,7 +7780,7 @@ h3 {
 
 /* Rutas: interfaz compacta */
 .routes-toolbar {
-  grid-template-columns: 134px minmax(150px, 1fr) minmax(150px, 1fr) auto auto auto auto;
+  grid-template-columns: 134px auto auto auto auto;
   gap: 6px;
   margin-bottom: 8px;
 }
@@ -7807,7 +7820,7 @@ h3 {
 }
 
 .routes-drivers-list {
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 6px;
   padding: 8px;
 }
@@ -7820,7 +7833,7 @@ h3 {
 
 .routes-driver-header {
   gap: 6px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .routes-driver-header strong {

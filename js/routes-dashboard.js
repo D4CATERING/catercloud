@@ -377,7 +377,6 @@ function renderizarConductoresRutasLogistica() {
                 <div class="routes-driver-header">
                     <div>
                         <strong>${escapeLogisticaHtml(driver.name || 'Sin nombre')}</strong>
-                        <span class="routes-driver-phone">${escapeLogisticaHtml(driver.phone || 'Sin telefono')}</span>
                     </div>
                     <span class="routes-driver-status ${operativo ? 'routes-driver-status--on' : 'routes-driver-status--off'}">${operativo ? 'Operativo' : 'No operativo'}</span>
                 </div>
@@ -661,13 +660,8 @@ function renderizarPlanningRutas() {
         return `
             <article class="routes-route-card">
                 <header>
-                    <div>
+                    <div class="routes-route-title">
                         <strong>${escapeLogisticaHtml(route.name || vehicle.plate || 'Ruta')}</strong>
-                        <span>${escapeLogisticaHtml(driver.name || 'Sin conductor')}</span>
-                        <small class="routes-route-time-summary">
-                            Total ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalRuta))}
-                            · Servicio ${escapeLogisticaHtml(formatearDuracionRuta(resumenTiempo.totalServicio))}
-                        </small>
                     </div>
                     <div class="routes-route-header-actions">
                         <small>${primeraSalida ? `Primera salida ${escapeLogisticaHtml(primeraSalida)}` : `Inicio ruta ${escapeLogisticaHtml(route.starts_at || '-')}`}</small>
@@ -750,18 +744,29 @@ function getHoraCompartirStopRuta(stop) {
         : (stop.planned_departure || stop.planned_arrival || stop.deadline_time || '');
 }
 
+function formatearHoraPrincipalPlanningCompartido(hora) {
+    const match = String(hora || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return hora || '--:--';
+    return `${match[1].padStart(2, '0')}:${match[2]}`;
+}
+
 function crearTextoPlanningRutasWhatsApp() {
     const fecha = getFechaRutasLogistica();
-    const routes = (window.rutasLogisticaState.routes || [])
-        .map(route => ({ route, stops: getRouteStops(route) }))
-        .filter(item => item.stops.length)
-        .sort((a, b) => {
-            const horaA = getHoraCompartirStopRuta(a.stops[0]) || a.route.starts_at || '';
-            const horaB = getHoraCompartirStopRuta(b.stops[0]) || b.route.starts_at || '';
-            return String(horaA).localeCompare(String(horaB));
-        });
+    const paradas = (window.rutasLogisticaState.routes || []).flatMap(route => {
+        const driver = route.driver || route.route_drivers || {};
+        const conductor = driver.name || 'Sin conductor';
+        return getRouteStops(route).map(stop => ({
+            stop,
+            conductor,
+            horaOrden: getHoraCompartirStopRuta(stop) || route.starts_at || ''
+        }));
+    }).sort((a, b) => {
+        const hora = String(a.horaOrden).localeCompare(String(b.horaOrden));
+        if (hora !== 0) return hora;
+        return String(a.stop.company_name || '').localeCompare(String(b.stop.company_name || ''));
+    });
 
-    if (!routes.length) return '';
+    if (!paradas.length) return '';
 
     const lineas = [
         'Logistica Decuatro Catering',
@@ -769,29 +774,19 @@ function crearTextoPlanningRutasWhatsApp() {
         ''
     ];
 
-    routes.forEach(({ route, stops }, routeIndex) => {
-        const driver = route.driver || route.route_drivers || {};
-        const conductor = driver.name || 'Sin conductor';
-        if (routes.length > 1) {
-            lineas.push(`${routeIndex + 1}. ${conductor}`);
-        }
+    let bloqueActual = '';
+    paradas.forEach(({ stop, conductor }) => {
+        const hora = formatearHoraPrincipalPlanningCompartido(getHoraCompartirStopRuta(stop));
+        if (bloqueActual && bloqueActual !== hora) lineas.push('');
+        bloqueActual = hora;
 
-        stops
-            .slice()
-            .sort((a, b) => String(getHoraCompartirStopRuta(a)).localeCompare(String(getHoraCompartirStopRuta(b))))
-            .forEach(stop => {
-                const hora = getHoraCompartirStopRuta(stop) || '--:--';
-                const entrega = stop.planned_arrival || stop.deadline_time || '';
-                const tipo = stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega';
-                const empresa = stop.company_name || 'Sin empresa';
-                const direccion = [stop.address_street, stop.address_number].filter(Boolean).join(' ').trim();
-                const cp = stop.postal_code ? ` ${stop.postal_code}` : '';
-                const entregaTexto = stop.stop_type === 'delivery' && entrega && entrega !== hora ? ` (${entrega})` : '';
-                lineas.push(`${hora} ${tipo} ${empresa}${entregaTexto} @${conductor}`);
-                if (direccion || cp) lineas.push(`   ${direccion}${cp}`.trimEnd());
-            });
-
-        if (routeIndex < routes.length - 1) lineas.push('');
+        const entrega = stop.planned_arrival || stop.deadline_time || '';
+        const tipo = stop.stop_type === 'pickup' ? 'Recogida' : 'Entrega';
+        const empresa = stop.company_name || 'Sin empresa';
+        const contacto = getContactoParadaRuta(stop);
+        const entregaTexto = stop.stop_type === 'delivery' && entrega && entrega !== hora ? ` (${entrega})` : '';
+        const contactoTexto = contacto ? ` - ${contacto}` : '';
+        lineas.push(`${hora} ${tipo} ${empresa}${contactoTexto}${entregaTexto} @${conductor}`);
     });
 
     return lineas.join('\n').trim();
@@ -1049,8 +1044,12 @@ async function crearRutaLogisticaDia() {
         return;
     }
 
-    const vehicleId = document.getElementById('rutaVehiculoSelect')?.value || null;
-    const driverId = document.getElementById('rutaConductorSelect')?.value || null;
+    const vehicleId = document.getElementById('rutaVehiculoSelect')?.value
+        || window.rutasLogisticaState.vehicles?.[0]?.id
+        || null;
+    const driverId = document.getElementById('rutaConductorSelect')?.value
+        || window.rutasLogisticaState.drivers?.[0]?.id
+        || null;
     const startsAt = getInicioRutaPorConductor(driverId);
     const fecha = getFechaRutasLogistica();
     if (!vehicleId || !driverId) {
@@ -1135,16 +1134,20 @@ function getJornadaRutaEnMinutos(route) {
     return { inicio, fin };
 }
 
+function getHoraReferenciaParadaRuta(stop) {
+    return parseHoraRutaEnMinutos(
+        stop.stop_type === 'delivery'
+            ? (stop.planned_departure || stop.planned_arrival || stop.deadline_time || '')
+            : (stop.planned_arrival || stop.deadline_time || '')
+    );
+}
+
 function paradasDentroJornadaRuta(route, paradasExtra = []) {
     const { inicio, fin } = getJornadaRutaEnMinutos(route);
     if (fin <= inicio) return true;
 
     return [...getRouteStops(route), ...paradasExtra].every(stop => {
-        const hora = parseHoraRutaEnMinutos(
-            stop.stop_type === 'delivery'
-                ? (stop.planned_departure || stop.planned_arrival || stop.deadline_time || '')
-                : (stop.planned_arrival || stop.deadline_time || '')
-        );
+        const hora = getHoraReferenciaParadaRuta(stop);
         if (hora === null) return true;
         return hora >= inicio && hora <= fin;
     });
@@ -1155,6 +1158,26 @@ function calcularDuracionRutaConParadas(route, paradasExtra = []) {
     const traslado = getTiempoTrasladoRutas();
     const servicio = stops.reduce((acc, stop) => acc + getDuracionParadaRuta(stop), 0);
     return servicio + (stops.length * traslado);
+}
+
+function getMetricasJornadaRuta(route, paradasExtra = []) {
+    const { inicio, fin } = getJornadaRutaEnMinutos(route);
+    const stops = [...getRouteStops(route), ...paradasExtra];
+    const horasFin = stops
+        .map(stop => {
+            const hora = getHoraReferenciaParadaRuta(stop);
+            return hora === null ? null : hora + getDuracionParadaRuta(stop);
+        })
+        .filter(hora => hora !== null);
+    const finEstimado = horasFin.length ? Math.max(...horasFin) : inicio;
+    const capacidad = Math.max(0, fin - inicio);
+    return {
+        inicio,
+        fin,
+        capacidad,
+        finEstimado,
+        holguraFinal: Math.max(0, fin - finEstimado)
+    };
 }
 
 function puedeRutaRecibirParadas(route, paradasExtra) {
@@ -1179,6 +1202,8 @@ function getRutasPlannerDeps() {
         getHoraObjetivoRutaPedido,
         normalizarDriverRuta,
         getDriverRuta,
+        getJornadaRutaEnMinutos,
+        getMetricasJornadaRuta,
         getConductoresOperativosRutas,
         contarRutasConParadas,
         getVehiclesCount: () => (window.rutasLogisticaState.vehicles || []).length
@@ -1315,13 +1340,16 @@ async function crearRutaAutomaticaCompatibleLogistica(fecha, vehiculosDisponible
         };
 
         if (!puedeRutaRecibirParadas(rutaPrueba, paradasPrueba)) return null;
-
-        const inicio = parseHoraRutaEnMinutos(driver.work_start || startsAt || '08:00') ?? 480;
-        const fin = parseHoraRutaEnMinutos(driver.work_end || '18:00') ?? 1080;
         return {
             driver,
             index,
-            score: Math.abs(inicio - horaObjetivo) + Math.max(0, horaObjetivo - fin) * 10
+            score: window.CaterCloudRoutes.puntuarConductorParaRutaNueva(
+                driver,
+                paradasPrueba,
+                horaObjetivo,
+                startsAt,
+                getRutasPlannerDeps()
+            )
         };
     }).filter(Boolean).sort((a, b) => a.score - b.score);
 

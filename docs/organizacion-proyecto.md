@@ -13,7 +13,8 @@ Este documento marca el plan de orden tecnico del proyecto. La prioridad es esta
 
 El proyecto funciona, pero tiene deuda tecnica acumulada:
 
-- Mucha logica vive en archivos grandes como `js/dashboard.js`, `js/main.js`, `js/historial.js`, `js/desayunos.js` y `js/menus-adicionales.js`.
+- Mucha logica aun vive en archivos grandes como `js/dashboard.js`, `js/historial.js`, `js/desayunos.js` y `js/menus-adicionales.js`.
+- Rutas ya salio de `js/dashboard.js` hacia `js/routes-dashboard.js`, con reglas puras en `js/routes-module.js`.
 - Varias zonas leen y escriben `historialComandas` y `historialComandasLogistica` directamente en `localStorage`.
 - Supabase `orders` y `localStorage` conviven como fuentes de datos.
 - El directorio `deploy` duplica archivos de raiz y requiere copia manual.
@@ -111,6 +112,14 @@ Siguiente frontera recomendada:
 
 - Crear una prueba/diagnostico simple para Rutas y seguir moviendo reglas del planning a `js/routes-module.js`.
 - Extraer o aislar alertas operativas de `js/dashboard.js`, porque Cocina y Logistica han mostrado regresiones visuales de tarjetas y estados.
+- Cuando los cambios actuales de Rutas esten validados y guardados, la siguiente tarea tecnica recomendada es crear un diagnostico de planning automatico con escenarios conocidos de jornadas y pedidos.
+
+Actualizado el 2026-09-22:
+
+- `js/dashboard.js` queda en 3235 lineas; Rutas ya no vive alli.
+- `js/routes-dashboard.js` queda como superficie principal de UI/datos de Rutas.
+- `js/routes-module.js` contiene reglas puras de puntuacion y seleccion del planning automatico.
+- Hay cambios recientes de Rutas pendientes de validacion de usuario: formato de compartir, cabecera visual y scoring por jornada. No conviene mezclar otro refactor funcional hasta guardarlos.
 
 ## Criterio de exito
 

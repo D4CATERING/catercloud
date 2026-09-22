@@ -44,6 +44,9 @@
         const fecha = deps.getFechaRutasLogistica();
         const candidatos = routes.map(route => {
             const extras = extrasPorRuta.get(String(route.id)) || [];
+            const nuevasParadas = deps.crearParadasPedidoRuta(item, route.id, 0, fecha);
+            if (!nuevasParadas.length || !deps.puedeRutaRecibirParadas(route, [...extras, ...nuevasParadas])) return null;
+
             const paradas = [...deps.getRouteStops(route), ...extras];
             const zonasRuta = paradas.map(stop => {
                 const pseudoItem = {
@@ -65,15 +68,16 @@
                 : 1;
             const carga = deps.calcularDuracionRutaConParadas(route, extras);
             const capacidad = deps.getCapacidadRuta(route) || 480;
-            const presionCarga = (paradas.length * 180) + ((carga / Math.max(capacidad, 1)) * 240);
-            return { route, score: (cercaniaZona * 80) + (cercaniaHora * 10) + presionCarga };
-        }).sort((a, b) => a.score - b.score);
+            const metricas = deps.getMetricasJornadaRuta(route, [...extras, ...nuevasParadas]);
+            const presionCarga = (carga / Math.max(capacidad, 1)) * 35;
+            const ajusteJornada = (metricas.holguraFinal * 0.55) + (metricas.capacidad * 0.08);
+            return {
+                route,
+                score: (cercaniaZona * 80) + (cercaniaHora * 10) + presionCarga + ajusteJornada
+            };
+        }).filter(Boolean).sort((a, b) => a.score - b.score);
 
-        return candidatos.find(candidato => {
-            const extras = extrasPorRuta.get(String(candidato.route.id)) || [];
-            const nuevasParadas = deps.crearParadasPedidoRuta(item, candidato.route.id, 0, fecha);
-            return deps.puedeRutaRecibirParadas(candidato.route, [...extras, ...nuevasParadas]);
-        })?.route || null;
+        return candidatos[0]?.route || null;
     }
 
     function seleccionarRutaVaciaCompatibleParaPedido(item, routes, extrasPorRuta, fecha, deps) {
@@ -86,9 +90,10 @@
 
             const driver = deps.normalizarDriverRuta(deps.getDriverRuta(route));
             const inicio = deps.parseHoraRutaEnMinutos(driver.work_start || route.starts_at || '08:00') ?? 480;
+            const metricas = deps.getMetricasJornadaRuta(route, nuevasParadas);
             return {
                 route,
-                score: Math.abs(inicio - horaObjetivo)
+                score: Math.abs(inicio - horaObjetivo) + (metricas.holguraFinal * 0.65) + (metricas.capacidad * 0.12)
             };
         }).filter(Boolean).sort((a, b) => a.score - b.score);
 
@@ -109,6 +114,22 @@
             };
             return deps.puedeRutaRecibirParadas(rutaPrueba, paradasPrueba);
         });
+    }
+
+    function puntuarConductorParaRutaNueva(driver, paradasPrueba, horaObjetivo, startsAt, deps) {
+        const rutaPrueba = {
+            id: '__nueva_ruta__',
+            starts_at: driver.work_start || startsAt || '08:00',
+            driver,
+            stops: []
+        };
+
+        if (!deps.puedeRutaRecibirParadas(rutaPrueba, paradasPrueba)) return null;
+
+        const inicio = deps.parseHoraRutaEnMinutos(driver.work_start || startsAt || '08:00') ?? 480;
+        const metricas = deps.getMetricasJornadaRuta(rutaPrueba, paradasPrueba);
+        const empiezaDespuesPedido = Math.max(0, inicio - horaObjetivo) * 4;
+        return empiezaDespuesPedido + (Math.abs(inicio - horaObjetivo) * 0.2) + (metricas.holguraFinal * 0.75) + (metricas.capacidad * 0.14);
     }
 
     function debeAbrirRutaNuevaParaPedido(item, route, routes, extrasPorRuta, vehiculosDisponibles, conductoresDisponibles, totalPedidos, fecha, deps) {
@@ -134,6 +155,7 @@
         getLabelEstadoParadaRuta,
         seleccionarMejorRutaParaPedido,
         seleccionarRutaVaciaCompatibleParaPedido,
-        debeAbrirRutaNuevaParaPedido
+        debeAbrirRutaNuevaParaPedido,
+        puntuarConductorParaRutaNueva
     });
 })();

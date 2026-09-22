@@ -1,6 +1,6 @@
 # Mapa actual del codigo
 
-Fecha base: 2026-09-17.
+Fecha base: 2026-09-22.
 
 Este mapa sirve para orientar la organizacion del proyecto. No describe como deberia quedar el sistema, sino donde esta concentrada la complejidad hoy.
 
@@ -8,14 +8,16 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 
 | Archivo | Lineas | Responsabilidad actual | Riesgo principal |
 | --- | ---: | --- | --- |
-| `js/dashboard.js` | 4701 | Dashboard, Cocina, Logistica, Rutas, inventario, alertas operativas | Mezcla de modulos que pueden afectarse entre si |
+| `js/dashboard.js` | 3235 | Dashboard, Cocina, Logistica, inventario y alertas operativas | Cocina, Logistica y alertas aun conviven en un archivo grande |
 | `js/historial.js` | 2829 | Historial, expedientes, impresion, edicion, adjuntos | Edicion y visualizacion comparten demasiado estado |
-| `js/main.js` | 2439 | Flujo principal de guardado, formulario, comanda logistica | Guardado de cocina/logistica acoplado |
 | `js/desayunos.js` | 2314 | Menus de desayuno, referencias, popups de seleccion | Estado de seleccion complejo |
-| `js/menus-adicionales.js` | 2202 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
+| `js/menus-adicionales.js` | 2206 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
+| `js/routes-dashboard.js` | 1617 | UI, datos y operaciones del modulo Rutas | Supabase y render de Rutas ya estan separados de `dashboard.js`, pero el archivo puede dividirse mas |
 | `js/logistics.js` | 1592 | Formulario y selector de material logistico | Material de menus y servicios mezclado en UI |
 | `js/storage.js` | 1517 | Supabase `orders`, localStorage, sincronizacion, codigos, sesion y timestamps | Archivo grande, pero ya actua como frontera principal de persistencia |
-| `js/routes-module.js` | 140 | Utilidades puras y decisiones del planning automatico de Rutas | Debe crecer solo con reglas de Rutas |
+| `js/main.js` | 1477 | Flujo principal de guardado, formulario, comanda logistica | Guardado de cocina/logistica acoplado |
+| `js/referencias.js` | 1097 | Referencias de menus y catalogos auxiliares | Consultas y render de referencias conviven |
+| `js/routes-module.js` | 162 | Utilidades puras y decisiones del planning automatico de Rutas | Debe crecer solo con reglas puras de Rutas |
 
 ## Archivos CSS mas grandes
 
@@ -32,12 +34,13 @@ Metricas tomadas con `tools/audit-project.ps1`:
 
 | Archivo | `window.*` | handlers inline | `innerHTML` | `localStorage` | Supabase |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `dashboard.js` | 265 | 46 | 29 | 6 | 41 |
+| `dashboard.js` | 169 | 33 | 21 | 4 | 9 |
 | `menus-adicionales.js` | 257 | 16 | 17 | 0 | 0 |
-| `main.js` | 228 | 0 | 8 | 1 | 0 |
 | `historial.js` | 160 | 19 | 32 | 1 | 9 |
 | `desayunos.js` | 168 | 32 | 21 | 0 | 2 |
 | `storage.js` | 118 | 0 | 0 | 8 | 31 |
+| `routes-dashboard.js` | 105 | 14 | 8 | 2 | 34 |
+| `main.js` | 212 | 0 | 8 | 1 | 0 |
 | `routes-module.js` | 2 | 0 | 0 | 0 | 0 |
 
 Estas metricas no son malas por si solas, pero indican donde hay mas riesgo de regresion.
@@ -112,10 +115,10 @@ No deberia reconstruir el estado desde el DOM salvo como transicion temporal.
 2. `js/dashboard.js`: extraer alertas operativas sin cambiar comportamiento.
 3. `js/dashboard.js`: separar helpers de Cocina.
 4. `js/dashboard.js`: separar helpers de Logistica.
-5. `js/dashboard.js`: separar Rutas.
+5. `js/routes-dashboard.js`: seguir separando reglas de planificacion pura hacia `js/routes-module.js` y, despues, considerar separar UI de datos.
 6. `js/historial.js`: separar impresion/expediente de edicion.
 7. `css/forms.css`: dividir despues de estabilizar JS.
 
 ## Regla de oro
 
-Antes de mover una funcion, debe existir una verificacion simple que confirme que el comportamiento visible no cambio.
+Antes de mover una funcion, debe existir una verificacion simple que confirme que el comportamiento visible no cambio. Si hay cambios funcionales pendientes sin commit, la siguiente organizacion debe ser documentacion, pruebas o refactor muy acotado en el mismo modulo.
