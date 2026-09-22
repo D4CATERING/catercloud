@@ -1149,7 +1149,8 @@ function paradasDentroJornadaRuta(route, paradasExtra = []) {
     return [...getRouteStops(route), ...paradasExtra].every(stop => {
         const hora = getHoraReferenciaParadaRuta(stop);
         if (hora === null) return true;
-        return hora >= inicio && hora <= fin;
+        const finParada = hora + getDuracionParadaRuta(stop);
+        return hora >= inicio && finParada <= fin;
     });
 }
 
