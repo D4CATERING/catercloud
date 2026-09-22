@@ -8,7 +8,7 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 
 | Archivo | Lineas | Responsabilidad actual | Riesgo principal |
 | --- | ---: | --- | --- |
-| `js/dashboard.js` | 3235 | Dashboard, Cocina, Logistica, inventario y alertas operativas | Cocina, Logistica y alertas aun conviven en un archivo grande |
+| `js/dashboard.js` | 2841 | Dashboard, Cocina, Logistica e inventario | Cocina y Logistica aun conviven en un archivo grande |
 | `js/historial.js` | 2829 | Historial, expedientes, impresion, edicion, adjuntos | Edicion y visualizacion comparten demasiado estado |
 | `js/desayunos.js` | 2314 | Menus de desayuno, referencias, popups de seleccion | Estado de seleccion complejo |
 | `js/menus-adicionales.js` | 2206 | Menus acumulados, resumen lateral, DIY, material acumulado | Edicion de menus y resumen comparten estado |
@@ -17,6 +17,7 @@ Este mapa sirve para orientar la organizacion del proyecto. No describe como deb
 | `js/storage.js` | 1517 | Supabase `orders`, localStorage, sincronizacion, codigos, sesion y timestamps | Archivo grande, pero ya actua como frontera principal de persistencia |
 | `js/main.js` | 1477 | Flujo principal de guardado, formulario, comanda logistica | Guardado de cocina/logistica acoplado |
 | `js/referencias.js` | 1097 | Referencias de menus y catalogos auxiliares | Consultas y render de referencias conviven |
+| `js/operational-alerts.js` | 398 | Alertas operativas de cambios, tarjetas, sonido y marcas vistas | Debe limitarse a avisos de revision; no debe renderizar listas de Cocina/Logistica |
 | `js/routes-module.js` | 162 | Utilidades puras y decisiones del planning automatico de Rutas | Debe crecer solo con reglas puras de Rutas |
 
 ## Archivos CSS mas grandes
@@ -34,13 +35,14 @@ Metricas tomadas con `tools/audit-project.ps1`:
 
 | Archivo | `window.*` | handlers inline | `innerHTML` | `localStorage` | Supabase |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `dashboard.js` | 169 | 33 | 21 | 4 | 9 |
+| `dashboard.js` | 147 | 31 | 19 | 0 | 9 |
 | `menus-adicionales.js` | 257 | 16 | 17 | 0 | 0 |
 | `historial.js` | 160 | 19 | 32 | 1 | 9 |
 | `desayunos.js` | 168 | 32 | 21 | 0 | 2 |
 | `storage.js` | 118 | 0 | 0 | 8 | 31 |
 | `routes-dashboard.js` | 105 | 14 | 8 | 2 | 34 |
 | `main.js` | 212 | 0 | 8 | 1 | 0 |
+| `operational-alerts.js` | 22 | 2 | 2 | 4 | 0 |
 | `routes-module.js` | 2 | 0 | 0 | 0 | 0 |
 
 Estas metricas no son malas por si solas, pero indican donde hay mas riesgo de regresion.
@@ -112,7 +114,7 @@ No deberia reconstruir el estado desde el DOM salvo como transicion temporal.
 ## Orden sugerido de extraccion
 
 1. `js/storage.js`: seguir reduciendo wrappers historicos sin cambiar contrato publico.
-2. `js/dashboard.js`: extraer alertas operativas sin cambiar comportamiento.
+2. `js/operational-alerts.js`: mantener aisladas las alertas operativas y agregar diagnostico cuando se cambie su comportamiento.
 3. `js/dashboard.js`: separar helpers de Cocina.
 4. `js/dashboard.js`: separar helpers de Logistica.
 5. `js/routes-dashboard.js`: seguir separando reglas de planificacion pura hacia `js/routes-module.js` y, despues, considerar separar UI de datos.

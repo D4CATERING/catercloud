@@ -15,6 +15,7 @@ El proyecto funciona, pero tiene deuda tecnica acumulada:
 
 - Mucha logica aun vive en archivos grandes como `js/dashboard.js`, `js/historial.js`, `js/desayunos.js` y `js/menus-adicionales.js`.
 - Rutas ya salio de `js/dashboard.js` hacia `js/routes-dashboard.js`, con reglas puras en `js/routes-module.js`.
+- Alertas operativas ya salieron de `js/dashboard.js` hacia `js/operational-alerts.js`.
 - Varias zonas leen y escriben `historialComandas` y `historialComandasLogistica` directamente en `localStorage`.
 - Supabase `orders` y `localStorage` conviven como fuentes de datos.
 - El directorio `deploy` duplica archivos de raiz y requiere copia manual.
@@ -120,6 +121,11 @@ Actualizado el 2026-09-22:
 - `js/routes-dashboard.js` queda como superficie principal de UI/datos de Rutas.
 - `js/routes-module.js` contiene reglas puras de puntuacion y seleccion del planning automatico.
 - Hay cambios recientes de Rutas pendientes de validacion de usuario: formato de compartir, cabecera visual y scoring por jornada. No conviene mezclar otro refactor funcional hasta guardarlos.
+
+Actualizado despues:
+
+- `js/dashboard.js` queda en 2841 lineas tras extraer alertas operativas.
+- `js/operational-alerts.js` concentra avisos de cambios/revisiones, sonido, tarjetas y marcas vistas.
 
 ## Criterio de exito
 
