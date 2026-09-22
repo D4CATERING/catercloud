@@ -17,6 +17,7 @@ El proyecto funciona, pero tiene deuda tecnica acumulada:
 - Rutas ya salio de `js/dashboard.js` hacia `js/routes-dashboard.js`, con reglas puras en `js/routes-module.js`.
 - Alertas operativas ya salieron de `js/dashboard.js` hacia `js/operational-alerts.js`.
 - Helpers puros de Cocina ya salieron de `js/dashboard.js` hacia `js/kitchen-module.js`.
+- Pantalla y acciones operativas de Cocina ya salieron de `js/dashboard.js` hacia `js/kitchen-dashboard.js`.
 - Varias zonas leen y escriben `historialComandas` y `historialComandasLogistica` directamente en `localStorage`.
 - Supabase `orders` y `localStorage` conviven como fuentes de datos.
 - El directorio `deploy` duplica archivos de raiz y requiere copia manual.
@@ -132,6 +133,12 @@ Actualizado despues:
 
 - `js/dashboard.js` queda en 2463 lineas tras extraer helpers puros de Cocina.
 - `js/kitchen-module.js` concentra estados, totales, items de produccion e intolerancias de Cocina sin tocar Supabase, `localStorage` ni render principal.
+
+Actualizado despues:
+
+- `js/dashboard.js` queda en 1899 lineas tras extraer la pantalla y acciones operativas de Cocina.
+- `js/kitchen-dashboard.js` concentra filtros, tarjetas, modal de produccion y marcado de items de Cocina.
+- Cocina queda dividida en una capa pura (`js/kitchen-module.js`) y una capa de UI/acciones (`js/kitchen-dashboard.js`).
 
 ## Criterio de exito
 
