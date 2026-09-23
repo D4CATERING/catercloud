@@ -798,6 +798,7 @@
   }
 
   function materialCompatibleConTipoMenajeEdicion(item, tipoMenaje = '') {
+    if (item?._manual_otro || item?.source_table === 'manual' || item?.subcategoria === 'otros') return true;
     const esLoza = tipoMenaje === 'loza';
     if (esLoza) {
       if (item?.solo_desechable || esKitCafeDesechableEdicion(item) || esVasoDesechableZumoEdicion(item)) return false;
@@ -954,6 +955,7 @@
   }
 
   async function abrirMaterialLogisticaMenuEdicion(categoriaId) {
+    window._materialInlineRepresentaAcumulado = false;
     if (window.serviciosMode || Number(categoriaId || 0) === 3) {
       const cont = document.getElementById('materialLogisticaInline');
       const logisticaSection = document.getElementById('logisticaInlineSection');
@@ -1022,6 +1024,76 @@
   }
 
   window.recalcularMaterialAcumuladoDesdeMenus = recalcularMaterialAcumuladoDesdeMenus;
+
+  function sincronizarMaterialAcumuladoDesdeSelectorInline() {
+    if (!window._materialInlineRepresentaAcumulado) return window._materialAcumulado;
+    if (typeof window.obtenerMaterialSeleccionado !== 'function') return window._materialAcumulado;
+    const material = window.obtenerMaterialSeleccionado('materialLogisticaInline');
+    window._materialAcumulado = window.normalizarMaterialLogistica(material || {});
+    return window._materialAcumulado;
+  }
+
+  window.sincronizarMaterialAcumuladoDesdeSelectorInline = sincronizarMaterialAcumuladoDesdeSelectorInline;
+
+  function filtrarMaterialManual(material = {}) {
+    const resultado = { bebidas: [], menaje: [], extras: [] };
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+      resultado[tipo] = (material?.[tipo] || []).filter(item =>
+        item?._manual_otro || item?.source_table === 'manual' || item?.subcategoria === 'otros'
+      );
+    });
+    return resultado;
+  }
+
+  function obtenerMaterialManualActualLogistica() {
+    const resultado = { bebidas: [], menaje: [], extras: [] };
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+      resultado[tipo] = (window.materialLogistica?.[tipo] || [])
+        .filter(item => item?._manual_otro || item?.source_table === 'manual' || item?.subcategoria === 'otros')
+        .filter(item => item.checked !== false && Number(item.cantidad || 0) > 0)
+        .map(item => normalizarItemMaterial(item, tipo));
+    });
+    return resultado;
+  }
+
+  function completarMaterialManualFaltante(base = {}, manuales = {}) {
+    const resultado = window.normalizarMaterialLogistica(base || {});
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+      resultado[tipo] = [...(resultado[tipo] || [])];
+      (manuales?.[tipo] || []).forEach(item => {
+        const normalizado = normalizarItemMaterial(item, tipo);
+        const key = claveMaterialAcumulado(normalizado, tipo);
+        const yaExiste = resultado[tipo].some(actual => claveMaterialAcumulado(actual, tipo) === key);
+        if (!yaExiste) resultado[tipo].push(normalizado);
+      });
+    });
+    return resultado;
+  }
+
+  function obtenerMaterialFinalMenusParaGuardar() {
+    const acumulado = window.normalizarMaterialLogistica(window._materialAcumulado || {});
+    const seleccionado = typeof window.obtenerMaterialSeleccionado === 'function'
+      ? window.normalizarMaterialLogistica(window.obtenerMaterialSeleccionado('materialLogisticaInline') || {})
+      : { bebidas: [], menaje: [], extras: [] };
+
+    if (window._materialInlineRepresentaAcumulado) {
+      window._materialAcumulado = seleccionado;
+      return seleccionado;
+    }
+
+    if (!materialTieneItems(acumulado)) {
+      window._materialAcumulado = seleccionado;
+      return seleccionado;
+    }
+
+    const manualSeleccionado = filtrarMaterialManual(seleccionado);
+    if (!materialTieneItems(manualSeleccionado)) return acumulado;
+
+    window._materialAcumulado = sumarMaterial(acumulado, manualSeleccionado);
+    return window._materialAcumulado;
+  }
+
+  window.obtenerMaterialFinalMenusParaGuardar = obtenerMaterialFinalMenusParaGuardar;
 
   function renderMaterialAcumuladoInline() {
     const cont = document.getElementById('materialLogisticaInline');
@@ -1119,12 +1191,14 @@
         window.materialLogistica.extras = [];
       }
       await restaurarMaterialMenuEnSelector(material, categoriaBase || null);
+      window._materialInlineRepresentaAcumulado = true;
       return;
     }
 
     if (typeof window.inicializarMaterialLogistica === 'function') {
       await window.inicializarMaterialLogistica('materialLogisticaInline');
     }
+    window._materialInlineRepresentaAcumulado = false;
   }
 
   window.mostrarMaterialAcumuladoComoFormulario = mostrarMaterialAcumuladoComoFormulario;
@@ -1377,6 +1451,11 @@
   // PÚBLICA: Añadir el menú configurado actualmente a la comanda
   // ─────────────────────────────────────────────────────────────
   window.anadirMenuAComanda = function () {
+    window._materialInlineRepresentaAcumulado = false;
+    window._materialMenuResumenVersion = (window._materialMenuResumenVersion || 0) + 1;
+    clearTimeout(window._restoreMaterialResumenTimer1);
+    clearTimeout(window._restoreMaterialResumenTimer2);
+    clearTimeout(window._abrirMaterialEdicionResumenTimer);
     const st = window.MenusAdicionalesState;
 
     if (!window.menuSeleccionado) {
@@ -1422,11 +1501,15 @@
     }
 
     const materialSnapshotBase = typeof window.obtenerMaterialSeleccionado === 'function'
-      ? window.obtenerMaterialSeleccionado()
+      ? window.obtenerMaterialSeleccionado('materialLogisticaInline')
       : capturarMaterialDOM();
+    const materialSnapshotConManuales = completarMaterialManualFaltante(
+      materialSnapshotBase,
+      obtenerMaterialManualActualLogistica()
+    );
     const materialSnapshot = (window.serviciosMode || Number(categoriaId || 0) === 3)
-      ? materialSnapshotBase
-      : prepararMaterialMenuEdicion(materialSnapshotBase);
+      ? materialSnapshotConManuales
+      : prepararMaterialMenuEdicion(materialSnapshotConManuales);
 
     // Construir objeto del menú
     const item = {
@@ -1497,6 +1580,7 @@
     window._materialMenuResumenEditando = null;
     clearTimeout(window._restoreMaterialResumenTimer1);
     clearTimeout(window._restoreMaterialResumenTimer2);
+    clearTimeout(window._abrirMaterialEdicionResumenTimer);
     window.menusAdicionales = st.menusAdicionales;
 
     // Recalcular material global desde cero para evitar duplicados al editar

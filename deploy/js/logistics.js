@@ -344,6 +344,7 @@
                         <div id="${containerId}_extras" class="dc-material-list"></div>
                     </div>
                 </div>
+                <div id="${containerId}_otros_manual" class="logistics-builder-other-wrap"></div>
             </div>
         `;
 
@@ -391,6 +392,41 @@
         const nombre = normalizarTextoMaterial(item?.nombre || item?.name);
         return Boolean(item?._zumoId) ||
             (nombre.includes('zumo') && (nombre.includes('naranja') || nombre.includes('natural')));
+    }
+
+    function consolidarZumosBebidasLogistica() {
+        const bebidas = window.materialLogistica?.bebidas || [];
+        if (!Array.isArray(bebidas) || bebidas.length < 2) return;
+
+        const resultado = [];
+        let zumoPrincipal = null;
+
+        bebidas.forEach(item => {
+            if (!esZumoNaturalLogistica(item)) {
+                resultado.push(item);
+                return;
+            }
+
+            if (!zumoPrincipal) {
+                zumoPrincipal = { ...item };
+                resultado.push(zumoPrincipal);
+                return;
+            }
+
+            if (!zumoPrincipal._zumoId && item._zumoId) {
+                zumoPrincipal._zumoId = item._zumoId;
+                zumoPrincipal.cantidadPorPax = item.cantidadPorPax ?? zumoPrincipal.cantidadPorPax;
+            }
+            if (!zumoPrincipal.item_id && item.item_id) zumoPrincipal.item_id = item.item_id;
+            if (!zumoPrincipal.source_table && item.source_table) zumoPrincipal.source_table = item.source_table;
+            if (!zumoPrincipal.incluido_en?.length && item.incluido_en?.length) zumoPrincipal.incluido_en = item.incluido_en;
+            if (!(Number(zumoPrincipal.cantidad || 0) > 0) && Number(item.cantidad || 0) > 0) {
+                zumoPrincipal.cantidad = item.cantidad;
+            }
+            zumoPrincipal.checked = zumoPrincipal.checked !== false || item.checked !== false;
+        });
+
+        window.materialLogistica.bebidas = resultado;
     }
 
     function esKitCafeDesechable(item) {
@@ -505,6 +541,7 @@
             ];
         });
 
+        consolidarZumosBebidasLogistica();
         renderizarMaterial(containerId);
     };
 
@@ -539,6 +576,7 @@
      * Obtiene material seleccionado
      */
     window.obtenerMaterialSeleccionado = function(containerId = obtenerContainerMaterialActivo()) {
+        consolidarZumosBebidasLogistica();
         const resultado = {
             bebidas: [],
             menaje: [],
@@ -581,6 +619,7 @@
     // RENDERIZADO
     // ──────────────────────────────────────────────────────────
     function renderizarMaterial(containerId) {
+        consolidarZumosBebidasLogistica();
         if (containerId === 'materialLogisticaPage') {
             renderizarMaterialLogisticaBuilder(containerId);
             return;
@@ -893,6 +932,9 @@
         if (containerId !== 'materialLogisticaInline') return;
         if (!window._materialMenuResumenEditando) return;
         window._materialMenuResumenVersion = (window._materialMenuResumenVersion || 0) + 1;
+        clearTimeout(window._restoreMaterialResumenTimer1);
+        clearTimeout(window._restoreMaterialResumenTimer2);
+        clearTimeout(window._abrirMaterialEdicionResumenTimer);
     }
 
     function normalizarItemSeleccionadoMaterial(tipo, item, containerId) {
@@ -1057,16 +1099,19 @@
     }
 
     function renderizarOtrosLogistica(containerId) {
+        const esMenu = esFormularioLogisticaMenus(containerId);
+        const titulo = esMenu ? 'Extra fuera de lista' : 'Otros';
+        const placeholder = esMenu ? 'Item extra para este menú' : 'Referencia fuera de lista';
         return `
             <div class="logistics-builder-other">
-                <div class="logistics-builder-other-title">Otros</div>
+                <div class="logistics-builder-other-title">${titulo}</div>
                 <div class="logistics-builder-other-row">
                     <select id="${containerId}_otro_tipo" class="dc-input" aria-label="Clasificación">
                         <option value="bebidas">Bebidas</option>
                         <option value="menaje">Menaje</option>
                         <option value="extras" selected>Extras</option>
                     </select>
-                    <input type="text" id="${containerId}_otro_nombre" class="dc-input" placeholder="Referencia fuera de lista">
+                    <input type="text" id="${containerId}_otro_nombre" class="dc-input" placeholder="${placeholder}">
                     <input type="number" id="${containerId}_otro_cantidad" class="dc-input" min="1" step="1" value="1" aria-label="Cantidad">
                     <input type="text" id="${containerId}_otro_unidad" class="dc-input" value="ud" aria-label="Unidad">
                     <button type="button" class="btn-fuera-carta" onclick="agregarOtroMaterialLogistica('${containerId}')">Añadir</button>
@@ -1223,6 +1268,9 @@
         }
         const cId = containerId || 'materialLogisticaInline';
         renderizarMaterial(cId);
+        if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {
+            window.sincronizarMaterialAcumuladoDesdeSelectorInline();
+        }
     };
 
     window.clickMaterialItemFila = function(event, tipo, itemId, containerId) {
@@ -1408,6 +1456,9 @@
         item.checked = item.cantidad > 0;
         item._cantidad_manual_zero = item.cantidad === 0 && (item.incluido_en || []).length > 0;
         if (containerId) renderizarMaterial(containerId);
+        if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {
+            window.sincronizarMaterialAcumuladoDesdeSelectorInline();
+        }
     };
 
     window.updateMaterialCantidadServicio = function(tipo, itemId, cantidad, containerId = 'materialLogisticaPage') {
@@ -1425,6 +1476,7 @@
     };
 
     window.agregarOtroMaterialLogistica = function(containerId = 'materialLogisticaPage') {
+        marcarCambioManualMaterialMenu(containerId);
         const tipoInput = document.getElementById(`${containerId}_otro_tipo`);
         const nombreInput = document.getElementById(`${containerId}_otro_nombre`);
         const cantidadInput = document.getElementById(`${containerId}_otro_cantidad`);
@@ -1472,6 +1524,9 @@
         if (cantidadInput) cantidadInput.value = '1';
         if (unidadInput) unidadInput.value = 'ud';
         renderizarMaterial(containerId);
+        if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {
+            window.sincronizarMaterialAcumuladoDesdeSelectorInline();
+        }
     };
 
     window.updateSubitemCantidad = function(tipo, parentId, subitemId, cantidad, containerId) {

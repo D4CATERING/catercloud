@@ -1949,7 +1949,7 @@ function _normalizarMaterialLogisticaEdicion(material) {
     }
     if (valor?.material_logistica) valor = _normalizarMaterialLogisticaEdicion(valor.material_logistica);
     if (valor?.materialLogistica) valor = _normalizarMaterialLogisticaEdicion(valor.materialLogistica);
-    const base = {
+    const base = _deduplicarMaterialManualEdicion({
         bebidas: Array.isArray(valor?.bebidas) ? valor.bebidas : [],
         menaje: Array.isArray(valor?.menaje) ? valor.menaje : [],
         extras: [
@@ -1957,10 +1957,55 @@ function _normalizarMaterialLogisticaEdicion(material) {
             ...(Array.isArray(valor?.otros) ? valor.otros : []),
             ...(Array.isArray(valor?.material) ? valor.material : [])
         ]
-    };
+    });
     return typeof window.normalizarMaterialLogistica === 'function'
         ? window.normalizarMaterialLogistica(base)
         : base;
+}
+
+function _esMaterialManualEdicion(item) {
+    return Boolean(item?._manual_otro || item?.source_table === 'manual' || item?.subcategoria === 'otros');
+}
+
+function _claveMaterialEdicion(item, tipo) {
+    const texto = (valor) => String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    return [
+        tipo,
+        texto(item?.nombre || item?.id),
+        texto(item?.unidad || item?.unidad_comanda || item?.unidad_inventario || '')
+    ].join(':');
+}
+
+function _deduplicarMaterialManualEdicion(material = {}) {
+    const resultado = { bebidas: [], menaje: [], extras: [] };
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        const porClave = new Map();
+        (material?.[tipo] || []).forEach(item => {
+            if (!_esMaterialManualEdicion(item)) {
+                resultado[tipo].push(item);
+                return;
+            }
+            const key = _claveMaterialEdicion(item, tipo);
+            const existente = porClave.get(key);
+            if (!existente) {
+                porClave.set(key, item);
+                return;
+            }
+            porClave.set(key, {
+                ...existente,
+                ...item,
+                cantidad: Math.max(Number(existente.cantidad || 0), Number(item.cantidad || 0)),
+                checked: existente.checked !== false || item.checked !== false
+            });
+        });
+        resultado[tipo].push(...porClave.values());
+    });
+    return resultado;
 }
 
 function _normalizarTextoUnidadMaterial(valor) {
@@ -2197,7 +2242,10 @@ function _sumarMaterialParaEdicion(base, nuevo) {
             const unidad = item?.unidad || '';
             const existente = result[tipo].find(i => (i.nombre || i.id || '') === nombre && (i.unidad || '') === unidad);
             if (existente) {
-                existente.cantidad = (Number(existente.cantidad) || 0) + (Number(item.cantidad) || 0);
+                const esManual = _esMaterialManualEdicion(existente) || _esMaterialManualEdicion(item);
+                existente.cantidad = esManual
+                    ? Math.max(Number(existente.cantidad || 0), Number(item.cantidad || 0))
+                    : (Number(existente.cantidad) || 0) + (Number(item.cantidad) || 0);
                 existente.checked = existente.checked !== false || item.checked !== false;
             } else {
                 result[tipo].push(_clonarValorComanda(item));

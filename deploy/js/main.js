@@ -395,8 +395,14 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         ? obtenerNombreUsuarioActual()
         : (window.currentUser?.email || '');
     const responsableFormulario = document.getElementById('responsable').value || usuarioActualNombre;
+    if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {
+        window.sincronizarMaterialAcumuladoDesdeSelectorInline();
+    }
+    const materialMenusFinal = typeof window.obtenerMaterialFinalMenusParaGuardar === 'function'
+        ? window.obtenerMaterialFinalMenusParaGuardar()
+        : null;
     const materialSeleccionadoActual = typeof obtenerMaterialSeleccionado === 'function'
-        ? obtenerMaterialSeleccionado()
+        ? obtenerMaterialSeleccionado('materialLogisticaInline')
         : null;
     const materialSeleccionadoTieneItems = !!materialSeleccionadoActual && (
         materialSeleccionadoActual.bebidas?.length ||
@@ -408,8 +414,8 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         window._materialAcumulado.menaje?.length ||
         window._materialAcumulado.extras?.length
     );
-    const materialParaGuardar = _menusAcumulados.length && materialAcumuladoTieneItems
-        ? window._materialAcumulado
+    const materialParaGuardar = _menusAcumulados.length && (materialMenusFinal || materialAcumuladoTieneItems)
+        ? (materialMenusFinal || window._materialAcumulado)
         : (materialSeleccionadoTieneItems ? materialSeleccionadoActual : (window._materialAcumulado || { bebidas: [], menaje: [], extras: [] }));
 
     const comandaData = {
@@ -700,7 +706,7 @@ const _materialCompleto = (
      window._materialAcumulado.menaje?.length  ||
      window._materialAcumulado.extras?.length)
 )   ? window._materialAcumulado
-    : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado() : { bebidas: [], menaje: [], extras: [] });
+    : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado('materialLogisticaInline') : { bebidas: [], menaje: [], extras: [] });
 const _materialNormalizado = typeof window.normalizarMaterialLogistica === 'function'
     ? window.normalizarMaterialLogistica(_materialCompleto)
     : _materialCompleto;
