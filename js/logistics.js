@@ -357,14 +357,14 @@
     // IDs de ítems incluidos en el precio según tipo de menú
     const MATERIAL_DESAYUNOS_IDS = {
         vasosZumo: '3a6e55f0-64ab-4c74-a19f-bdb4c85a31d8',
-        kitCafeDesechable: '548b2e15-1315-4673-ad3d-e5cd8102e816',
-        kitCafeLoza: 'c4ffea2a-e6bb-4bb4-87e8-0929f73b67fc',
+        kitCafeDesechable: '231a78f5-36f1-4066-bca8-289cc3d2ee38',
+        kitCafeLoza: 'f9f80ca6-a1c8-45f1-83ff-e112046afb4c',
         servilletas: 'a045fca2-d788-491d-a521-f731bc744e54'
     };
 
     const INCLUIDOS_POR_MENU = {
         desayunos: [
-            '548b2e15-1315-4673-ad3d-e5cd8102e816', // Kit desechable para café
+            MATERIAL_DESAYUNOS_IDS.kitCafeDesechable, // Kit desechable para café
             'a045fca2-d788-491d-a521-f731bc744e54', // Servilletas
         ],
     };
@@ -483,6 +483,13 @@
         return incluidos;
     }
 
+    function materialCompatibleConMenajeMenu(item, menuTipo, esLoza) {
+        if (item.solo_loza && !esLoza) return false;
+        if (item.solo_desechable && esLoza && !esKitCafeDesechable(item)) return false;
+        if (menuTipo === 'desayunos' && !esLoza && esKitCafeLoza(item)) return false;
+        return true;
+    }
+
     window.autocompletarMaterialPorCategoria = async function(categoriaId, containerId) {
         const mapeo = {
             1: 'desayunos',
@@ -516,9 +523,7 @@
                 ...catalogo
                     .filter(item => {
                         if (normalizarTipoLogisticaUnificada(item.tipo, item) !== tipo) return false;
-                        if (item.solo_loza && !esLoza) return false;
-                        if (item.solo_desechable && esLoza) return false;
-                        if (menuTipo === 'desayunos' && !esLoza && esKitCafeLoza(item)) return false;
+                        if (!materialCompatibleConMenajeMenu(item, menuTipo, esLoza)) return false;
                         if (tieneZumoInyectado && esZumoNaturalLogistica(item)) return false;
                         if (item.parent_id) return false;
                         return true;

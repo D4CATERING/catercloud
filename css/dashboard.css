@@ -513,8 +513,24 @@
 
 .calendar-request-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
+}
+
+.calendar-request-field--half {
+  grid-column: span 3;
+}
+
+.calendar-request-field--menu {
+  grid-column: span 3;
+}
+
+.calendar-request-field--pax {
+  grid-column: span 1;
+}
+
+.calendar-request-field--time {
+  grid-column: span 2;
 }
 
 .calendar-request-grid label {
@@ -1044,6 +1060,13 @@
   .calendar-request-grid,
   .event-actions,
   .expediente-link-upload { grid-template-columns: 1fr; }
+
+  .calendar-request-field--half,
+  .calendar-request-field--menu,
+  .calendar-request-field--pax,
+  .calendar-request-field--time {
+    grid-column: auto;
+  }
 }
 
 /* Mobile dashboard and expediente */

@@ -543,11 +543,7 @@ async function nuevaSolicitudEnFecha(dateStr) {
     cont.innerHTML = `
         <div class="calendar-request-title">Solicitud de pedido</div>
         <div class="calendar-request-grid">
-            <label>
-                <span>Hora de salida</span>
-                <input type="time" id="solHoraSalida">
-            </label>
-            <label>
+            <label class="calendar-request-field--half">
                 <span>Empresa</span>
                 <div class="calendar-client-search">
                     <input type="text" id="solEmpresa" placeholder="Buscar empresa" autocomplete="off" oninput="buscarClientesSolicitud(this.value)">
@@ -555,16 +551,28 @@ async function nuevaSolicitudEnFecha(dateStr) {
                     <div id="solClientesSugerencias" class="calendar-client-results"></div>
                 </div>
             </label>
-            <label>
+            <label class="calendar-request-field--half">
+                <span>Contacto</span>
+                <div class="calendar-client-search">
+                    <input type="text" id="solContacto" placeholder="Buscar o crear contacto" autocomplete="off" oninput="buscarContactosSolicitud(this.value)" onfocus="mostrarContactosSolicitud()">
+                    <input type="hidden" id="solContactoId">
+                    <div id="solContactosSugerencias" class="calendar-client-results"></div>
+                </div>
+            </label>
+            <label class="calendar-request-field--menu">
                 <span>Menu</span>
                 <select id="solCategoriaMenu">
                     <option value="">Selecciona menú</option>
                     ${opcionesMenu}
                 </select>
             </label>
-            <label>
+            <label class="calendar-request-field--pax">
                 <span>PAX</span>
                 <input type="number" id="solPax" min="0" placeholder="0">
+            </label>
+            <label class="calendar-request-field--time">
+                <span>Hora de salida</span>
+                <input type="time" id="solHoraSalida">
             </label>
         </div>
         <div class="calendar-request-status">Estado: <strong>POR CONFIRMAR</strong></div>
@@ -584,6 +592,9 @@ function cerrarSolicitudCalendario() {
         cont.dataset.formType = '';
         cont.dataset.date = '';
     }
+    window._solicitudClienteSeleccionado = null;
+    window._solicitudContactoSeleccionado = null;
+    window._solicitudContactosEmpresa = [];
 }
 
 function scrollSolicitudCalendarioSiNecesario() {
@@ -603,23 +614,34 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
 
     const empresaInput = document.getElementById('solEmpresa');
     const clienteIdInput = document.getElementById('solClienteId');
+    const contactoInput = document.getElementById('solContacto');
+    const contactoIdInput = document.getElementById('solContactoId');
     const horaInput = document.getElementById('solHoraSalida');
     const categoriaInput = document.getElementById('solCategoriaMenu');
     const paxInput = document.getElementById('solPax');
 
     const empresa = (empresaInput?.value || '').trim();
     const clienteId = clienteIdInput?.value || '';
+    const contactoTexto = (contactoInput?.value || '').trim();
+    let contactoId = contactoIdInput?.value || '';
     const categoriaId = categoriaInput?.value || '';
     const categoriaNombre = categoriaInput?.selectedOptions?.[0]?.textContent || 'Pendiente';
     const pax = Number(paxInput?.value || 0) || 0;
 
-    if (!empresa || !clienteId) {
-        alert('Selecciona una empresa de la base de clientes.');
+    if (!empresa) {
+        alert('Selecciona o crea una empresa.');
         empresaInput?.focus();
         return;
     }
 
-    const clienteSeleccionado = window._solicitudClienteSeleccionado || {};
+    let clienteSeleccionado = window._solicitudContactoSeleccionado || null;
+    if (contactoTexto && !clienteSeleccionado) {
+        clienteSeleccionado = await crearContactoSolicitudDesdeTexto(empresa, contactoTexto);
+        if (!clienteSeleccionado) return;
+        contactoId = clienteSeleccionado.id || '';
+    }
+    if (!clienteSeleccionado) clienteSeleccionado = window._solicitudClienteSeleccionado || {};
+
     const usuarioActualNombre = typeof obtenerNombreUsuarioActual === 'function'
         ? obtenerNombreUsuarioActual()
         : (window.currentUser?.email || '');
@@ -628,9 +650,11 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
         tipo_registro: 'solicitud',
         codigo: generarCodigoSolicitudPedido(),
         empresa,
-        cliente_id: clienteId,
+        cliente_id: contactoId || clienteSeleccionado.id || clienteId || null,
+        empresa_cliente_id: clienteId || null,
+        contacto_id: contactoId || clienteSeleccionado.id || null,
         responsable: usuarioActualNombre || 'Pendiente',
-        cliente_contacto: clienteSeleccionado.contacto || '',
+        cliente_contacto: clienteSeleccionado.contacto || contactoTexto || '',
         cliente_telefono: clienteSeleccionado.telefono || '',
         cliente_direccion: clienteSeleccionado.direccion || '',
         cliente_codigo_postal: clienteSeleccionado.codigo_postal || '',
@@ -758,13 +782,188 @@ function seleccionarClienteSolicitud(index) {
 function seleccionarClienteSolicitudData(cliente) {
     const empresaInput = document.getElementById('solEmpresa');
     const clienteIdInput = document.getElementById('solClienteId');
+    const contactoInput = document.getElementById('solContacto');
+    const contactoIdInput = document.getElementById('solContactoId');
     const results = document.getElementById('solClientesSugerencias');
 
     if (empresaInput) empresaInput.value = cliente.empresa || '';
     if (clienteIdInput) clienteIdInput.value = cliente.id || '';
+    if (contactoInput) contactoInput.value = '';
+    if (contactoIdInput) contactoIdInput.value = '';
     if (results) results.style.display = 'none';
 
     window._solicitudClienteSeleccionado = cliente;
+    window._solicitudContactoSeleccionado = null;
+    cargarContactosEmpresaSolicitud(cliente.empresa || '', cliente.id || '');
+}
+
+async function cargarContactosEmpresaSolicitud(empresa, selectedId = '') {
+    const empresaBase = (empresa || '').trim();
+    window._solicitudContactosEmpresa = [];
+    if (!empresaBase || !window.supabaseClient) return [];
+
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('clients')
+            .select('id, empresa, contacto, telefono, direccion, codigo_postal')
+            .ilike('empresa', empresaBase)
+            .eq('activo', true)
+            .order('contacto');
+        if (error) throw error;
+
+        window._solicitudContactosEmpresa = (data || []).filter(cliente => cliente.contacto);
+        if (selectedId) {
+            const contacto = window._solicitudContactosEmpresa.find(cliente => String(cliente.id) === String(selectedId));
+            if (contacto) seleccionarContactoSolicitudData(contacto, { mantenerDropdown: true });
+        }
+        return window._solicitudContactosEmpresa;
+    } catch (error) {
+        console.warn('No se pudieron cargar contactos para la solicitud:', error);
+        return [];
+    }
+}
+
+function buscarContactosSolicitud(term) {
+    const contactoIdInput = document.getElementById('solContactoId');
+    const results = document.getElementById('solContactosSugerencias');
+    if (contactoIdInput) contactoIdInput.value = '';
+    window._solicitudContactoSeleccionado = null;
+    if (!results) return;
+
+    const texto = (term || '').trim();
+    const contactos = window._solicitudContactosEmpresa || [];
+    const filtrados = texto.length
+        ? contactos.filter(cliente => String(cliente.contacto || '').toLocaleLowerCase('es').includes(texto.toLocaleLowerCase('es')))
+        : contactos;
+
+    renderContactosSolicitud(filtrados, texto);
+}
+
+async function mostrarContactosSolicitud() {
+    const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+    if (!empresa) return;
+    if (!window._solicitudContactosEmpresa?.length) {
+        await cargarContactosEmpresaSolicitud(empresa, document.getElementById('solContactoId')?.value || '');
+    }
+    buscarContactosSolicitud(document.getElementById('solContacto')?.value || '');
+}
+
+function renderContactosSolicitud(contactos = [], texto = '') {
+    const results = document.getElementById('solContactosSugerencias');
+    const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+    if (!results) return;
+
+    if (!empresa) {
+        results.innerHTML = '<div class="calendar-client-empty">Selecciona primero una empresa</div>';
+        results.style.display = 'block';
+        return;
+    }
+
+    const opciones = contactos.map((cliente, index) => `
+        <button type="button" class="calendar-client-option" onclick="seleccionarContactoSolicitud(${index})">
+            <strong>${escapeCalendarHtml(cliente.contacto || '')}</strong>
+            ${cliente.telefono ? `<span>${escapeCalendarHtml(cliente.telefono)}</span>` : ''}
+        </button>
+    `).join('');
+
+    const crear = texto ? `
+        <button type="button" class="calendar-client-create" onclick="crearContactoDesdeSolicitud()">
+            + Crear "${escapeCalendarHtml(texto)}" como contacto de ${escapeCalendarHtml(empresa)}
+        </button>
+    ` : '';
+
+    results.innerHTML = opciones || texto
+        ? `${opciones}${crear}`
+        : '<div class="calendar-client-empty">Sin contactos guardados para esta empresa</div>';
+    results.style.display = 'block';
+}
+
+function seleccionarContactoSolicitud(index) {
+    const texto = (document.getElementById('solContacto')?.value || '').trim();
+    const contactos = window._solicitudContactosEmpresa || [];
+    const filtrados = texto.length
+        ? contactos.filter(cliente => String(cliente.contacto || '').toLocaleLowerCase('es').includes(texto.toLocaleLowerCase('es')))
+        : contactos;
+    const contacto = filtrados[index];
+    if (!contacto) return;
+    seleccionarContactoSolicitudData(contacto);
+}
+
+function seleccionarContactoSolicitudData(contacto, options = {}) {
+    const contactoInput = document.getElementById('solContacto');
+    const contactoIdInput = document.getElementById('solContactoId');
+    const results = document.getElementById('solContactosSugerencias');
+
+    if (contactoInput) contactoInput.value = contacto.contacto || '';
+    if (contactoIdInput) contactoIdInput.value = contacto.id || '';
+    if (results && !options.mantenerDropdown) results.style.display = 'none';
+
+    window._solicitudContactoSeleccionado = contacto;
+    if (contacto.empresa) {
+        const empresaInput = document.getElementById('solEmpresa');
+        if (empresaInput) empresaInput.value = contacto.empresa;
+    }
+}
+
+function crearContactoDesdeSolicitud() {
+    const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+    const contacto = (document.getElementById('solContacto')?.value || '').trim();
+    if (!empresa) {
+        alert('Selecciona primero una empresa.');
+        document.getElementById('solEmpresa')?.focus();
+        return;
+    }
+    if (typeof window.abrirModalCliente !== 'function') {
+        alert('No se pudo abrir el formulario de clientes.');
+        return;
+    }
+    const results = document.getElementById('solContactosSugerencias');
+    if (results) results.style.display = 'none';
+    window.abrirModalCliente(null, {
+        prefillEmpresa: empresa,
+        prefillContacto: contacto,
+        onSave: (cliente) => {
+            seleccionarClienteSolicitudData(cliente);
+            seleccionarContactoSolicitudData(cliente);
+            cargarContactosEmpresaSolicitud(cliente.empresa || empresa, cliente.id || '');
+        }
+    });
+}
+
+async function crearContactoSolicitudDesdeTexto(empresa, contacto) {
+    if (!window.supabaseClient) {
+        alert('No se pudo guardar el contacto porque no hay conexión con Supabase.');
+        return null;
+    }
+
+    const empresaBase = (empresa || '').trim();
+    const contactoBase = (contacto || '').trim();
+    if (!empresaBase || !contactoBase) return null;
+
+    const clienteBase = window._solicitudClienteSeleccionado || {};
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('clients')
+            .insert({
+                empresa: empresaBase,
+                contacto: contactoBase,
+                telefono: null,
+                direccion: clienteBase.direccion || null,
+                codigo_postal: clienteBase.codigo_postal || null,
+                created_by: window.currentUser?.id || null
+            })
+            .select('id, empresa, contacto, telefono, direccion, codigo_postal')
+            .single();
+        if (error) throw error;
+
+        window._solicitudContactoSeleccionado = data;
+        await cargarContactosEmpresaSolicitud(empresaBase, data.id);
+        return data;
+    } catch (error) {
+        console.error('Error creando contacto para la solicitud:', error);
+        alert('No se pudo crear el contacto. Revisa si ya existe o inténtalo nuevamente.');
+        return null;
+    }
 }
 
 function crearClienteDesdeSolicitud() {

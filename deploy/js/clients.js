@@ -504,6 +504,8 @@
             // Prerellenar empresa con lo que hay escrito
             const empresa = options.prefillEmpresa || document.getElementById('empresa')?.value || '';
             modal.querySelector('#mc_empresa').value = empresa;
+            if (options.prefillContacto) modal.querySelector('#mc_contacto').value = options.prefillContacto;
+            if (options.prefillTelefono) modal.querySelector('#mc_telefono').value = options.prefillTelefono;
         }
     };
 

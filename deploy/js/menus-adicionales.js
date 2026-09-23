@@ -801,7 +801,7 @@
     if (item?._manual_otro || item?.source_table === 'manual' || item?.subcategoria === 'otros') return true;
     const esLoza = tipoMenaje === 'loza';
     if (esLoza) {
-      if (item?.solo_desechable || esKitCafeDesechableEdicion(item) || esVasoDesechableZumoEdicion(item)) return false;
+      if ((item?.solo_desechable && !esKitCafeDesechableEdicion(item)) || esVasoDesechableZumoEdicion(item)) return false;
       return true;
     }
     if (item?.solo_loza || esKitCafeLozaEdicion(item)) return false;
