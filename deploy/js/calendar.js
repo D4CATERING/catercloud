@@ -595,6 +595,10 @@ function cerrarSolicitudCalendario() {
     window._solicitudClienteSeleccionado = null;
     window._solicitudContactoSeleccionado = null;
     window._solicitudContactosEmpresa = [];
+    window._solicitudContactosRenderizados = [];
+    window._solicitudContactosOffset = 0;
+    window._solicitudContactosTieneMas = false;
+    window._solicitudContactosTerm = '';
 }
 
 function scrollSolicitudCalendarioSiNecesario() {
@@ -690,6 +694,7 @@ async function guardarSolicitudDesdeCalendario(dateStr) {
 }
 
 let _solicitudClientesTimer = null;
+const CONTACTOS_SOLICITUD_PAGE_SIZE = 10;
 
 function agruparClientesSolicitudPorEmpresa(clientes = []) {
     const mapa = new Map();
@@ -794,24 +799,51 @@ function seleccionarClienteSolicitudData(cliente) {
 
     window._solicitudClienteSeleccionado = cliente;
     window._solicitudContactoSeleccionado = null;
-    cargarContactosEmpresaSolicitud(cliente.empresa || '', cliente.id || '');
+    cargarContactosEmpresaSolicitud(cliente.empresa || '');
 }
 
-async function cargarContactosEmpresaSolicitud(empresa, selectedId = '') {
+async function cargarContactosEmpresaSolicitud(empresa, selectedId = '', options = {}) {
     const empresaBase = (empresa || '').trim();
-    window._solicitudContactosEmpresa = [];
     if (!empresaBase || !window.supabaseClient) return [];
 
+    const term = (options.term ?? window._solicitudContactosTerm ?? '').trim();
+    const append = Boolean(options.append);
+    const offset = append ? Number(window._solicitudContactosOffset || 0) : 0;
+
+    if (!append) {
+        window._solicitudContactosEmpresa = [];
+        window._solicitudContactosOffset = 0;
+        window._solicitudContactosTieneMas = true;
+        window._solicitudContactosTerm = term;
+    }
+
+    if (window._solicitudContactosCargando || window._solicitudContactosTieneMas === false) {
+        return window._solicitudContactosEmpresa || [];
+    }
+
     try {
-        const { data, error } = await window.supabaseClient
+        window._solicitudContactosCargando = true;
+        let query = window.supabaseClient
             .from('clients')
             .select('id, empresa, contacto, telefono, direccion, codigo_postal')
             .ilike('empresa', empresaBase)
             .eq('activo', true)
-            .order('contacto');
+            .not('contacto', 'is', null)
+            .order('contacto')
+            .range(offset, offset + CONTACTOS_SOLICITUD_PAGE_SIZE - 1);
+
+        if (term) query = query.ilike('contacto', `%${term}%`);
+
+        const { data, error } = await query;
         if (error) throw error;
 
-        window._solicitudContactosEmpresa = (data || []).filter(cliente => cliente.contacto);
+        const nuevos = (data || []).filter(cliente => cliente.contacto);
+        window._solicitudContactosEmpresa = append
+            ? [...(window._solicitudContactosEmpresa || []), ...nuevos]
+            : nuevos;
+        window._solicitudContactosOffset = offset + nuevos.length;
+        window._solicitudContactosTieneMas = nuevos.length === CONTACTOS_SOLICITUD_PAGE_SIZE;
+
         if (selectedId) {
             const contacto = window._solicitudContactosEmpresa.find(cliente => String(cliente.id) === String(selectedId));
             if (contacto) seleccionarContactoSolicitudData(contacto, { mantenerDropdown: true });
@@ -820,10 +852,12 @@ async function cargarContactosEmpresaSolicitud(empresa, selectedId = '') {
     } catch (error) {
         console.warn('No se pudieron cargar contactos para la solicitud:', error);
         return [];
+    } finally {
+        window._solicitudContactosCargando = false;
     }
 }
 
-function buscarContactosSolicitud(term) {
+async function buscarContactosSolicitud(term) {
     const contactoIdInput = document.getElementById('solContactoId');
     const results = document.getElementById('solContactosSugerencias');
     if (contactoIdInput) contactoIdInput.value = '';
@@ -831,21 +865,19 @@ function buscarContactosSolicitud(term) {
     if (!results) return;
 
     const texto = (term || '').trim();
-    const contactos = window._solicitudContactosEmpresa || [];
-    const filtrados = texto.length
-        ? contactos.filter(cliente => String(cliente.contacto || '').toLocaleLowerCase('es').includes(texto.toLocaleLowerCase('es')))
-        : contactos;
-
-    renderContactosSolicitud(filtrados, texto);
+    const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+    await cargarContactosEmpresaSolicitud(empresa, '', { term: texto });
+    renderContactosSolicitud(window._solicitudContactosEmpresa || [], texto);
 }
 
 async function mostrarContactosSolicitud() {
     const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
     if (!empresa) return;
-    if (!window._solicitudContactosEmpresa?.length) {
-        await cargarContactosEmpresaSolicitud(empresa, document.getElementById('solContactoId')?.value || '');
+    const texto = (document.getElementById('solContacto')?.value || '').trim();
+    if (!window._solicitudContactosEmpresa?.length || texto !== (window._solicitudContactosTerm || '')) {
+        await cargarContactosEmpresaSolicitud(empresa, document.getElementById('solContactoId')?.value || '', { term: texto });
     }
-    buscarContactosSolicitud(document.getElementById('solContacto')?.value || '');
+    renderContactosSolicitud(window._solicitudContactosEmpresa || [], texto);
 }
 
 function renderContactosSolicitud(contactos = [], texto = '') {
@@ -858,6 +890,8 @@ function renderContactosSolicitud(contactos = [], texto = '') {
         results.style.display = 'block';
         return;
     }
+
+    window._solicitudContactosRenderizados = contactos;
 
     const opciones = contactos.map((cliente, index) => `
         <button type="button" class="calendar-client-option" onclick="seleccionarContactoSolicitud(${index})">
@@ -872,21 +906,35 @@ function renderContactosSolicitud(contactos = [], texto = '') {
         </button>
     ` : '';
 
+    const cargarMas = window._solicitudContactosTieneMas
+        ? '<div class="calendar-client-empty calendar-client-loading">Desliza para cargar más contactos</div>'
+        : '';
+
     results.innerHTML = opciones || texto
-        ? `${opciones}${crear}`
+        ? `${opciones}${cargarMas}${crear}`
         : '<div class="calendar-client-empty">Sin contactos guardados para esta empresa</div>';
     results.style.display = 'block';
+    configurarScrollContactosSolicitud();
 }
 
 function seleccionarContactoSolicitud(index) {
-    const texto = (document.getElementById('solContacto')?.value || '').trim();
-    const contactos = window._solicitudContactosEmpresa || [];
-    const filtrados = texto.length
-        ? contactos.filter(cliente => String(cliente.contacto || '').toLocaleLowerCase('es').includes(texto.toLocaleLowerCase('es')))
-        : contactos;
-    const contacto = filtrados[index];
+    const contacto = (window._solicitudContactosRenderizados || [])[index];
     if (!contacto) return;
     seleccionarContactoSolicitudData(contacto);
+}
+
+function configurarScrollContactosSolicitud() {
+    const results = document.getElementById('solContactosSugerencias');
+    if (!results || results.dataset.scrollContactosReady === '1') return;
+    results.dataset.scrollContactosReady = '1';
+    results.addEventListener('scroll', async () => {
+        const cercaDelFinal = results.scrollTop + results.clientHeight >= results.scrollHeight - 24;
+        if (!cercaDelFinal || window._solicitudContactosCargando || !window._solicitudContactosTieneMas) return;
+        const empresa = (document.getElementById('solEmpresa')?.value || '').trim();
+        const texto = (document.getElementById('solContacto')?.value || '').trim();
+        await cargarContactosEmpresaSolicitud(empresa, '', { term: texto, append: true });
+        renderContactosSolicitud(window._solicitudContactosEmpresa || [], texto);
+    });
 }
 
 function seleccionarContactoSolicitudData(contacto, options = {}) {

@@ -29,7 +29,7 @@
   background: white;
   border: 1px solid var(--dc-border);
   border-radius: 12px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--dc-shadow);
 }
 
@@ -40,6 +40,7 @@
   flex-direction: column;
   max-height: calc(100vh - 130px);
   min-height: 0;
+  overflow: visible;
 }
 
 .dash-events-panel .event-details h4 {
@@ -566,13 +567,29 @@
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 20;
-  max-height: 180px;
+  z-index: 80;
+  max-height: 148px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   background: #fff;
   border: 1px solid var(--dc-border);
   border-radius: 8px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, .14);
+}
+
+.calendar-client-results::-webkit-scrollbar {
+  width: 10px;
+}
+
+.calendar-client-results::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 8px;
+}
+
+.calendar-client-results::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2px solid #f1f5f9;
+  border-radius: 8px;
 }
 
 .calendar-client-option {
