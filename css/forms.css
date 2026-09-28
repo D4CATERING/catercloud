@@ -9003,7 +9003,7 @@ h3 {
 @media print {
   @page {
     size: A4;
-    margin: 6mm;
+    margin: 4mm;
   }
 
   #detalleComanda {
@@ -9021,8 +9021,8 @@ h3 {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) auto !important;
     align-items: end !important;
-    margin-bottom: 5pt !important;
-    padding-bottom: 3pt !important;
+    margin-bottom: 1pt !important;
+    padding-bottom: 1pt !important;
     border-bottom: 1.4pt solid #E1342E !important;
   }
 
@@ -9042,7 +9042,7 @@ h3 {
   #detalleComanda .dc-section {
     border: .65pt solid #D6DEE8 !important;
     border-radius: 3pt !important;
-    margin-bottom: 4pt !important;
+    margin-bottom: 2pt !important;
     overflow: hidden !important;
     background: transparent !important;
   }
@@ -9051,9 +9051,9 @@ h3 {
   #detalleComanda .dc-section-header {
     display: flex !important;
     align-items: center !important;
-    gap: 4pt !important;
-    min-height: 11pt !important;
-    padding: 1.5pt 7pt !important;
+    gap: 3pt !important;
+    min-height: 8pt !important;
+    padding: .5pt 6pt !important;
     background: transparent !important;
     border-bottom: .8pt solid #E1342E !important;
     border-left: 1.4pt solid #111B24 !important;
@@ -9064,9 +9064,9 @@ h3 {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 10pt !important;
+    width: 8pt !important;
     line-height: 1 !important;
-    font-size: 8pt !important;
+    font-size: 7pt !important;
   }
 
   .detalle-container .dc-section-header h3,
@@ -9088,14 +9088,14 @@ h3 {
     color: #71829D !important;
     font-size: 7pt !important;
     line-height: 1 !important;
-    margin-bottom: 1.5pt !important;
+    margin-bottom: .6pt !important;
     text-transform: uppercase !important;
   }
 
   #detalleInfoEventoSection .detalle-grid {
     grid-template-columns: minmax(140pt, 1.65fr) minmax(70pt, .9fr) 34pt minmax(92pt, 1.05fr) 48pt !important;
     column-gap: 14pt !important;
-    padding: 3pt 12pt 4pt !important;
+    padding: .4pt 14pt 4.5pt !important;
     align-items: start !important;
   }
 
@@ -9108,8 +9108,8 @@ h3 {
     display: grid !important;
     grid-template-columns: minmax(98pt, 1.4fr) minmax(68pt, .82fr) minmax(90pt, 1fr) minmax(92pt, 1fr) minmax(66pt, .72fr) !important;
     column-gap: 12pt !important;
-    row-gap: 3pt !important;
-    padding: 5pt 14pt 6pt !important;
+    row-gap: 1pt !important;
+    padding: .4pt 14pt 4.5pt !important;
     align-items: start !important;
   }
 
@@ -9151,11 +9151,11 @@ h3 {
   }
 
   #detalleDatosLogisticaContent td {
-    padding: 6pt 0 7pt !important;
+    padding: 1.5pt 0 2pt !important;
   }
 
   #detalleDatosLogisticaSection {
-    margin-top: 10pt !important;
+    margin-top: 3pt !important;
   }
 
   .detalle-menaje-badge {
@@ -9163,13 +9163,13 @@ h3 {
     color: #000000 !important;
     font-weight: 800 !important;
     line-height: 1 !important;
-    padding: 3pt 8pt 2pt !important;
+    padding: 1pt 8pt 1pt !important;
     margin: 0 !important;
     border-bottom-color: #E5EAF0 !important;
   }
 
   .detalle-body {
-    padding: 5pt 12pt 6pt !important;
+    padding: 1.5pt 8pt 3pt !important;
     background: transparent !important;
   }
 
@@ -9179,6 +9179,10 @@ h3 {
   #detalleNotasLogisticaSection,
   #detalleIntoleranciasSection {
     background: transparent !important;
+  }
+
+  .detalle-menu-card {
+    padding: 3pt 8pt !important;
   }
 
   .detalle-termos-total {
@@ -9212,12 +9216,12 @@ h3 {
     grid-template-columns: minmax(0, 1fr) 58pt !important;
     column-gap: 10pt !important;
     align-items: baseline !important;
-    padding: 1.7pt 0 !important;
+    padding: 1.2pt 0 !important;
     border-bottom: 0 !important;
   }
 
   .detalle-menu-row--heading {
-    margin-bottom: 4pt !important;
+    margin-bottom: 2pt !important;
   }
 
   .detalle-menu-nombre,
@@ -9243,12 +9247,12 @@ h3 {
   }
 
   #detalleLogisticaContent {
-    padding: 5pt 9pt 7pt !important;
+    padding: 2pt 5pt 3pt !important;
     background: transparent !important;
   }
 
   #detalleLogisticaContent .dc-material-grid {
-    gap: 6pt !important;
+    gap: 4pt !important;
     background: transparent !important;
   }
 
@@ -9256,19 +9260,21 @@ h3 {
     background: transparent !important;
     border: .55pt solid #DDE5EF !important;
     border-radius: 4pt !important;
-    padding: 5pt !important;
+    padding: 3pt !important;
   }
 
   #detalleLogisticaContent .dc-material-col h5 {
     font-size: 8.4pt !important;
-    color: #51637C !important;
+    color: #000000 !important;
     border-bottom: 0 !important;
-    padding-bottom: 3pt !important;
-    margin-bottom: 4pt !important;
+    min-height: 0 !important;
+    line-height: 1 !important;
+    padding: 0 0 .4pt !important;
+    margin-bottom: 0 !important;
   }
 
   #detalleLogisticaContent .dc-material-item {
-    padding: 2pt 0 !important;
+    padding: .7pt 0 !important;
     border-bottom: 0 !important;
   }
 
@@ -9283,5 +9289,88 @@ h3 {
   #detalleLogisticaContent .dc-material-medida {
     color: #000000 !important;
     font-weight: 800 !important;
+  }
+}
+
+/* Impresion de comanda: el PDF no debe heredar scroll de la vista en pantalla. */
+@media print {
+  html,
+  body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #detalleComanda {
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    scrollbar-width: none !important;
+    zoom: 1 !important;
+    font-family: 'Roboto', Arial, sans-serif !important;
+  }
+
+  #detalleComanda * {
+    font-family: 'Roboto', Arial, sans-serif !important;
+  }
+
+  #detalleComanda .detalle-field-value,
+  #detalleComanda .detalle-logistica-entrega-field .detalle-field-value,
+  #detalleComanda #detalleDatosLogisticaContent td .detalle-field-value,
+  #detalleComanda .detalle-menu-nombre:not(.es-titulo),
+  #detalleComanda .detalle-menu-cantidad,
+  #detalleComanda #detalleLogisticaContent .dc-material-nombre,
+  #detalleComanda #detalleLogisticaContent .dc-material-medida,
+  #detalleComanda #detalleLogisticaContent .dc-material-cantidad,
+  #detalleComanda #detalleLogisticaContent .dc-material-unidad,
+  #detalleComanda #detalleNotas,
+  #detalleComanda #detalleNotasLogistica,
+  #detalleComanda .detalle-logistica-notas {
+    font-size: 10.2pt !important;
+    line-height: 1.08 !important;
+  }
+
+  #detalleComanda .detalle-field-value,
+  #detalleComanda .detalle-logistica-entrega-field .detalle-field-value,
+  #detalleComanda #detalleDatosLogisticaContent td .detalle-field-value,
+  #detalleComanda .detalle-menu-nombre:not(.es-titulo),
+  #detalleComanda #detalleLogisticaContent .dc-material-nombre,
+  #detalleComanda #detalleNotas,
+  #detalleComanda #detalleNotasLogistica,
+  #detalleComanda .detalle-logistica-notas {
+    font-weight: 400 !important;
+  }
+
+  #detalleComanda .detalle-menu-cantidad,
+  #detalleComanda #detalleLogisticaContent .dc-material-medida,
+  #detalleComanda #detalleLogisticaContent .dc-material-cantidad {
+    font-weight: 800 !important;
+  }
+
+  #detalleComanda #detalleLogisticaContent .dc-material-unidad {
+    font-weight: 400 !important;
+  }
+
+  #detalleComanda,
+  #detalleComanda *,
+  .detalle-container {
+    max-height: none !important;
+    overflow: visible !important;
+    scrollbar-width: none !important;
+  }
+
+  #detalleComanda::-webkit-scrollbar,
+  #detalleComanda *::-webkit-scrollbar,
+  .detalle-container::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }

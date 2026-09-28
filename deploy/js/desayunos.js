@@ -920,7 +920,7 @@ function mostrarReferenciasPrincipales(referencias, containerId, tipo) {
     const container = document.getElementById(containerId);
     container.innerHTML = '';
     
-    const cantidadBase = Math.ceil(window.pax * window.multiplicadores[tipo]);
+    const cantidadBase = Math.max(1, Math.floor(window.pax * window.multiplicadores[tipo]));
     
     referencias.forEach(ref => {
         const div = document.createElement('div');
@@ -966,8 +966,8 @@ function mostrarReferenciasPrincipales(referencias, containerId, tipo) {
  * Actualiza cantidades de referencias
  */
 function actualizarCantidadesReferencias() {
-    const cantidadSaladas = Math.ceil(window.pax * window.multiplicadores.saladas);
-    const cantidadPostres = Math.ceil(window.pax * window.multiplicadores.postres);
+    const cantidadSaladas = Math.max(1, Math.floor(window.pax * window.multiplicadores.saladas));
+    const cantidadPostres = Math.max(1, Math.floor(window.pax * window.multiplicadores.postres));
     
     document.querySelectorAll('.referencia-option[data-tipo="saladas"] .cantidad-input').forEach(input => {
         input.value = cantidadSaladas;
@@ -1221,7 +1221,7 @@ function mostrarReferenciasAdicionales(referencias, containerId, tipo) {
         parseFloat(document.getElementById('modalMultiplicadorSaladasAdicional').value) || 1 :
         parseFloat(document.getElementById('modalMultiplicadorPostresAdicional').value) || 1;
     
-    const cantidadBase = Math.ceil(paxAdicional * multiplicador);
+    const cantidadBase = Math.max(1, Math.floor(paxAdicional * multiplicador));
     
     referencias.forEach(ref => {
         const div = document.createElement('div');
@@ -1271,8 +1271,8 @@ function actualizarCantidadesReferenciasAdicionales() {
     const multiplicadorSaladas = parseFloat(document.getElementById('modalMultiplicadorSaladasAdicional').value) || 1;
     const multiplicadorPostres = parseFloat(document.getElementById('modalMultiplicadorPostresAdicional').value) || 1;
     
-    const cantidadSaladas = Math.ceil(paxAdicional * multiplicadorSaladas);
-    const cantidadPostres = Math.ceil(paxAdicional * multiplicadorPostres);
+    const cantidadSaladas = Math.max(1, Math.floor(paxAdicional * multiplicadorSaladas));
+    const cantidadPostres = Math.max(1, Math.floor(paxAdicional * multiplicadorPostres));
     
     document.querySelectorAll('#modalReferenciasSaladasGrid .cantidad-input').forEach(input => {
         input.value = cantidadSaladas;
@@ -1544,8 +1544,8 @@ function actualizarPaxMenuAdicional(index, valor) {
             const multiplicadorSaladas = window.menusAdicionales[index].multiplicadores.saladas || 1;
             const multiplicadorPostres = window.menusAdicionales[index].multiplicadores.postres || 1;
             
-            const nuevaCantidadSaladas = Math.ceil(nuevoPax * multiplicadorSaladas);
-            const nuevaCantidadPostres = Math.ceil(nuevoPax * multiplicadorPostres);
+            const nuevaCantidadSaladas = Math.max(1, Math.floor(nuevoPax * multiplicadorSaladas));
+            const nuevaCantidadPostres = Math.max(1, Math.floor(nuevoPax * multiplicadorPostres));
             
             window.menusAdicionales[index].referencias.saladas.forEach(ref => {
                 ref.cantidad = nuevaCantidadSaladas;
@@ -1577,11 +1577,11 @@ function actualizarMultiplicador(tipo, valor) {
     if (tipo === 'saladas') {
         document.getElementById('multSaladasValue').textContent = window.multiplicadores.saladas;
         const pax = window.pax || 0;
-        document.getElementById('totalSaladasValue').textContent = Math.ceil(pax * window.multiplicadores.saladas);
+        document.getElementById('totalSaladasValue').textContent = Math.floor(pax * window.multiplicadores.saladas);
     } else if (tipo === 'postres') {
         document.getElementById('multPostresValue').textContent = window.multiplicadores.postres;
         const pax = window.pax || 0;
-        document.getElementById('totalPostresValue').textContent = Math.ceil(pax * window.multiplicadores.postres);
+        document.getElementById('totalPostresValue').textContent = Math.floor(pax * window.multiplicadores.postres);
     }
     
     // Actualizar cantidades en referencias seleccionadas

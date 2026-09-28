@@ -8,10 +8,10 @@ function actualizarMultiplicador(tipo, valor) {
   const pax = window.pax || 0;
   if (tipo === 'saladas') {
     if (window.setText) setText('multSaladasValue', window.multiplicadores.saladas);
-    if (window.setText) setText('totalSaladasValue', Math.ceil(pax * window.multiplicadores.saladas));
+    if (window.setText) setText('totalSaladasValue', Math.floor(pax * window.multiplicadores.saladas));
   } else if (tipo === 'postres') {
     if (window.setText) setText('multPostresValue', window.multiplicadores.postres);
-    if (window.setText) setText('totalPostresValue', Math.ceil(pax * window.multiplicadores.postres));
+    if (window.setText) setText('totalPostresValue', Math.floor(pax * window.multiplicadores.postres));
   }
   // Re-renderizar referencias visibles
   if (typeof actualizarCantidadesReferencias === 'function') {

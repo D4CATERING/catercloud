@@ -279,7 +279,7 @@
 
     const pax = st.paxTemporal || parseInt($('modalPaxAdicional')?.value) || 0;
     const mult = st.multiplicadoresTemporales[tipo] || 1;
-    const cantidadBase = Math.max(1, Math.ceil(pax * mult));
+    const cantidadBase = Math.max(1, Math.floor(pax * mult));
 
     const filtradas = query
       ? referencias.filter(ref => normalizarTextoBusquedaModal(ref.nombre).includes(query))
@@ -381,7 +381,7 @@
     const pax = parseInt($('modalPaxAdicional')?.value) || 0;
     st.paxTemporal = pax;
 
-    const cantidad = Math.max(1, Math.ceil(pax * st.multiplicadoresTemporales[tipo]));
+    const cantidad = Math.max(1, Math.floor(pax * st.multiplicadoresTemporales[tipo]));
     const gridId = tipo === 'saladas' ? 'modalReferenciasSaladasGrid' : 'modalReferenciasPostresGrid';
 
     document.querySelectorAll(`#${gridId} .cantidad-input`).forEach(inp => { inp.value = cantidad; });
@@ -576,8 +576,8 @@
     if (item.multiplicadores && item.referencias) {
       const ms = item.multiplicadores.saladas || 1;
       const mp = item.multiplicadores.postres || 1;
-      item.referencias.saladas?.forEach(r => { r.cantidad = Math.max(1, Math.ceil(nuevoPax * ms)); });
-      item.referencias.postres?.forEach(r => { r.cantidad = Math.max(1, Math.ceil(nuevoPax * mp)); });
+      item.referencias.saladas?.forEach(r => { r.cantidad = Math.max(1, Math.floor(nuevoPax * ms)); });
+      item.referencias.postres?.forEach(r => { r.cantidad = Math.max(1, Math.floor(nuevoPax * mp)); });
     }
 
     actualizarListaMenusAdicionalesCompleta();

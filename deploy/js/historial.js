@@ -61,12 +61,16 @@ function textoSeguro(valor) {
     }[char]));
 }
 
+function limitarTextoDetalle(valor, max = 25) {
+    return String(valor || '').trim().slice(0, max);
+}
+
 function renderDatosEntregaLogistica(datos = {}) {
     const direccionCompleta = datos.direccion || [datos.calle, datos.numero].filter(Boolean).join(', ');
     const direccionPartes = typeof window.separarDireccionLogistica === 'function'
         ? window.separarDireccionLogistica(direccionCompleta)
         : { calle: '', numero: '' };
-    const calle = datos.calle || direccionPartes.calle || direccionCompleta;
+    const calle = limitarTextoDetalle(datos.calle || direccionPartes.calle || direccionCompleta);
     const numero = datos.numero || direccionPartes.numero || '';
     const campo = (label, valor, extraClass = '') => {
         if (!valor) return '';
@@ -77,7 +81,7 @@ function renderDatosEntregaLogistica(datos = {}) {
     };
 
     const campos = [
-        campo('Contacto', datos.nombre_contacto, 'detalle-logistica-contacto'),
+        campo('Contacto', limitarTextoDetalle(datos.nombre_contacto), 'detalle-logistica-contacto'),
         campo('Telefono', datos.telefono_contacto, 'detalle-logistica-telefono'),
         campo('Duracion evento', datos.duracion_evento, 'detalle-logistica-duracion'),
         campo('Cantidad camareros', datos.cantidad_camareros, 'detalle-logistica-camareros'),
@@ -2192,6 +2196,35 @@ function _esComandaServicios(comanda) {
     return menus.some(menu => _esMenuServicios(_normalizarMenuEdicion(menu, comanda, menu === comanda?.menu_principal)));
 }
 
+function _contarMenusComandaEdicion(comanda = {}) {
+    return [
+        comanda.menu_principal,
+        ...(comanda.menus_adicionales || [])
+    ].filter(Boolean).length;
+}
+
+function _resolverMaterialMenuEdicion(menu, comanda = {}) {
+    const materialMenu = _normalizarMaterialLogisticaEdicion(
+        menu?.material || menu?.material_logistica || menu?.materialLogistica || null
+    );
+    if (_materialLogisticaTieneItems(materialMenu)) return materialMenu;
+
+    const categoriaId = _inferirCategoriaMenuEdicion(menu);
+    if (categoriaId === 3 || _contarMenusComandaEdicion(comanda) !== 1) {
+        return materialMenu;
+    }
+
+    const materialComanda = _normalizarMaterialLogisticaEdicion(
+        comanda?.material_logistica ||
+        comanda?.materialLogistica ||
+        comanda?.logistica?.material_logistica ||
+        comanda?.logistica_inline?.material_logistica ||
+        null
+    );
+
+    return _materialLogisticaTieneItems(materialComanda) ? materialComanda : materialMenu;
+}
+
 function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
     const categoriaId = _inferirCategoriaMenuEdicion(menu);
     const item = {
@@ -2202,7 +2235,7 @@ function _normalizarMenuEdicion(menu, comanda, esPrincipal) {
         categoria: menu?.categoria || '',
         pax: Number(menu?.pax || menu?.pax_adicional || (esPrincipal ? comanda?.pax : 0)) || 0,
         tipo_menaje: menu?.tipo_menaje || comanda?.tipo_menaje || null,
-        material: _normalizarMaterialLogisticaEdicion(menu?.material || menu?.material_logistica || menu?.materialLogistica || null)
+        material: _resolverMaterialMenuEdicion(menu, comanda)
     };
 
     if (esPrincipal) {
@@ -2674,14 +2707,31 @@ function imprimirComanda() {
 
     setTimeout(() => {
         try {
+            ajustarComandaParaImpresion();
             window.focus();
             window.print();
         } catch (error) {
             console.error('No se pudo abrir la impresion:', error);
             alert('No se pudo abrir la ventana de impresión. Intenta con Ctrl + P.');
+        } finally {
+            setTimeout(limpiarAjusteImpresionComanda, 250);
         }
     }, 80);
 }
+
+function ajustarComandaParaImpresion() {
+    const detalle = document.getElementById('detalleComanda');
+    if (!detalle) return;
+
+    detalle.style.setProperty('--detalle-print-scale', '1');
+}
+
+function limpiarAjusteImpresionComanda() {
+    document.getElementById('detalleComanda')?.style.removeProperty('--detalle-print-scale');
+}
+
+window.addEventListener('beforeprint', ajustarComandaParaImpresion);
+window.addEventListener('afterprint', limpiarAjusteImpresionComanda);
 
 async function eliminarComanda() {
     if (window.detalleDocumentoActivo?.tipo === 'logistica') {

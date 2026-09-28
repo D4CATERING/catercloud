@@ -501,6 +501,27 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
     if (_catPrincipal !== 4) comandaData.foodbox_lunch = null;
     if (_catPrincipal !== 5 && _catPrincipal !== 6) comandaData.bandejas = null;
     comandaData.logistica_inline = comandaData.logistica;
+    const normalizarMaterialGuardado = typeof window.normalizarMaterialLogistica === 'function'
+        ? window.normalizarMaterialLogistica
+        : (material) => material || { bebidas: [], menaje: [], extras: [] };
+    const materialTieneItemsGuardado = (material) => {
+        const normalizado = normalizarMaterialGuardado(material || {});
+        return ['bebidas', 'menaje', 'extras'].some(tipo => (normalizado[tipo] || []).some(item =>
+            item?.checked !== false &&
+            (Number(item?.cantidad || 0) > 0 || (item?.subitems_selected || []).length > 0)
+        ));
+    };
+    const materialGlobalGuardado = normalizarMaterialGuardado(comandaData.material_logistica || {});
+    const menusGuardadosConMaterial = [
+        comandaData.menu_principal,
+        ...(comandaData.menus_adicionales || [])
+    ].filter(Boolean);
+    if (menusGuardadosConMaterial.length === 1 && materialTieneItemsGuardado(materialGlobalGuardado)) {
+        const menuUnico = menusGuardadosConMaterial[0];
+        if (!materialTieneItemsGuardado(menuUnico.material || menuUnico.material_logistica || menuUnico.materialLogistica)) {
+            menuUnico.material = materialGlobalGuardado;
+        }
+    }
     if (window.solicitudConvirtiendo) {
         comandaData.solicitud_origen = {
             codigo: window.solicitudConvirtiendo.codigo_solicitud || window.solicitudConvirtiendo.codigo || '',

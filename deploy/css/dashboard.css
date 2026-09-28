@@ -1086,8 +1086,8 @@
   }
 }
 
-/* Mobile dashboard and expediente */
-@media (max-width: 760px) {
+/* Tablet/mobile dashboard and expediente */
+@media (max-width: 1100px) {
   .dash-page-header {
     align-items: stretch;
     gap: 10px;
@@ -1111,6 +1111,13 @@
     border-radius: 10px;
   }
 
+  .dash-events-panel .event-list {
+    max-height: 44vh;
+  }
+}
+
+/* Mobile dashboard and expediente */
+@media (max-width: 760px) {
   .dash-events-panel .event-list {
     max-height: none;
   }

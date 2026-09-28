@@ -177,14 +177,14 @@ function calcularCantidad(ref, pax) {
         const mult = tipo === 'postres'
             ? (window.multiplicadores?.postres ?? window.menuSeleccionado?.mult_postres ?? 1)
             : (window.multiplicadores?.saladas ?? 1);
-        return Math.max(1, Math.ceil((Number(pax) || 0) * mult));
+        return Math.max(1, Math.floor((Number(pax) || 0) * mult));
     }
     if (ref.tipo === 'fijo')     return ref.cantidad * pax;       // ej: 2 uds x 20 pax = 40
     if (ref.tipo === 'porPax')   return pax * ref.cantidad;       // ej: 15 grs x 20 pax = 300 grs
     if (ref.tipo === 'cadaXpax') return Math.ceil(pax / (ref.divisor || 15)); // ej: ceil(20/15) = 2
     if (ref.tipo === 'postre') {
         const mult = window.menuSeleccionado?.mult_postres ?? 1;
-        return Math.ceil(pax * mult);
+        return Math.max(1, Math.floor(pax * mult));
     }
     return ref.cantidad || 1;
 }

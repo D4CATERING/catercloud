@@ -1241,7 +1241,13 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
 }
 
 async function cargarHistorialRemotoSupabase(options = {}) {
-    if (!haySesionSupabase()) return false;
+    if (!haySesionSupabase()) {
+        window._ultimoHistorialRemotoError = {
+            at: fechaHoraIso(),
+            message: window.supabaseClient ? 'sin_usuario_autenticado' : 'supabase_no_inicializado'
+        };
+        return false;
+    }
     if (window._cargandoHistorialRemotoSupabase) {
         window._historialRemotoPendiente = true;
         if (window._historialRemotoPromise) {

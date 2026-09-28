@@ -1,6 +1,7 @@
 // ========== LOGISTICS DELIVERY: datos de entrega y validacion ==========
 
 (function initCaterCloudLogisticsDelivery() {
+    const DELIVERY_TEXT_LIMIT = 25;
     const REQUIRED_FIELDS = Object.freeze([
         { key: 'hora_entrega', suffix: 'hora_entrega', label: 'Hora de entrega' },
         { key: 'hora_evento', suffix: 'hora_evento', label: 'Hora del evento' },
@@ -19,6 +20,10 @@
 
     function getValue(prefix, suffix) {
         return getInput(prefix, suffix)?.value?.trim() || '';
+    }
+
+    function limitDeliveryText(value, max = DELIVERY_TEXT_LIMIT) {
+        return String(value || '').trim().slice(0, max);
     }
 
     function setFieldState(prefix, suffix, ok, message = '') {
@@ -56,14 +61,14 @@
     }
 
     function readFromDom(prefix) {
-        const calle = getValue(prefix, 'calle');
+        const calle = limitDeliveryText(getValue(prefix, 'calle'));
         const numero = getValue(prefix, 'numero');
         return {
             hora_entrega: getValue(prefix, 'hora_entrega'),
             hora_evento: getValue(prefix, 'hora_evento'),
             fecha_recogida: getValue(prefix, 'fecha_recogida'),
             hora_recogida: getValue(prefix, 'hora_recogida'),
-            nombre_contacto: getValue(prefix, 'nombre_contacto'),
+            nombre_contacto: limitDeliveryText(getValue(prefix, 'nombre_contacto')),
             telefono_contacto: getValue(prefix, 'telefono_contacto'),
             montaje: getValue(prefix, 'montaje'),
             duracion_evento: getValue(prefix, 'duracion_evento'),
@@ -169,11 +174,14 @@
 
         const merged = sources.reduce((acc, source) => ({ ...acc, ...source }), {});
         const direccion = !merged.calle && merged.direccion ? splitAddress(merged.direccion) : { calle: '', numero: '' };
+        const calle = limitDeliveryText(merged.calle || direccion.calle || '');
+        const numero = merged.numero || direccion.numero || '';
         return {
             ...merged,
-            calle: merged.calle || direccion.calle || '',
-            numero: merged.numero || direccion.numero || '',
-            direccion: merged.direccion || composeAddress(merged.calle || direccion.calle || '', merged.numero || direccion.numero || '')
+            nombre_contacto: limitDeliveryText(merged.nombre_contacto || ''),
+            calle,
+            numero,
+            direccion: composeAddress(calle, numero)
         };
     }
 
