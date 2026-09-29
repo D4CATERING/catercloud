@@ -6,7 +6,7 @@
     <title>CaterCloud - Sistema de Comandas</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css?v=20260929b">
+    <link rel="stylesheet" href="css/styles.css?v=20260929c">
     <link rel="stylesheet" href="css/dashboard.css?v=20260929a">
     <link rel="stylesheet" href="css/calendar.css?v=20260928b">
     <link rel="stylesheet" href="css/forms.css?v=20260929d">
@@ -60,7 +60,11 @@
       </span><span class="nav-label">Logística</span>
     </div>
     <div class="dc-nav-item dc-nav-item--logout" onclick="cerrarSesionDesdeNav()" id="nav-logout">
-      <span class="nav-icon" aria-hidden="true">↪</span><span class="nav-label">Salir</span>
+      <span class="dc-user-avatar dc-mobile-user-avatar" id="dcMobileUserInitial">—</span>
+      <span class="dc-mobile-user-copy">
+        <span class="dc-mobile-user-name" id="dcMobileUserName"></span>
+        <span class="nav-label">Cerrar sesión</span>
+      </span>
     </div>
   </nav>
 
@@ -1381,8 +1385,12 @@
         const name = u?.user_metadata?.full_name || u?.email || '';
         const el = document.getElementById('dcUserName');
         const av = document.getElementById('dcUserInitial');
+        const mobileEl = document.getElementById('dcMobileUserName');
+        const mobileAv = document.getElementById('dcMobileUserInitial');
         if (el) el.textContent = name;
         if (av) av.textContent = (name[0] || 'D').toUpperCase();
+        if (mobileEl) mobileEl.textContent = name;
+        if (mobileAv) mobileAv.textContent = (name[0] || 'D').toUpperCase();
       }
 
       document.addEventListener('user:changed', actualizarSidebar);

@@ -134,6 +134,11 @@ a:hover { text-decoration: underline; }
 .dc-nav-item--logout {
   display: none;
 }
+
+.dc-mobile-user-avatar,
+.dc-mobile-user-copy {
+  display: none;
+}
 .dc-nav-item:hover {
   background: rgba(255,255,255,.06);
   color: #e2e8f0;
@@ -563,6 +568,44 @@ button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 
   .dc-nav-item--logout {
     display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    padding-left: 8px;
+    padding-right: 8px;
+    text-align: left;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-avatar {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    font-size: .72rem;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-name {
+    display: block;
+    overflow: hidden;
+    color: #fff;
+    font-size: .7rem;
+    font-weight: 800;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dc-nav-item--logout .nav-label {
+    color: #94a3b8;
+    font-size: .68rem;
+    font-weight: 500;
+    line-height: 1.05;
   }
 
   .dc-page-header {
@@ -683,6 +726,45 @@ button:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
 
   .dc-nav-item--logout {
     display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 7px;
+    padding-left: 4px;
+    padding-right: 4px;
+    text-align: left;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-avatar {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: .68rem;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .dc-nav-item--logout .dc-mobile-user-name {
+    display: block;
+    max-width: 72px;
+    overflow: hidden;
+    color: #fff;
+    font-size: .66rem;
+    font-weight: 800;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dc-nav-item--logout .nav-label {
+    color: #94a3b8;
+    font-size: .61rem;
+    font-weight: 500;
+    line-height: 1.05;
   }
 
   .dc-main {
