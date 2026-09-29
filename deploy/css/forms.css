@@ -5671,7 +5671,7 @@ h3 {
 
   #cocinaPage .dc-page-content,
   #logisticaPage .dc-page-content {
-    height: calc(100vh - 90px);
+    height: calc(100vh - 76px);
     overflow: hidden;
   }
 
@@ -5705,7 +5705,7 @@ h3 {
 
   #cocinaPage .dc-page-content,
   #logisticaPage .dc-page-content {
-    height: calc(100vh - 90px - var(--mobile-nav-h, 68px) - env(safe-area-inset-bottom, 0px));
+    height: calc(100vh - 76px - var(--mobile-nav-h, 68px) - env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -7099,6 +7099,122 @@ h3 {
 .logistics-prep-header p {
   font-family: var(--font-body);
   color: var(--dc-muted);
+}
+
+#logisticaPage .back-button,
+#cocinaPage .back-button {
+  margin-bottom: 10px;
+  padding: 5px 11px;
+  min-height: 30px;
+  border-radius: 7px;
+  font-size: .76rem;
+}
+
+#logisticaPage .dc-page-header,
+#cocinaPage .dc-page-header {
+  padding-top: 14px;
+  padding-bottom: 0;
+}
+
+#logisticaPage .dc-page-header h1,
+#cocinaPage .dc-page-header h1 {
+  font-size: 1.36rem;
+  line-height: 1.12;
+}
+
+#logisticaPage .dc-page-header p,
+#cocinaPage .dc-page-header p {
+  margin-top: 2px;
+  font-size: .76rem;
+  line-height: 1.2;
+}
+
+#logisticaPage .dc-page-content,
+#cocinaPage .dc-page-content {
+  padding-top: 10px;
+}
+
+#logisticaPage .logistics-dashboard,
+#cocinaPage .logistics-dashboard {
+  gap: 8px;
+}
+
+#logisticaPage .logistics-tab-panel,
+#cocinaPage .logistics-tab-panel {
+  gap: 8px;
+}
+
+#logisticaPage .logistics-kpi-grid,
+#cocinaPage .logistics-kpi-grid {
+  gap: 8px;
+}
+
+#logisticaPage .logistics-kpi-card,
+#cocinaPage .logistics-kpi-card {
+  min-height: 54px;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+}
+
+#logisticaPage .logistics-kpi-icon,
+#cocinaPage .logistics-kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+}
+
+#logisticaPage .logistics-kpi-icon::before,
+#cocinaPage .logistics-kpi-icon::before {
+  width: 16px;
+  height: 16px;
+}
+
+#logisticaPage .logistics-kpi-card strong,
+#cocinaPage .logistics-kpi-card strong {
+  font-size: 1.18rem;
+}
+
+#logisticaPage .logistics-kpi-card span:last-child,
+#cocinaPage .logistics-kpi-card span:last-child {
+  margin-top: 1px;
+  font-size: .72rem;
+}
+
+#logisticaPage .logistics-tabs,
+#cocinaPage .logistics-tabs {
+  padding: 3px;
+  border-radius: 8px;
+}
+
+#logisticaPage .logistics-tab,
+#cocinaPage .logistics-tab {
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: .8rem;
+}
+
+#logisticaPage .logistics-events-toolbar,
+#cocinaPage .logistics-events-toolbar {
+  padding: 7px 10px;
+  border-radius: 8px;
+  gap: 6px;
+}
+
+#logisticaPage .logistics-events-toolbar label,
+#cocinaPage .logistics-events-toolbar label {
+  gap: 2px;
+  font-size: .66rem;
+}
+
+#logisticaPage .logistics-events-toolbar input,
+#cocinaPage .logistics-events-toolbar input,
+#logisticaPage .logistics-events-toolbar button,
+#cocinaPage .logistics-events-toolbar button {
+  height: 30px;
+  border-radius: 7px;
+  font-size: .78rem;
 }
 
 #cocinaPage .logistics-dashboard {
