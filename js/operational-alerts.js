@@ -98,12 +98,33 @@ function marcarCambioOperativoGestionado(key, action = 'dismissed') {
     }
 }
 
-function esFechaAvisoOperativoInmediata(item) {
+function parseFechaOperativaLocal(fecha) {
+    if (!fecha) return null;
+    const [year, month, day] = String(fecha).split('T')[0].split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const parsed = new Date(year, month - 1, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getFechaEventoOperativa(item) {
     const fecha = String(item?.fecha_evento || item?.fecha || item?.fecha_creacion || '').split('T')[0];
-    if (!fecha) return false;
-    const hoy = getFechaLocalHoyDashboard();
-    const manana = sumarDiasFechaLocalDashboard(hoy, 1);
-    return fecha === hoy || fecha === manana;
+    return fecha || '';
+}
+
+function esFechaAvisoOperativoSemanaActual(item) {
+    const fechaEvento = parseFechaOperativaLocal(getFechaEventoOperativa(item));
+    const hoy = parseFechaOperativaLocal(getFechaLocalHoyDashboard());
+    if (!fechaEvento || !hoy) return false;
+
+    const inicioSemana = new Date(hoy);
+    const diaSemana = inicioSemana.getDay() || 7;
+    inicioSemana.setDate(inicioSemana.getDate() - diaSemana + 1);
+    inicioSemana.setHours(0, 0, 0, 0);
+
+    const finSemana = new Date(inicioSemana);
+    finSemana.setDate(inicioSemana.getDate() + 7);
+
+    return fechaEvento >= inicioSemana && fechaEvento < finSemana;
 }
 
 function getCambiosOperativosPendientes(areaVista, eventos) {
@@ -114,10 +135,11 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
 
     const cambios = [];
     (eventos || []).forEach((item, index) => {
-        if (!esFechaAvisoOperativoInmediata(item)) return;
+        if (!esFechaAvisoOperativoSemanaActual(item)) return;
 
         const codigo = getCodigoOperativo(item);
         const empresa = item.empresa || item.company_name || 'Sin empresa';
+        const fechaEvento = getFechaEventoOperativa(item);
 
         if (areaVista === 'cocina' && item.kitchen_revision_notice) {
             cambios.push({
@@ -125,6 +147,7 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
                 tipo: 'cocina',
                 index,
                 codigo,
+                fechaEvento,
                 empresa,
                 label: 'Cocina',
                 notice: item.kitchen_revision_notice,
@@ -139,6 +162,7 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
                     tipo: 'cocina',
                     index,
                     codigo,
+                    fechaEvento,
                     empresa,
                     label: 'Cocina',
                     notice: item.kitchen_revision_notice,
@@ -154,6 +178,7 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
                         tipo: 'logistica',
                         index,
                         codigo,
+                        fechaEvento,
                         empresa,
                         label: 'Logistica',
                         notice: item.logistics_revision_notice,
@@ -178,12 +203,27 @@ function getCambiosOperativosPendientesGlobales() {
     const areas = getAreasAvisoOperativoPorRol();
     if (!areas.length) return [];
 
-    return areas.flatMap(areaVista => {
+    const cambios = areas.flatMap(areaVista => {
         const eventos = areaVista === 'cocina'
             ? getEventosCocinaActivos()
             : getEventosLogisticaActivos();
         return getCambiosOperativosPendientes(areaVista, eventos);
-    }).sort((a, b) => {
+    });
+
+    const porAviso = new Map();
+    cambios.forEach(cambio => {
+        const dedupeKey = [
+            cambio.tipo,
+            cambio.codigo || 'sin-codigo',
+            hashCambioOperativo(JSON.stringify(cambio.notice || {}))
+        ].join(':');
+        const existente = porAviso.get(dedupeKey);
+        if (!existente || cambio.areaVista === cambio.tipo) {
+            porAviso.set(dedupeKey, cambio);
+        }
+    });
+
+    return Array.from(porAviso.values()).sort((a, b) => {
         const fechaB = new Date(b.notice?.at || 0).getTime() || 0;
         const fechaA = new Date(a.notice?.at || 0).getTime() || 0;
         return fechaB - fechaA;
@@ -305,6 +345,7 @@ function mostrarTarjetaCambioOperativo(areaVista, eventos) {
 
     const cambio = cambios[0];
     const detalle = getResumenNoticeOperativa(cambio.notice);
+    const codigoConFecha = `${cambio.codigo || 'Sin codigo'}${cambio.fechaEvento ? ` · ${cambio.fechaEvento}` : ''}`;
     const tituloArea = areaVista === 'cocina' ? 'Cocina' : 'Logistica';
     const accion = areaVista === 'cocina' ? 'Abrir comanda de trabajo' : 'Abrir preparacion';
     const existente = document.getElementById('operationalChangeOverlay');
@@ -320,7 +361,7 @@ function mostrarTarjetaCambioOperativo(areaVista, eventos) {
         areaVista,
         index: cambio.index,
         kicker: `Cambio para ${tituloArea}`,
-        titulo: `Comanda modificada · ${cambio.codigo || 'Sin codigo'}`,
+        titulo: `Comanda modificada · ${codigoConFecha}`,
         subtitulo: `${cambio.empresa} · afecta ${cambio.label}`,
         detalle,
         accion
@@ -337,6 +378,7 @@ function mostrarTarjetaCambioOperativoGlobal() {
 
     const cambio = cambios[0];
     const detalle = getResumenNoticeOperativa(cambio.notice);
+    const codigoConFecha = `${cambio.codigo || 'Sin codigo'}${cambio.fechaEvento ? ` · ${cambio.fechaEvento}` : ''}`;
     const tituloTipo = getEtiquetaTipoCambioOperativo(cambio.tipo, cambio.notice);
     const tituloArea = cambio.areaVista === 'cocina' ? 'Cocina' : 'Logistica';
     const accion = cambio.areaVista === 'cocina' ? 'Abrir produccion' : 'Abrir preparacion';
@@ -351,7 +393,7 @@ function mostrarTarjetaCambioOperativoGlobal() {
         index: cambio.index,
         claseTipo: cambio.tipo,
         kicker: tituloTipo,
-        titulo: cambio.codigo || 'Sin codigo',
+        titulo: codigoConFecha,
         subtitulo: `${cambio.empresa} · aviso para ${tituloArea}`,
         detalle,
         accion
