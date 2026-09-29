@@ -950,6 +950,65 @@ function getMaterialLogisticaPlano(material) {
     return resultado;
 }
 
+function mapearEstadoPreparacionMaterialLogistica(material = {}) {
+    const mapa = new Map();
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        (material?.[tipo] || []).forEach(item => {
+            const key = getKeyMaterialPreparacionLogistica(tipo, item);
+            if (key) mapa.set(key, item);
+            (item.subitems_selected || []).forEach(subitem => {
+                const subKey = getKeyMaterialPreparacionLogistica(`${tipo}:sub`, subitem);
+                if (subKey) mapa.set(subKey, subitem);
+            });
+        });
+    });
+    return mapa;
+}
+
+function conservarPreparadosMaterialLogistica(destino = {}, fuente = {}) {
+    const preparadosFuente = mapearEstadoPreparacionMaterialLogistica(fuente);
+    if (!preparadosFuente.size) return destino;
+
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+        (destino?.[tipo] || []).forEach(item => {
+            const anterior = preparadosFuente.get(getKeyMaterialPreparacionLogistica(tipo, item));
+            if (anterior?.preparado) {
+                item.preparado = true;
+                if (item.material_nuevo) item.material_nuevo = false;
+            }
+            (item.subitems_selected || []).forEach(subitem => {
+                const anteriorSubitem = preparadosFuente.get(getKeyMaterialPreparacionLogistica(`${tipo}:sub`, subitem));
+                if (anteriorSubitem?.preparado) {
+                    subitem.preparado = true;
+                    if (subitem.material_nuevo) subitem.material_nuevo = false;
+                }
+            });
+        });
+    });
+
+    return destino;
+}
+
+async function refrescarPreparadosLogisticaDesdeSupabase(item) {
+    const codigo = getCodigoPedidoLogistica(item);
+    if (!codigo || typeof window.CaterCloudStorage?.obtenerOrdenSupabasePorCodigo !== 'function') return item;
+
+    try {
+        const row = await window.CaterCloudStorage.obtenerOrdenSupabasePorCodigo(codigo, { searchPayload: true });
+        const payload = row?.payload || null;
+        if (payload?.material_logistica && item?.material_logistica) {
+            conservarPreparadosMaterialLogistica(item.material_logistica, payload.material_logistica);
+        }
+        if (payload?.logistics_action_log?.length && !item.logistics_action_log?.length) {
+            item.logistics_action_log = payload.logistics_action_log;
+        }
+    } catch (error) {
+        console.warn('No se pudo refrescar el avance de logistica antes de marcar material:', error);
+    }
+
+    return item;
+}
+
 function getCodigosLogistica(historial) {
     return new Set((historial || []).map(item => item.codigo_cocina || item.codigo).filter(Boolean));
 }
@@ -1465,12 +1524,13 @@ async function confirmarCompletadoLogistica(index, codigo = '') {
     abrirPreparacionLogistica(index, codigo);
 }
 
-function togglePreparadoLogistica(index, tipo, matIndex, materialKey = '', checked, codigo = '') {
+async function togglePreparadoLogistica(index, tipo, matIndex, materialKey = '', checked, codigo = '') {
     if (!requireEditarLogistica()) return;
     tipo = leerJsArgSeguro(tipo);
     materialKey = leerJsArgSeguro(materialKey);
     codigo = leerJsArgSeguro(codigo);
     const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
+    await refrescarPreparadosLogisticaDesdeSupabase(item);
     const materialItem = getMaterialPreparacionLogistica(item, tipo, matIndex, materialKey);
     if (!item || !materialItem) return;
 

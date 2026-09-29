@@ -8,19 +8,34 @@ const ORDER_STORAGE_KEYS = Object.freeze({
     calendarEvents: 'calendarioEventos'
 });
 
+window.__catercloudMemoryStorage = window.__catercloudMemoryStorage || {};
+
 function leerJsonLocalStorage(key, fallback) {
+    const memoryValue = window.__catercloudMemoryStorage?.[key];
     try {
         const raw = localStorage.getItem(key);
-        if (!raw) return fallback;
+        if (!raw) return memoryValue !== undefined ? memoryValue : fallback;
         return JSON.parse(raw);
     } catch (error) {
         console.warn(`No se pudo leer ${key} desde localStorage:`, error);
-        return fallback;
+        return memoryValue !== undefined ? memoryValue : fallback;
     }
 }
 
 function guardarJsonLocalStorage(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
+    window.__catercloudMemoryStorage[key] = value;
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        window._localStorageDisponible = true;
+    } catch (error) {
+        window._localStorageDisponible = false;
+        window._ultimoLocalStorageError = {
+            at: fechaHoraIso(),
+            key,
+            message: error?.message || String(error)
+        };
+        console.warn(`No se pudo guardar ${key} en localStorage. Se usara memoria de sesion:`, error);
+    }
 }
 
 function getUsuarioActual() {
@@ -37,6 +52,48 @@ function getUsuarioActualEmail() {
 
 function haySesionSupabase() {
     return Boolean(window.supabaseClient && getUsuarioActualId());
+}
+
+async function asegurarSesionSupabase(timeoutMs = 3000) {
+    if (haySesionSupabase()) return true;
+
+    const deadline = Date.now() + timeoutMs;
+
+    if (window.AuthReady) {
+        try {
+            await window.AuthReady;
+        } catch (_) {}
+        if (haySesionSupabase()) return true;
+    }
+
+    while (Date.now() < deadline) {
+        if (window.Auth?.getUser) {
+            try {
+                const user = await window.Auth.getUser();
+                if (user) {
+                    window.currentUser = user;
+                    document.dispatchEvent(new CustomEvent('user:changed', { detail: user }));
+                    return true;
+                }
+            } catch (_) {}
+        }
+
+        if (window.supabaseClient?.auth?.getSession) {
+            try {
+                const { data } = await window.supabaseClient.auth.getSession();
+                if (data?.session?.user) {
+                    window.currentUser = data.session.user;
+                    document.dispatchEvent(new CustomEvent('user:changed', { detail: data.session.user }));
+                    return true;
+                }
+            } catch (_) {}
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 150));
+        if (haySesionSupabase()) return true;
+    }
+
+    return haySesionSupabase();
 }
 
 function fechaHoraIso() {
@@ -395,6 +452,63 @@ window.obtenerCodigoComandaParaGuardar = obtenerCodigoComandaParaGuardar;
 
 // ========== STORAGE: logistica vinculada a una comanda ==========
 
+function getClaveMaterialPreparadoSync(tipo, item) {
+  return [
+    tipo,
+    item?.item_id || item?.material_id || item?.id || '',
+    item?.source_table || '',
+    item?.nombre || '',
+    item?.unidad || item?.unidad_comanda || ''
+  ].map(value => String(value || '').trim().toLowerCase())
+    .filter(Boolean)
+    .join('|');
+}
+
+function mapearMaterialPreparadoSync(material = {}) {
+  const mapa = new Map();
+  ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+    (material?.[tipo] || []).forEach(item => {
+      const key = getClaveMaterialPreparadoSync(tipo, item);
+      if (key) mapa.set(key, item);
+      (item.subitems_selected || []).forEach(subitem => {
+        const subKey = getClaveMaterialPreparadoSync(`${tipo}:sub`, subitem);
+        if (subKey) mapa.set(subKey, subitem);
+      });
+    });
+  });
+  return mapa;
+}
+
+function conservarMaterialPreparadoSync(materialNuevo = {}, materialAnterior = {}) {
+  const mapaAnterior = mapearMaterialPreparadoSync(materialAnterior);
+  if (!mapaAnterior.size) return materialNuevo;
+
+  ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+    (materialNuevo?.[tipo] || []).forEach(item => {
+      const anterior = mapaAnterior.get(getClaveMaterialPreparadoSync(tipo, item));
+      if (anterior?.preparado) {
+        item.preparado = true;
+        if (item.material_nuevo) item.material_nuevo = false;
+      }
+      (item.subitems_selected || []).forEach(subitem => {
+        const anteriorSubitem = mapaAnterior.get(getClaveMaterialPreparadoSync(`${tipo}:sub`, subitem));
+        if (anteriorSubitem?.preparado) {
+          subitem.preparado = true;
+          if (subitem.material_nuevo) subitem.material_nuevo = false;
+        }
+      });
+    });
+  });
+
+  return materialNuevo;
+}
+
+function contarMaterialPreparadoSync(material = {}) {
+  return ['bebidas', 'menaje', 'extras'].reduce((total, tipo) => {
+    return total + (material?.[tipo] || []).filter(item => item?.preparado).length;
+  }, 0);
+}
+
 async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistica = {}) {
   if (!codigoPedido) throw new Error('No se encontro el codigo de cocina para vincular la logistica.');
   if (!haySesionSupabase()) {
@@ -416,14 +530,19 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
   }
 
   const version = Number(order.version || order.payload?.version || 1) + 1;
+  const materialLogistica = conservarMaterialPreparadoSync(
+    datosLogistica.material_logistica || {},
+    order.payload?.material_logistica || {}
+  );
+  const preparadosMarcados = contarMaterialPreparadoSync(materialLogistica);
   const payload = {
     ...(order.payload || {}),
     logistica: datosLogistica.logistica || {},
     logistica_inline: datosLogistica.logistica || {},
-    material_logistica: datosLogistica.material_logistica || {},
+    material_logistica: materialLogistica,
     logistics_status: datosLogistica.logistics_status || datosLogistica.estado || 'sin_preparar',
     logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
-    logistics_prepared_items: Number(datosLogistica.logistics_prepared_items || 0),
+    logistics_prepared_items: Math.max(preparadosMarcados, Number(datosLogistica.logistics_prepared_items || 0)),
     tiene_comanda_logistica: true,
     fecha_modificacion: fechaHoraIso(),
     version,
@@ -1105,7 +1224,7 @@ function normalizarComandaRemota(row) {
         supabase_order_id: payload.supabase_order_id || row?.id || null,
         codigo: payload.codigo || row?.codigo || '',
         fecha_creacion: payload.fecha_creacion || row?.created_at || '',
-        fecha_modificacion: payload.fecha_modificacion || row?.updated_at || payload.fecha_creacion || row?.created_at || '',
+        fecha_modificacion: row?.updated_at || payload.fecha_modificacion || payload.fecha_creacion || row?.created_at || '',
         fecha_evento: payload.fecha_evento || row?.fecha_evento || '',
         hora_salida: payload.hora_salida || row?.hora_salida || '',
         pax: payload.pax || payload.pax_total || row?.pax_total || 0,
@@ -1226,7 +1345,7 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
         if (!key) return;
         const remoto = mapa.get(String(key));
         if (!remoto || getFechaModificacionHistorialSync(item) > getFechaModificacionHistorialSync(remoto)) {
-            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: false }) : item);
+            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: true }) : item);
         } else if (remoto) {
             mapa.set(String(key), fusionarDatosLogisticaSync(remoto, item, { preferirFuente: false }));
         }
@@ -1241,6 +1360,9 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
 }
 
 async function cargarHistorialRemotoSupabase(options = {}) {
+    if (!haySesionSupabase()) {
+        await asegurarSesionSupabase(3500);
+    }
     if (!haySesionSupabase()) {
         window._ultimoHistorialRemotoError = {
             at: fechaHoraIso(),

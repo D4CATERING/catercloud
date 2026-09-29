@@ -1063,6 +1063,10 @@ async function guardarComandaLogistica() {
         const sync = await window.sincronizarComandaLogisticaEnSupabase(datosLogistica.codigo_cocina || codigo, datosLogistica);
         datosLogistica.orden_id = sync.id || datosLogistica.orden_id || null;
         datosLogistica.supabase_order_id = sync.id || datosLogistica.supabase_order_id || null;
+        if (sync.payload?.material_logistica) {
+            datosLogistica.material_logistica = sync.payload.material_logistica;
+            datosLogistica.logistics_prepared_items = sync.payload.logistics_prepared_items || datosLogistica.logistics_prepared_items || 0;
+        }
         const codigoLocal = guardarComandaLogisticaEnHistorial(datosLogistica);
         if (typeof mostrarMensaje === 'function') {
             mostrarMensaje(`Comanda de logística ${codigoLocal} creada`, 'success');

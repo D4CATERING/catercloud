@@ -61,6 +61,23 @@
 
     window.supabaseClient = supabaseClient;
 
+    async function readAuthenticatedUser() {
+      try {
+        const { data: sessionData } = await supabaseClient.auth.getSession();
+        if (sessionData?.session?.user) return sessionData.session.user;
+      } catch (error) {
+        console.warn("No se pudo leer la sesion local de Supabase:", error);
+      }
+
+      try {
+        const { data } = await supabaseClient.auth.getUser();
+        return data?.user || null;
+      } catch (error) {
+        console.warn("No se pudo validar el usuario de Supabase:", error);
+        return null;
+      }
+    }
+
     window.obtenerNombreUsuarioActual = function () {
       const user = window.currentUser;
       if (!user) return "";
@@ -114,25 +131,16 @@
       },
 
       async getUser() {
-        try {
-          const { data } = await supabaseClient.auth.getUser();
-          return data.user;
-        } catch (e) {
-          return null;
-        }
+        const user = await readAuthenticatedUser();
+        if (user && window.currentUser?.id !== user.id) emitUserChanged(user);
+        return user;
       }
     };
 
     window.currentUser = null;
 
-    try {
-      const { data } = await supabaseClient.auth.getUser();
-      if (data.user && !window.currentUser) {
-        window.currentUser = data.user;
-      }
-    } catch (e) {
-      window.currentUser = null;
-    }
+    const initialUser = await readAuthenticatedUser();
+    emitUserChanged(initialUser || null);
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
       console.log("Auth state changed:", event, session?.user?.email);
