@@ -362,7 +362,7 @@ function renderizarConductoresRutasLogistica() {
     if (!cont) return;
 
     const fecha = getFechaRutasLogistica();
-    const drivers = window.rutasLogisticaState.allDrivers || [];
+    const drivers = (window.rutasLogisticaState.allDrivers || []).filter(esRegistroActivoRutasLogistica);
     if (!drivers.length) {
         cont.innerHTML = '<div class="routes-empty routes-empty--small">No hay conductores creados.</div>';
         return;
@@ -396,6 +396,7 @@ function renderizarConductoresRutasLogistica() {
                         <span class="routes-driver-switch" aria-hidden="true"></span>
                         <span>No operativo hoy</span>
                     </label>
+                    <button type="button" class="routes-icon-btn routes-icon-btn--danger routes-driver-delete" title="Eliminar conductor" onclick="eliminarConductorRuta('${driver.id}')">×</button>
                 </div>
             </article>
         `;
@@ -448,6 +449,30 @@ async function actualizarActivoConductorRuta(driverId, active) {
         mostrarMensajeRutasLogistica(`No se pudo actualizar el conductor: ${error.message || error}`, 'error');
     }
 }
+
+async function eliminarConductorRuta(driverId) {
+    if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para eliminar conductores.')) return;
+    if (!window.supabaseClient) return;
+
+    const driver = (window.rutasLogisticaState.allDrivers || []).find(item => String(item.id) === String(driverId));
+    const nombre = driver?.name || 'este conductor';
+    if (!confirm(`Eliminar ${nombre} de conductores activos? No se borraran rutas historicas.`)) return;
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('route_drivers')
+            .update({ active: false })
+            .eq('id', driverId);
+        if (error) throw error;
+        mostrarMensajeRutasLogistica('Conductor eliminado de la lista activa.', 'success');
+        await cargarModuloRutasLogistica();
+    } catch (error) {
+        console.error('Error eliminando conductor:', error);
+        mostrarMensajeRutasLogistica(`No se pudo eliminar el conductor: ${error.message || error}`, 'error');
+    }
+}
+
+window.eliminarConductorRuta = eliminarConductorRuta;
 
 async function actualizarNoOperativoConductorRuta(driverId, noOperativo) {
     if (window.AppPermissions && !AppPermissions.requireLogistics('Tu usuario no tiene permiso para editar conductores.')) return;

@@ -6,10 +6,10 @@
     <title>CaterCloud - Sistema de Comandas</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="css/styles.css?v=20260928b">
-    <link rel="stylesheet" href="css/dashboard.css?v=20260928b">
+    <link rel="stylesheet" href="css/styles.css?v=20260929b">
+    <link rel="stylesheet" href="css/dashboard.css?v=20260929a">
     <link rel="stylesheet" href="css/calendar.css?v=20260928b">
-    <link rel="stylesheet" href="css/forms.css?v=20260928b">
+    <link rel="stylesheet" href="css/forms.css?v=20260929c">
 
     <!-- Fuentes corporativas -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -58,6 +58,9 @@
           <circle cx="18" cy="18" r="2"></circle>
         </svg>
       </span><span class="nav-label">Logística</span>
+    </div>
+    <div class="dc-nav-item dc-nav-item--logout" onclick="cerrarSesionDesdeNav()" id="nav-logout">
+      <span class="nav-icon" aria-hidden="true">↪</span><span class="nav-label">Salir</span>
     </div>
   </nav>
 
@@ -1349,7 +1352,7 @@
     <script src="js/clients.js?v=20260928a"></script>
     <script src="js/calendar.js?v=20260928a"></script>
     <script src="js/routes-module.js?v=20260928a"></script>
-    <script src="js/routes-dashboard.js?v=20260928a"></script>
+    <script src="js/routes-dashboard.js?v=20260929a"></script>
     <script src="js/operational-alerts.js?v=20260928a"></script>
     <script src="js/kitchen-module.js?v=20260928a"></script>
     <script src="js/kitchen-dashboard.js?v=20260928a"></script>
@@ -1419,9 +1422,17 @@
       document.getElementById('dcSidebarBrandToggle')?.addEventListener('click', toggleSidebarCompacta);
 
       function setNavActive(id) {
-        document.querySelectorAll('.dc-nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.dc-nav-item:not(.dc-nav-item--logout)').forEach(el => el.classList.remove('active'));
         const el = document.getElementById(id);
         if (el) el.classList.add('active');
+      }
+
+      async function cerrarSesionDesdeNav() {
+        try {
+          await Auth.signOut();
+        } finally {
+          window.location.href = 'login.html';
+        }
       }
 
       function filtrarPorEstado(estado) {

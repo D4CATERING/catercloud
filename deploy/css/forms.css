@@ -5526,10 +5526,10 @@ h3 {
 }
 
 .logistics-events-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(190px, 240px) repeat(3, max-content);
   align-items: end;
   gap: 8px;
-  flex-wrap: wrap;
   padding: 10px 12px;
   border: 1px solid #e5ddd3;
   border-radius: 10px;
@@ -5548,7 +5548,8 @@ h3 {
 
 .logistics-events-toolbar input {
   height: 34px;
-  min-width: 170px;
+  width: 100%;
+  min-width: 0;
   border: 1px solid #d8cfc4;
   border-radius: 8px;
   padding: 0 10px;
@@ -5559,6 +5560,7 @@ h3 {
 
 .logistics-events-toolbar button {
   height: 34px;
+  min-width: 70px;
   border: 1px solid #d1aa68;
   border-radius: 8px;
   padding: 0 12px;
@@ -5613,6 +5615,98 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+#cocinaPage,
+#logisticaPage {
+  min-height: 100vh;
+}
+
+#cocinaPage .dc-page-content,
+#logisticaPage .dc-page-content {
+  min-height: 0;
+}
+
+#cocinaPage .logistics-dashboard,
+#logisticaPage .logistics-dashboard {
+  min-height: 0;
+}
+
+#cocinaEventosPanel,
+#logisticaEventosPanel {
+  min-height: 0;
+}
+
+#cocinaComandasList,
+#logisticaComandasList {
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #aab4c2 transparent;
+}
+
+#cocinaComandasList::-webkit-scrollbar,
+#logisticaComandasList::-webkit-scrollbar {
+  width: 10px;
+}
+
+#cocinaComandasList::-webkit-scrollbar-track,
+#logisticaComandasList::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+#cocinaComandasList::-webkit-scrollbar-thumb,
+#logisticaComandasList::-webkit-scrollbar-thumb {
+  background: #aab4c2;
+  border: 2px solid #f1f5f9;
+  border-radius: 999px;
+}
+
+@media (min-width: 761px) {
+  #cocinaPage,
+  #logisticaPage {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  #cocinaPage .dc-page-content,
+  #logisticaPage .dc-page-content {
+    height: calc(100vh - 90px);
+    overflow: hidden;
+  }
+
+  #cocinaPage .logistics-dashboard,
+  #logisticaPage .logistics-dashboard {
+    height: 100%;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  #cocinaEventosPanel {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  #logisticaEventosPanel {
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  #cocinaComandasList,
+  #logisticaComandasList {
+    align-content: start;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  #cocinaPage,
+  #logisticaPage {
+    height: calc(100vh - var(--mobile-nav-h, 68px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  #cocinaPage .dc-page-content,
+  #logisticaPage .dc-page-content {
+    height: calc(100vh - 90px - var(--mobile-nav-h, 68px) - env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .logistics-event-card {
@@ -7976,6 +8070,14 @@ h3 {
   background: #ef4444;
 }
 
+.routes-driver-delete {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .routes-kpi-grid {
   gap: 8px;
   margin-bottom: 8px;
@@ -8416,6 +8518,54 @@ h3 {
     grid-column: auto;
     grid-row: auto;
     width: max-content;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .logistics-events-toolbar {
+    grid-template-columns: minmax(190px, 1fr) repeat(3, max-content);
+  }
+
+  #logisticaRutasPanel {
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  #logisticaRutasPanel .routes-toolbar {
+    grid-template-columns: minmax(170px, 220px) repeat(4, max-content);
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  #logisticaRutasPanel .routes-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #logisticaRutasPanel .routes-layout {
+    grid-template-columns: minmax(280px, .8fr) minmax(430px, 1.2fr);
+    min-height: 0;
+  }
+
+  #logisticaRutasPanel .routes-panel {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #logisticaRutasPanel .routes-pending-list,
+  #logisticaRutasPanel .routes-planning-list {
+    max-height: none;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .logistics-events-toolbar {
+    grid-template-columns: 1fr repeat(3, minmax(0, 1fr));
+  }
+
+  .logistics-events-toolbar label {
+    grid-column: 1 / -1;
   }
 }
 
