@@ -1430,8 +1430,8 @@ function _renderTotalTermosDetalle(comanda) {
             .replace(/^Termo de?\s*/i, '')
             .replace(/^Termo\s*/i, '');
 
-        return `${nombreCorto} ×${r.cantidad}`;
-    }).join('  ·  ');
+        return `<span class="detalle-termo-chip">${textoSeguro(nombreCorto)} ×${textoSeguro(r.cantidad)}</span>`;
+    }).join('');
 
     return `<div class="detalle-termos-total">
         <span class="detalle-termos-title">☕ Total termos:</span>
