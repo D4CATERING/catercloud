@@ -554,7 +554,51 @@
         const pax = parseInt(document.getElementById('pax')?.value) || 0;
         window.pax = pax;
 
+        const calcularCantidadPorPaxItem = (item, tipo) => {
+            const base = Number(item.cantidad_base || item.cantidad_base_menu || 0);
+            const porPax = Number(item.cantidad_por_pax || item.cantidadPorPax || item.ratio_pax || 0);
+            const redondeo = Math.max(0.01, Number(item.redondeo_a || item.incremento_cantidad || item.cantidad_step || item.step_cantidad || 1));
+
+            if (porPax > 0 || base > 0 || item.auto_calcular) {
+                const calculado = base + (pax * porPax);
+                if (calculado <= 0) return 0;
+                return Math.round((Math.ceil(calculado / redondeo) * redondeo) * 100) / 100;
+            }
+
+            if ((item.incluido_en || []).length || item.auto_incluido_menu || item.asociado_menu) {
+                return pax;
+            }
+
+            if (tipo === 'menaje' && item.checked && !item._manual_otro) {
+                return pax;
+            }
+
+            return null;
+        };
+
+        const recalcularLista = (tipo) => {
+            (window.materialLogistica?.[tipo] || []).forEach(item => {
+                if (!item.checked && !(item.subitems_selected || []).length) return;
+                if (item._zumoId) return;
+                if (item._cantidad_manual) return;
+
+                if (item.tiene_subitems && (item.subitems_selected || []).length) {
+                    item.subitems_selected = item.subitems_selected.map(subitem => {
+                        if (subitem._cantidad_manual) return subitem;
+                        const cantidadSubitem = calcularCantidadPorPaxItem(subitem, tipo);
+                        return cantidadSubitem === null ? subitem : { ...subitem, cantidad: cantidadSubitem };
+                    });
+                    item.cantidad = item.subitems_selected.reduce((total, subitem) => total + Number(subitem.cantidad || 0), 0);
+                    return;
+                }
+
+                const cantidad = calcularCantidadPorPaxItem(item, tipo);
+                if (cantidad !== null) item.cantidad = cantidad;
+            });
+        };
+
         (window.materialLogistica?.bebidas || []).forEach(item => {
+            if (item._cantidad_manual) return;
             if (item._zumoId) {
                 const ref = window.referenciasDesayuno?.[item._zumoId];
                 const cantidadPorPax = Number(ref?.cantidadPorPax ?? item.cantidadPorPax ?? 0);
@@ -568,11 +612,9 @@
             if (item.checked && esAguaWelcome) item.cantidad = pax;
         });
 
-        (window.materialLogistica?.menaje || []).forEach(item => {
-            if (item.checked && (item.incluido_en || []).length) {
-                item.cantidad = pax;
-            }
-        });
+        recalcularLista('bebidas');
+        recalcularLista('menaje');
+        recalcularLista('extras');
 
         renderizarMaterial(containerId);
     };
@@ -960,7 +1002,15 @@
                     (esBebidaServicioSinDescripcion(item) ? '' : item.descripcion || item.presentacion || '')),
             cantidad: item.cantidad,
             checked: item.checked !== false && Number(item.cantidad || 0) > 0,
+            incluido_en: item.incluido_en || [],
+            asociado_menu: !!item.asociado_menu,
+            auto_incluido_menu: !!item.auto_incluido_menu,
+            auto_calcular: !!item.auto_calcular,
+            cantidad_por_pax: Number(item.cantidad_por_pax || item.cantidadPorPax || 0),
+            cantidadPorPax: Number(item.cantidadPorPax || item.cantidad_por_pax || 0),
+            cantidad_base: Number(item.cantidad_base || 0),
             _cantidad_manual_zero: !!item._cantidad_manual_zero,
+            _cantidad_manual: !!item._cantidad_manual,
             unidad: unidadVisual,
             unidad_comanda: unidadVisual,
             redondeo_a: Number(item.redondeo_a || item.incremento_cantidad || item.cantidad_step || item.step_cantidad || 1),
@@ -1459,6 +1509,7 @@
         const valor = normalizarCantidadPorModo(cantidad, containerId, item);
         item.cantidad = valor > 0 ? valor : 0;
         item.checked = item.cantidad > 0;
+        item._cantidad_manual = true;
         item._cantidad_manual_zero = item.cantidad === 0 && (item.incluido_en || []).length > 0;
         if (containerId) renderizarMaterial(containerId);
         if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {

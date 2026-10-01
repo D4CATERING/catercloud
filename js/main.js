@@ -395,28 +395,35 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
         ? obtenerNombreUsuarioActual()
         : (window.currentUser?.email || '');
     const responsableFormulario = document.getElementById('responsable').value || usuarioActualNombre;
+    const normalizarMaterialGuardado = typeof window.normalizarMaterialLogistica === 'function'
+        ? window.normalizarMaterialLogistica
+        : (material) => material || { bebidas: [], menaje: [], extras: [] };
+    const materialTieneItemsGuardado = (material) => {
+        const normalizado = normalizarMaterialGuardado(material || {});
+        return ['bebidas', 'menaje', 'extras'].some(tipo => (normalizado[tipo] || []).some(item =>
+            item?.checked !== false &&
+            (Number(item?.cantidad || 0) > 0 || (item?.subitems_selected || []).length > 0)
+        ));
+    };
     if (typeof window.sincronizarMaterialAcumuladoDesdeSelectorInline === 'function') {
-        window.sincronizarMaterialAcumuladoDesdeSelectorInline();
+        window.sincronizarMaterialAcumuladoDesdeSelectorInline({ force: true });
     }
     const materialMenusFinal = typeof window.obtenerMaterialFinalMenusParaGuardar === 'function'
         ? window.obtenerMaterialFinalMenusParaGuardar()
         : null;
-    const materialSeleccionadoActual = typeof obtenerMaterialSeleccionado === 'function'
-        ? obtenerMaterialSeleccionado('materialLogisticaInline')
-        : null;
-    const materialSeleccionadoTieneItems = !!materialSeleccionadoActual && (
-        materialSeleccionadoActual.bebidas?.length ||
-        materialSeleccionadoActual.menaje?.length ||
-        materialSeleccionadoActual.extras?.length
+    const materialSeleccionadoActual = normalizarMaterialGuardado(
+        typeof obtenerMaterialSeleccionado === 'function'
+            ? obtenerMaterialSeleccionado('materialLogisticaInline')
+            : {}
     );
-    const materialAcumuladoTieneItems = !!window._materialAcumulado && (
-        window._materialAcumulado.bebidas?.length ||
-        window._materialAcumulado.menaje?.length ||
-        window._materialAcumulado.extras?.length
-    );
-    const materialParaGuardar = _menusAcumulados.length && (materialMenusFinal || materialAcumuladoTieneItems)
-        ? (materialMenusFinal || window._materialAcumulado)
-        : (materialSeleccionadoTieneItems ? materialSeleccionadoActual : (window._materialAcumulado || { bebidas: [], menaje: [], extras: [] }));
+    const materialMenusNormalizado = normalizarMaterialGuardado(materialMenusFinal || {});
+    const materialAcumuladoNormalizado = normalizarMaterialGuardado(window._materialAcumulado || {});
+    const materialParaGuardar = (materialTieneItemsGuardado(materialSeleccionadoActual) || window._materialInlineRepresentaAcumulado)
+        ? materialSeleccionadoActual
+        : (materialTieneItemsGuardado(materialMenusNormalizado)
+            ? materialMenusNormalizado
+            : materialAcumuladoNormalizado);
+    window._materialAcumulado = materialParaGuardar;
 
     const comandaData = {
         empresa:      document.getElementById('empresa').value,
@@ -501,16 +508,6 @@ if (!hayMenusAgregados && !editandoConMenusGuardados && categoriaId == 4) { // F
     if (_catPrincipal !== 4) comandaData.foodbox_lunch = null;
     if (_catPrincipal !== 5 && _catPrincipal !== 6) comandaData.bandejas = null;
     comandaData.logistica_inline = comandaData.logistica;
-    const normalizarMaterialGuardado = typeof window.normalizarMaterialLogistica === 'function'
-        ? window.normalizarMaterialLogistica
-        : (material) => material || { bebidas: [], menaje: [], extras: [] };
-    const materialTieneItemsGuardado = (material) => {
-        const normalizado = normalizarMaterialGuardado(material || {});
-        return ['bebidas', 'menaje', 'extras'].some(tipo => (normalizado[tipo] || []).some(item =>
-            item?.checked !== false &&
-            (Number(item?.cantidad || 0) > 0 || (item?.subitems_selected || []).length > 0)
-        ));
-    };
     const materialGlobalGuardado = normalizarMaterialGuardado(comandaData.material_logistica || {});
     const menusGuardadosConMaterial = [
         comandaData.menu_principal,
@@ -719,18 +716,15 @@ const _domBebidas = _leerContainerTipo('bebidas', []);
 const _domMenaje  = _leerContainerTipo('menaje',  []);
 const _domExtras  = _leerContainerTipo('extras',  []);
 
-// Usar el material acumulado de todos los menús añadidos
-// (capturado por anadirMenuAComanda en window._materialAcumulado)
-const _materialCompleto = (
-    window._materialAcumulado &&
-    (window._materialAcumulado.bebidas?.length ||
-     window._materialAcumulado.menaje?.length  ||
-     window._materialAcumulado.extras?.length)
-)   ? window._materialAcumulado
-    : (typeof obtenerMaterialSeleccionado === 'function' ? obtenerMaterialSeleccionado('materialLogisticaInline') : { bebidas: [], menaje: [], extras: [] });
-const _materialNormalizado = typeof window.normalizarMaterialLogistica === 'function'
-    ? window.normalizarMaterialLogistica(_materialCompleto)
-    : _materialCompleto;
+const _materialSeleccionadoFinal = typeof obtenerMaterialSeleccionado === 'function'
+    ? obtenerMaterialSeleccionado('materialLogisticaInline')
+    : {};
+const _materialSeleccionadoNormalizado = normalizarMaterialGuardado(_materialSeleccionadoFinal || {});
+const _materialBaseNormalizado = normalizarMaterialGuardado(comandaData.material_logistica || window._materialAcumulado || {});
+const _materialNormalizado = (materialTieneItemsGuardado(_materialSeleccionadoNormalizado) || window._materialInlineRepresentaAcumulado)
+    ? _materialSeleccionadoNormalizado
+    : _materialBaseNormalizado;
+window._materialAcumulado = _materialNormalizado;
 
 // Enriquecer comandaData con material y tipo_menaje antes de guardar
 comandaData.material_logistica = _materialNormalizado;

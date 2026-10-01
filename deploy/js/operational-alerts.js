@@ -98,6 +98,82 @@ function marcarCambioOperativoGestionado(key, action = 'dismissed') {
     }
 }
 
+function getDatosCambioOperativoDesdeKey(key) {
+    const partes = String(key || '').split(':');
+    if (partes[0] !== 'catercloudOperationalChange') return null;
+    return {
+        areaVista: partes[1] || '',
+        tipo: partes[2] || '',
+        codigo: partes[3] || '',
+        hash: partes[4] || ''
+    };
+}
+
+function getPatchAvisoOperativoGestionado(tipo) {
+    if (tipo === 'logistica') return { logistics_revision_notice: null };
+    if (tipo === 'cocina') return { kitchen_revision_notice: null };
+    return {};
+}
+
+function limpiarAvisoOperativoEnListaLocal(lista, codigo, tipo) {
+    if (!codigo || !Array.isArray(lista)) return false;
+    const patch = getPatchAvisoOperativoGestionado(tipo);
+    if (!Object.keys(patch).length) return false;
+    let actualizado = false;
+
+    lista.forEach(item => {
+        if (String(getCodigoOperativo(item) || '') !== String(codigo)) return;
+        Object.assign(item, patch);
+        item.fecha_modificacion = getTimestampOperativoDashboard();
+        actualizado = true;
+    });
+
+    return actualizado;
+}
+
+function limpiarAvisoOperativoLocal(codigo, tipo) {
+    try {
+        if (typeof getHistorialCocinaModulo === 'function' && typeof guardarHistorialCocinaModulo === 'function') {
+            const cocina = getHistorialCocinaModulo();
+            if (limpiarAvisoOperativoEnListaLocal(cocina, codigo, tipo)) {
+                guardarHistorialCocinaModulo(cocina);
+            }
+        }
+        if (typeof getHistorialLogisticaModulo === 'function' && typeof guardarHistorialLogisticaModulo === 'function') {
+            const logistica = getHistorialLogisticaModulo();
+            if (limpiarAvisoOperativoEnListaLocal(logistica, codigo, tipo)) {
+                guardarHistorialLogisticaModulo(logistica);
+            }
+        }
+    } catch (error) {
+        console.warn('No se pudo limpiar el aviso operativo local:', error);
+    }
+}
+
+async function persistirCambioOperativoGestionado(key, action = 'dismissed') {
+    const datos = getDatosCambioOperativoDesdeKey(key);
+    if (!datos?.codigo || !datos?.tipo) return false;
+
+    const patch = getPatchAvisoOperativoGestionado(datos.tipo);
+    if (!Object.keys(patch).length) return false;
+
+    limpiarAvisoOperativoLocal(datos.codigo, datos.tipo);
+
+    if (!window.CaterCloudStorage?.sincronizarAccionesOperativasSupabase) return false;
+
+    try {
+        return await window.CaterCloudStorage.sincronizarAccionesOperativasSupabase(datos.codigo, patch, {
+            editado_por_nombre: getUsuarioActualEmailDashboard() || action
+        });
+    } catch (error) {
+        console.warn('No se pudo marcar la alerta operativa como gestionada en Supabase:', error);
+        if (typeof mostrarMensaje === 'function') {
+            mostrarMensaje('La alerta se ocultó aquí, pero no se pudo compartir como procesada. Revisa conexión o permisos.', 'warning');
+        }
+        return false;
+    }
+}
+
 function parseFechaOperativaLocal(fecha) {
     if (!fecha) return null;
     const [year, month, day] = String(fecha).split('T')[0].split('-').map(Number);
@@ -296,6 +372,7 @@ function cerrarTarjetaCambioOperativo() {
 }
 
 async function abrirCambioOperativoDesdeTarjeta(areaVista, index, key) {
+    await persistirCambioOperativoGestionado(key, 'opened');
     marcarCambioOperativoGestionado(key, 'opened');
     cerrarTarjetaCambioOperativo();
     const codigo = key ? String(key).split(':')[3] || '' : '';
@@ -310,7 +387,8 @@ async function abrirCambioOperativoDesdeTarjeta(areaVista, index, key) {
     abrirPreparacionLogistica(index, codigo);
 }
 
-function descartarCambioOperativoDesdeTarjeta(key) {
+async function descartarCambioOperativoDesdeTarjeta(key) {
+    await persistirCambioOperativoGestionado(key, 'dismissed');
     marcarCambioOperativoGestionado(key, 'dismissed');
     cerrarTarjetaCambioOperativo();
 }

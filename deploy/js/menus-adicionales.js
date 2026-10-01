@@ -1015,6 +1015,31 @@
     window._restoreMaterialResumenTimer2 = setTimeout(restaurar, 700);
   }
 
+  function obtenerMaterialParaEditarMenuResumen(menu) {
+    const materialMenu = window.normalizarMaterialLogistica(menu?.material || menu?.material_logistica || menu?.materialLogistica || {});
+    if (window.comandaEditando) {
+      const candidatos = [
+        window._materialAcumulado,
+        window.comandaEditando.material_logistica,
+        window.comandaEditando.materialLogistica,
+        window.comandaEditando.logistica?.material_logistica,
+        window.comandaEditando.logistica_inline?.material_logistica
+      ];
+
+      for (const candidato of candidatos) {
+        const materialGlobal = window.normalizarMaterialLogistica(candidato || {});
+        if (!materialTieneItems(materialGlobal)) continue;
+        return deduplicarMaterialMenuEdicion({
+          bebidas: [...(materialMenu.bebidas || []), ...(materialGlobal.bebidas || [])],
+          menaje: [...(materialMenu.menaje || []), ...(materialGlobal.menaje || [])],
+          extras: [...(materialMenu.extras || []), ...(materialGlobal.extras || [])]
+        });
+      }
+    }
+
+    return materialTieneItems(materialMenu) ? materialMenu : null;
+  }
+
   function recalcularMaterialAcumuladoDesdeMenus() {
     const st = window.MenusAdicionalesState || { menusAdicionales: [] };
     window._materialAcumulado = (st.menusAdicionales || []).reduce((acc, menu) => {
@@ -1025,8 +1050,9 @@
 
   window.recalcularMaterialAcumuladoDesdeMenus = recalcularMaterialAcumuladoDesdeMenus;
 
-  function sincronizarMaterialAcumuladoDesdeSelectorInline() {
-    if (!window._materialInlineRepresentaAcumulado) return window._materialAcumulado;
+  function sincronizarMaterialAcumuladoDesdeSelectorInline(opciones = {}) {
+    const forzarLecturaActual = opciones === true || opciones?.force === true;
+    if (!forzarLecturaActual && !window._materialInlineRepresentaAcumulado) return window._materialAcumulado;
     if (typeof window.obtenerMaterialSeleccionado !== 'function') return window._materialAcumulado;
     const material = window.obtenerMaterialSeleccionado('materialLogisticaInline');
     window._materialAcumulado = window.normalizarMaterialLogistica(material || {});
@@ -1292,7 +1318,8 @@
         tipo: ref.tipo || (ref.grupo === 'postre' ? 'postres' : 'saladas'),
         grupo: ref.grupo || (ref.tipo === 'postres' ? 'postre' : 'salado'),
         extra_carta: ref.extra_carta !== false,
-        cantidad_manual: ref.cantidad_manual !== false,
+        cantidad_manual: !!ref._cantidad_manual_usuario,
+        _cantidad_manual_usuario: !!ref._cantidad_manual_usuario,
         _cantidad_guardada_edicion: true
       }))
       : [];
@@ -1311,7 +1338,8 @@
       || rojasIds.has(String(ref?.id));
     const marcarCantidadGuardada = ref => ({
       ...ref,
-      cantidad_manual: ref.cantidad_manual !== false,
+      cantidad_manual: !!ref._cantidad_manual_usuario,
+      _cantidad_manual_usuario: !!ref._cantidad_manual_usuario,
       _cantidad_guardada_edicion: true
     });
     window.referenciasSeleccionadas = {
@@ -1352,7 +1380,8 @@
           return {
           ...actual,
           ...ref,
-          cantidad_manual: ref?.cantidad_manual !== false,
+          cantidad_manual: !!ref?._cantidad_manual_usuario,
+          _cantidad_manual_usuario: !!ref?._cantidad_manual_usuario,
           _cantidad_guardada_edicion: true,
           opcionesDisponibles: actual.opcionesDisponibles || ref?.opcionesDisponibles || [],
           pulguitasDisponibles: actual.pulguitasDisponibles || ref?.pulguitasDisponibles || []
@@ -1378,6 +1407,10 @@
       }
       if (typeof actualizarCantidadDesayuno === 'function') {
         actualizarCantidadDesayuno(refId, cantidad);
+        if (window.referenciasDesayuno?.[refId]) {
+          window.referenciasDesayuno[refId].cantidad_manual = !!ref?._cantidad_manual_usuario;
+          window.referenciasDesayuno[refId]._cantidad_manual_usuario = !!ref?._cantidad_manual_usuario;
+        }
       }
     });
   }
@@ -2063,9 +2096,7 @@
     const categoriaEdicion = inferirCategoriaMenuResumen(menu);
     const requiereLogisticaMenu = [1, 2, 4, 5, 6].includes(categoriaEdicion);
 
-    const materialParaEditar = materialTieneItems(menu.material)
-      ? menu.material
-      : null;
+    const materialParaEditar = obtenerMaterialParaEditarMenuResumen(menu);
 
     if (materialParaEditar) {
       programarRestauracionMaterialMenuEdicion(materialParaEditar, categoriaEdicion, index);

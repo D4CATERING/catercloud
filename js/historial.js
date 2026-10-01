@@ -2402,7 +2402,8 @@ function _hidratarReferenciasDesayunoEdicion(menu) {
         window.referenciasDesayuno[refId] = {
             ...refActual,
             ...refGuardada,
-            cantidad_manual: refGuardada.cantidad_manual !== false,
+            cantidad_manual: !!refGuardada._cantidad_manual_usuario,
+            _cantidad_manual_usuario: !!refGuardada._cantidad_manual_usuario,
             _cantidad_guardada_edicion: true,
             opcionesDisponibles: refActual.opcionesDisponibles || refGuardada.opcionesDisponibles || [],
             pulguitasDisponibles: refActual.pulguitasDisponibles || refGuardada.pulguitasDisponibles || []
@@ -2435,7 +2436,8 @@ function _hidratarReferenciasServiciosEdicion(menu) {
         nombre: ref.nombre || '',
         cantidad: Number(ref.cantidad || 0) || 1,
         unidad: ref.unidad || 'uds',
-        cantidad_manual: ref.cantidad_manual !== false,
+        cantidad_manual: !!ref._cantidad_manual_usuario,
+        _cantidad_manual_usuario: !!ref._cantidad_manual_usuario,
         _cantidad_guardada_edicion: true
     }));
     window.referenciasSeleccionadas.rojo = [];
@@ -2445,7 +2447,8 @@ function _hidratarReferenciasServiciosEdicion(menu) {
         nombre: ref.nombre || '',
         cantidad: Number(ref.cantidad || 0) || 1,
         unidad: ref.unidad || 'uds',
-        cantidad_manual: ref.cantidad_manual !== false,
+        cantidad_manual: !!ref._cantidad_manual_usuario,
+        _cantidad_manual_usuario: !!ref._cantidad_manual_usuario,
         _cantidad_guardada_edicion: true
     }));
     window.referenciasExtras = extras.map(ref => ({
@@ -2456,7 +2459,8 @@ function _hidratarReferenciasServiciosEdicion(menu) {
         tipo: ref.tipo || (ref.grupo === 'postre' ? 'postres' : 'saladas'),
         grupo: ref.grupo || (ref.tipo === 'postres' ? 'postre' : 'salado'),
         extra_carta: ref.extra_carta !== false,
-        cantidad_manual: ref.cantidad_manual !== false,
+        cantidad_manual: !!ref._cantidad_manual_usuario,
+        _cantidad_manual_usuario: !!ref._cantidad_manual_usuario,
         _cantidad_guardada_edicion: true
     }));
 
@@ -2607,7 +2611,8 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     window.MenusAdicionalesState.indiceMenuEditando = -1;
     window.MenusAdicionalesState.indiceMenuSeleccionadoResumen = -1;
     window.menusAdicionales = menus;
-    window._materialAcumulado = _extraerMaterialLogisticaEdicion(comanda, menus);
+    const materialLogisticaEdicion = _extraerMaterialLogisticaEdicion(comanda, menus);
+    window._materialAcumulado = materialLogisticaEdicion;
 
     const paxTotal = menus.reduce((total, menu) => total + (Number(menu.pax) || 0), 0);
     const paxTotalEl = document.getElementById('paxTotalValor');
@@ -2625,6 +2630,7 @@ async function cargarComandaEnFormularioEdicion(comanda) {
     window.MenusAdicionalesState.menusAdicionales = menus;
     window.MenusAdicionalesState.indiceMenuSeleccionadoResumen = menus.length ? 0 : -1;
     window.menusAdicionales = menus;
+    _restaurarMaterialLogisticaEdicion(materialLogisticaEdicion);
     if (typeof actualizarResumenLateral === 'function') actualizarResumenLateral();
     if (comandaEsServicios) {
         const logisticaSection = document.getElementById('logisticaInlineSection');

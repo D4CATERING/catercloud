@@ -874,12 +874,14 @@ function actualizarCantidadFueraCarta(refId, cantidad) {
         if (ref) {
             ref.cantidad = valor;
             ref.cantidad_manual = true;
+            ref._cantidad_manual_usuario = true;
         }
     });
     const refLista = (window.referenciasFueraCarta || []).find(item => String(item.id) === String(refId));
     if (refLista) {
         refLista.cantidad = valor;
         refLista.cantidad_manual = true;
+        refLista._cantidad_manual_usuario = true;
     }
 }
 
@@ -965,7 +967,11 @@ function eliminarReferenciaExtraCarta(refId) {
 
 function actualizarCantidadExtraCarta(refId, cantidad) {
     const ref = (window.referenciasExtras || []).find(item => String(item.id) === String(refId));
-    if (ref) ref.cantidad = Math.max(0.1, parseFloat(cantidad) || 1);
+    if (ref) {
+        ref.cantidad = Math.max(0.1, parseFloat(cantidad) || 1);
+        ref.cantidad_manual = true;
+        ref._cantidad_manual_usuario = true;
+    }
 }
 
 function renderReferenciasExtras() {
@@ -1054,6 +1060,7 @@ function actualizarCantidadReferencia(refId, tipo, cantidad) {
     if (sel) {
         sel.cantidad = parseFloat(cantidad) || 1;
         sel.cantidad_manual = true;
+        sel._cantidad_manual_usuario = true;
     }
 }
 
@@ -1069,7 +1076,7 @@ function actualizarCantidadesReferencias() {
                        : CATALOGO_POSTRES);
 
         (window.referenciasSeleccionadas[tipo] || []).forEach(sel => {
-            if (sel.cantidad_manual || sel._cantidad_guardada_edicion) return;
+            if (sel._cantidad_manual_usuario) return;
             const ref = catalogo.find(r => String(r.id) === String(sel.id));
             if (sel.fuera_carta && !sel.cantidad_manual) {
                 sel.cantidad = calcularCantidad(sel, pax);

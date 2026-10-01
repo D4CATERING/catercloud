@@ -123,7 +123,7 @@ function actualizarCantidadesReferencias() {
         const seleccionadas = window.referenciasSeleccionadas[tipo] || [];
 
         seleccionadas.forEach(sel => {
-            if (sel.cantidad_manual || sel._cantidad_guardada_edicion) return;
+            if (sel._cantidad_manual_usuario) return;
             const ref = catalogo.find(r => String(r.id) === String(sel.id));
             if (!ref || typeof calcularCantidad !== 'function') return;
             sel.cantidad = calcularCantidad(ref, pax);
@@ -166,7 +166,7 @@ function actualizarCantidadesDesayuno() {
         const input = item.querySelector('.dc-input-qty, .cantidad-input-compact');
 
         if (!refData || !input || tipo === 'leche_especial') return;
-        if (refData.cantidad_manual || refData._cantidad_guardada_edicion) return;
+        if (refData._cantidad_manual_usuario) return;
 
         let nuevaCantidad = 0;
 

@@ -690,6 +690,7 @@ function actualizarCantidadDesayuno(refId, nuevaCantidad) {
     const cantidad = parseInt(nuevaCantidad) || 0;
     window.referenciasDesayuno[refId].cantidad = cantidad;
     window.referenciasDesayuno[refId].cantidad_manual = true;
+    window.referenciasDesayuno[refId]._cantidad_manual_usuario = true;
     
     // NOTA: Ya no actualizamos el texto del contador de termos porque lo eliminamos
     
@@ -730,7 +731,7 @@ function actualizarCantidadesDesayuno() {
         const input = item.querySelector('.cantidad-input-compact');
         
         if (!input || !window.referenciasDesayuno || !window.referenciasDesayuno[refId]) return;
-        if (window.referenciasDesayuno[refId].cantidad_manual || window.referenciasDesayuno[refId]._cantidad_guardada_edicion) return;
+        if (window.referenciasDesayuno[refId]._cantidad_manual_usuario) return;
         
         const baseCantidad = parseFloat(input.dataset.base) || 0;
         let nuevaCantidad;
@@ -994,6 +995,7 @@ function actualizarCantidadReferencia(refId, tipo, cantidad) {
     if (ref) {
         ref.cantidad = parseInt(cantidad);
         ref.cantidad_manual = true;
+        ref._cantidad_manual_usuario = true;
     }
 }
 
