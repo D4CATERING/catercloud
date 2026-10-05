@@ -1279,8 +1279,10 @@ function valorLogisticaSync(baseValor, fuenteValor, preferirFuente = true) {
 }
 
 function textoLogisticaSync(baseValor, fuenteValor, preferirFuente = true) {
-    if (preferirFuente) return fuenteValor || baseValor;
-    return baseValor || fuenteValor;
+    const tieneFuente = fuenteValor !== undefined && fuenteValor !== null;
+    const tieneBase = baseValor !== undefined && baseValor !== null;
+    if (preferirFuente) return tieneFuente ? fuenteValor : baseValor;
+    return tieneBase ? baseValor : fuenteValor;
 }
 
 function fusionarDatosLogisticaSync(base = {}, fuente = {}, options = {}) {
@@ -1345,7 +1347,7 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
         if (!key) return;
         const remoto = mapa.get(String(key));
         if (!remoto || getFechaModificacionHistorialSync(item) > getFechaModificacionHistorialSync(remoto)) {
-            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: true }) : item);
+            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: false }) : item);
         } else if (remoto) {
             mapa.set(String(key), fusionarDatosLogisticaSync(remoto, item, { preferirFuente: false }));
         }
