@@ -8285,6 +8285,67 @@ h3 {
   padding: 8px;
 }
 
+#logisticaPage.logistica-tab-compact {
+  height: 100vh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#logisticaPage.logistica-tab-compact .dc-page-content {
+  height: calc(100vh - 8px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+#logisticaPage.logistica-tab-compact .logistics-dashboard {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  gap: 8px;
+}
+
+#logisticaRutasPanel {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+#logisticaRutasPanel .routes-layout {
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#logisticaRutasPanel .routes-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#logisticaRutasPanel .routes-pending-list,
+#logisticaRutasPanel .routes-planning-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #aab4c2 transparent;
+}
+
+#logisticaRutasPanel .routes-pending-list::-webkit-scrollbar,
+#logisticaRutasPanel .routes-planning-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#logisticaRutasPanel .routes-pending-list::-webkit-scrollbar-thumb,
+#logisticaRutasPanel .routes-planning-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #aab4c2;
+}
+
 .routes-pending-card,
 .routes-route-card {
   padding: 8px;
