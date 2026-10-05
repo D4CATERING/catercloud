@@ -1,7 +1,8 @@
 // ========== LOGISTICS DELIVERY: datos de entrega y validacion ==========
 
 (function initCaterCloudLogisticsDelivery() {
-    const DELIVERY_TEXT_LIMIT = 25;
+    const CONTACT_TEXT_LIMIT = 25;
+    const ADDRESS_TEXT_LIMIT = 60;
     const REQUIRED_FIELDS = Object.freeze([
         { key: 'hora_entrega', suffix: 'hora_entrega', label: 'Hora de entrega' },
         { key: 'hora_evento', suffix: 'hora_evento', label: 'Hora del evento' },
@@ -9,8 +10,7 @@
         { key: 'telefono_contacto', suffix: 'telefono_contacto', label: 'Telefono de contacto' },
         { key: 'duracion_evento', suffix: 'duracion_evento', label: 'Duracion evento' },
         { key: 'cantidad_camareros', suffix: 'cantidad_camareros', label: 'Cantidad camareros' },
-        { key: 'calle', suffix: 'calle', label: 'Calle' },
-        { key: 'numero', suffix: 'numero', label: 'Numero / portal' },
+        { key: 'calle', suffix: 'calle', label: 'Direccion' },
         { key: 'codigo_postal', suffix: 'codigo_postal', label: 'Codigo postal' }
     ]);
 
@@ -22,7 +22,7 @@
         return getInput(prefix, suffix)?.value?.trim() || '';
     }
 
-    function limitDeliveryText(value, max = DELIVERY_TEXT_LIMIT) {
+    function limitDeliveryText(value, max = CONTACT_TEXT_LIMIT) {
         return String(value || '').trim().slice(0, max);
     }
 
@@ -61,14 +61,14 @@
     }
 
     function readFromDom(prefix) {
-        const calle = limitDeliveryText(getValue(prefix, 'calle'));
+        const calle = limitDeliveryText(getValue(prefix, 'calle'), ADDRESS_TEXT_LIMIT);
         const numero = getValue(prefix, 'numero');
         return {
             hora_entrega: getValue(prefix, 'hora_entrega'),
             hora_evento: getValue(prefix, 'hora_evento'),
             fecha_recogida: getValue(prefix, 'fecha_recogida'),
             hora_recogida: getValue(prefix, 'hora_recogida'),
-            nombre_contacto: limitDeliveryText(getValue(prefix, 'nombre_contacto')),
+            nombre_contacto: limitDeliveryText(getValue(prefix, 'nombre_contacto'), CONTACT_TEXT_LIMIT),
             telefono_contacto: getValue(prefix, 'telefono_contacto'),
             montaje: getValue(prefix, 'montaje'),
             duracion_evento: getValue(prefix, 'duracion_evento'),
@@ -173,15 +173,16 @@
         ].filter(Boolean);
 
         const merged = sources.reduce((acc, source) => ({ ...acc, ...source }), {});
-        const direccion = !merged.calle && merged.direccion ? splitAddress(merged.direccion) : { calle: '', numero: '' };
-        const calle = limitDeliveryText(merged.calle || direccion.calle || '');
+        const direccionTexto = merged.direccion || composeAddress(merged.calle, merged.numero);
+        const direccion = !merged.calle && direccionTexto ? splitAddress(direccionTexto) : { calle: '', numero: '' };
+        const calle = limitDeliveryText(direccionTexto || merged.calle || direccion.calle || '', ADDRESS_TEXT_LIMIT);
         const numero = merged.numero || direccion.numero || '';
         return {
             ...merged,
-            nombre_contacto: limitDeliveryText(merged.nombre_contacto || ''),
+            nombre_contacto: limitDeliveryText(merged.nombre_contacto || '', CONTACT_TEXT_LIMIT),
             calle,
-            numero,
-            direccion: composeAddress(calle, numero)
+            numero: direccionTexto ? '' : numero,
+            direccion: calle
         };
     }
 

@@ -458,11 +458,8 @@
             _setVal(`${prefix}_numero`, '');
             return;
         }
-        const partes = typeof window.separarDireccionLogistica === 'function'
-            ? window.separarDireccionLogistica(direccion)
-            : { calle: direccion, numero: '' };
-        _setVal(`${prefix}_calle`, partes.calle);
-        _setVal(`${prefix}_numero`, partes.numero);
+        _setVal(`${prefix}_calle`, direccion);
+        _setVal(`${prefix}_numero`, '');
     }
 
     function _mostrarBadgeCliente(cliente) {

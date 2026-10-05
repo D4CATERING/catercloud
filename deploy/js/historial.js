@@ -67,11 +67,7 @@ function limitarTextoDetalle(valor, max = 25) {
 
 function renderDatosEntregaLogistica(datos = {}) {
     const direccionCompleta = datos.direccion || [datos.calle, datos.numero].filter(Boolean).join(', ');
-    const direccionPartes = typeof window.separarDireccionLogistica === 'function'
-        ? window.separarDireccionLogistica(direccionCompleta)
-        : { calle: '', numero: '' };
-    const calle = limitarTextoDetalle(datos.calle || direccionPartes.calle || direccionCompleta);
-    const numero = datos.numero || direccionPartes.numero || '';
+    const direccion = limitarTextoDetalle(direccionCompleta || datos.calle, 60);
     const campo = (label, valor, extraClass = '') => {
         if (!valor) return '';
         return `<div class="detalle-logistica-entrega-field ${extraClass}">
@@ -86,8 +82,7 @@ function renderDatosEntregaLogistica(datos = {}) {
         campo('Duracion evento', datos.duracion_evento, 'detalle-logistica-duracion'),
         campo('Cantidad camareros', datos.cantidad_camareros, 'detalle-logistica-camareros'),
         campo('Hora Entrega', datos.hora_entrega, 'detalle-logistica-hora detalle-logistica-hora-entrega'),
-        campo('Calle', calle, 'detalle-logistica-calle'),
-        campo('Numero / Portal', numero, 'detalle-logistica-numero'),
+        campo('Direccion', direccion, 'detalle-logistica-calle'),
         campo('Cod. Postal', datos.codigo_postal, 'detalle-logistica-cp'),
         campo('Montaje', datos.montaje, 'detalle-logistica-montaje'),
         campo('Hora Evento', datos.hora_evento, 'detalle-logistica-hora detalle-logistica-hora-evento')

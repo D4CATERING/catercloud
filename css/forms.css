@@ -968,7 +968,7 @@ input:focus, select:focus, textarea:focus {
     grid-template-columns: minmax(150px, 1.25fr) minmax(115px, .78fr) minmax(125px, .9fr) minmax(135px, .95fr) minmax(100px, .72fr);
     grid-template-areas:
         "contacto telefono duracion camareros hora-entrega"
-        "calle numero cp montaje hora-evento";
+        "calle calle cp montaje hora-evento";
     gap: 6px 22px;
     padding: 8px 22px 10px;
 }
@@ -4365,16 +4365,16 @@ h3 {
   grid-template-columns: minmax(190px, 1.35fr) minmax(115px, .72fr) minmax(125px, .78fr) minmax(120px, .78fr) minmax(120px, .75fr);
   grid-template-areas:
     "contacto   telefono   duracion   camareros  hora-entrega"
-    "calle      numero     cp         montaje    hora-evento"
-    "calle      numero     fecha-recogida hora-recogida hora-recogida";
+    "calle      calle      cp         montaje    hora-evento"
+    "calle      calle      fecha-recogida hora-recogida hora-recogida";
 }
 
 #logisticaForm .dc-log-grid {
   grid-template-columns: minmax(190px, 1.35fr) minmax(115px, .72fr) minmax(125px, .78fr) minmax(120px, .78fr) minmax(120px, .75fr);
   grid-template-areas:
     "contacto   telefono   duracion   camareros  hora-entrega"
-    "calle      numero     cp         montaje    hora-evento"
-    "calle      numero     fecha-recogida hora-recogida hora-recogida";
+    "calle      calle      cp         montaje    hora-evento"
+    "calle      calle      fecha-recogida hora-recogida hora-recogida";
 }
 
 #logisticaInlineSection .dc-log-calle,
@@ -4382,6 +4382,11 @@ h3 {
 #logisticaForm .dc-log-calle,
 #logisticaForm .dc-log-numero {
   border-left: 2px solid #10b981;
+}
+
+#logisticaInlineSection .dc-log-numero,
+#logisticaForm .dc-log-numero {
+  display: none;
 }
 
 #logisticaInlineSection .dc-log-hora-entrega,
@@ -4399,7 +4404,7 @@ h3 {
       "telefono    duracion"
       "camareros   hora-entrega"
       "calle       calle"
-      "numero      cp"
+      "cp          cp"
       "montaje     montaje"
       "hora-evento hora-evento"
       "fecha-recogida hora-recogida";
@@ -4412,7 +4417,7 @@ h3 {
       "telefono    duracion"
       "camareros   hora-entrega"
       "calle       calle"
-      "numero      cp"
+      "cp          cp"
       "montaje     montaje"
       "hora-evento hora-evento"
       "fecha-recogida hora-recogida";
@@ -9511,6 +9516,9 @@ h3 {
   .detalle-logistica-entrega-grid {
     display: grid !important;
     grid-template-columns: minmax(98pt, 1.4fr) minmax(68pt, .82fr) minmax(90pt, 1fr) minmax(92pt, 1fr) minmax(66pt, .72fr) !important;
+    grid-template-areas:
+      "contacto telefono duracion camareros hora-entrega"
+      "calle calle cp montaje hora-evento" !important;
     column-gap: 12pt !important;
     row-gap: 1pt !important;
     padding: .4pt 14pt 4.5pt !important;
@@ -9523,7 +9531,6 @@ h3 {
 
   .detalle-logistica-calle {
     grid-area: calle !important;
-    grid-column: auto !important;
   }
 
   .detalle-logistica-contacto .detalle-field-value,
@@ -9534,7 +9541,6 @@ h3 {
 
   .detalle-logistica-hora .detalle-field-value,
   .detalle-logistica-cp .detalle-field-value,
-  .detalle-logistica-numero .detalle-field-value,
   .detalle-logistica-telefono .detalle-field-value {
     white-space: nowrap !important;
   }
