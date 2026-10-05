@@ -593,6 +593,11 @@ function getCodigoOperativoJsArg(item) {
     return getJsArg(getCodigoOperativo(item));
 }
 
+function abrirTarjetaLogisticaDesdeEvento(event, index, codigo = '') {
+    if (event?.target?.closest?.('.logistics-event-controls')) return;
+    abrirPreparacionLogistica(index, codigo);
+}
+
 function getJsArg(value) {
     return `'${encodeURIComponent(String(value ?? ''))}'`;
 }
@@ -719,7 +724,7 @@ function esPedidoAnulado(item) {
 }
 
 function materialLogisticaTieneItems(material) {
-    return ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length);
+    return ['bebidas', 'menaje', 'extras'].some(tipo => getMaterialLogisticaActivaPorTipo(material, tipo).length > 0);
 }
 
 function comandaTieneEntregaLogistica(item) {
@@ -868,9 +873,18 @@ function normalizarEstadoLogistica(estado) {
     return estado || 'sin_preparar';
 }
 
+function materialLogisticaItemActivo(item = {}) {
+    if (Number(item?.cantidad || 0) > 0) return true;
+    return (item?.subitems_selected || []).some(subitem => Number(subitem?.cantidad || 0) > 0);
+}
+
+function getMaterialLogisticaActivaPorTipo(material = {}, tipo) {
+    return (material?.[tipo] || []).filter(materialLogisticaItemActivo);
+}
+
 function getTotalMaterialLogistica(item = {}) {
     const material = item.material_logistica || {};
-    return ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + ((material[tipo] || []).length), 0);
+    return ['bebidas', 'menaje', 'extras'].reduce((acc, tipo) => acc + getMaterialLogisticaActivaPorTipo(material, tipo).length, 0);
 }
 
 function getPreparadosLogistica(item = {}) {
@@ -943,7 +957,7 @@ function normalizarItemInventarioServicios(item) {
 function getMaterialLogisticaPlano(material) {
     const resultado = [];
     ['menaje', 'bebidas', 'extras'].forEach(tipo => {
-        (material?.[tipo] || []).forEach(item => {
+        getMaterialLogisticaActivaPorTipo(material, tipo).forEach(item => {
             resultado.push({ ...item, tipo });
         });
     });
@@ -1123,7 +1137,7 @@ function renderizarComandasLogistica() {
         const puedeOperar = canEdit && confirmado;
 
         return `
-            <article class="logistics-event-card ${tieneAlertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirPreparacionLogistica(${index}, ${codigoArg})">
+            <article class="logistics-event-card ${tieneAlertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirTarjetaLogisticaDesdeEvento(event, ${index}, ${codigoArg})">
                 <div class="logistics-event-main">
                     <div>
                         <div class="logistics-event-title-row">
@@ -1386,13 +1400,15 @@ function abrirPreparacionLogistica(index, codigo = '') {
         ${canEdit ? confirmacionHtml : ''}
 
         ${getCategoriasMaterialLogistica().map(cat => {
-            const items = material[cat.key] || [];
+            const items = (material[cat.key] || [])
+                .map((mat, matIndex) => ({ mat, matIndex }))
+                .filter(({ mat }) => materialLogisticaItemActivo(mat));
             if (!items.length) return '';
             return `
                 <section class="logistics-prep-group">
                     <h3>${cat.label.toUpperCase()}</h3>
                     <div class="logistics-prep-list">
-                        ${items.map((mat, matIndex) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex, canEdit, codigoArg)).join('')}
+                        ${items.map(({ mat, matIndex }) => renderizarItemPreparacionLogistica(index, cat.key, mat, matIndex, canEdit, codigoArg)).join('')}
                     </div>
                 </section>
             `;
