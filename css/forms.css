@@ -8897,6 +8897,52 @@ h3 {
   }
 }
 
+#cocinaProduccionModal,
+#logisticaPreparacionModal {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+#cocinaProduccionModal .logistics-prep-modal,
+#logisticaPreparacionModal .logistics-prep-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(860px, calc(100vw - 32px));
+  max-height: min(680px, calc(100dvh - 96px));
+  margin: 48px auto;
+  overflow: hidden;
+}
+
+#cocinaProduccionContent,
+#logisticaPreparacionContent {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 900px) {
+  #cocinaProduccionModal .logistics-prep-modal,
+  #logisticaPreparacionModal .logistics-prep-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 72px);
+    margin: 36px auto;
+  }
+}
+
+@media (max-width: 560px) {
+  #cocinaProduccionModal .logistics-prep-modal,
+  #logisticaPreparacionModal .logistics-prep-modal {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+  }
+}
+
 /* Impresion: lectura mas clara aprovechando mejor la hoja */
 @media print {
   body {
