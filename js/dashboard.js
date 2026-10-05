@@ -1094,6 +1094,7 @@ function renderizarAlertasLogistica(historial) {
 function renderizarComandasLogistica() {
     const cont = document.getElementById('logisticaComandasList');
     if (!cont) return;
+    if (document.activeElement?.classList?.contains('logistics-assigned-input')) return;
     const canEdit = puedeEditarLogistica();
 
     const historialLogistica = getHistorialLogistica();
@@ -1135,6 +1136,7 @@ function renderizarComandasLogistica() {
         const alertaSalida = tieneAlertaSalida ? getAlertaSalidaHtml(item, estado) : '';
         const confirmado = pedidoOperativoConfirmado(item);
         const puedeOperar = canEdit && confirmado;
+        const puedeAsignarResponsable = canEdit;
 
         return `
             <article class="logistics-event-card ${tieneAlertaSalida ? 'logistics-event-card--urgent' : ''}" onclick="abrirTarjetaLogisticaDesdeEvento(event, ${index}, ${codigoArg})">
@@ -1170,16 +1172,16 @@ function renderizarComandasLogistica() {
                 <div class="logistics-event-controls">
                     <label>
                         Responsable
-                        <input type="text" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
-                            ${puedeOperar ? '' : 'disabled'}
+                        <input type="text" class="logistics-assigned-input" value="${escapeLogisticaHtml(responsable)}" placeholder="Asignar persona"
+                            ${puedeAsignarResponsable ? '' : 'disabled'}
                             onpointerdown="event.stopPropagation()"
                             onmousedown="event.stopPropagation()"
                             onclick="event.stopPropagation()"
                             onfocus="event.stopPropagation()"
                             onkeydown="event.stopPropagation()"
+                            onkeyup="if (event.key === 'Enter') this.blur()"
                             oninput="event.stopPropagation()"
-                            onblur="actualizarResponsableLogistica(${index}, this.value, ${codigoArg})"
-                            onchange="actualizarResponsableLogistica(${index}, this.value, ${codigoArg})">
+                            onblur="actualizarResponsableLogistica(${index}, this.value, ${codigoArg})">
                     </label>
                     <label>
                         Estado
@@ -1591,7 +1593,6 @@ function actualizarResponsableLogistica(index, value, codigo = '') {
     item.logistics_assigned_to = value.trim();
     item.fecha_modificacion = getTimestampOperativoDashboard();
     guardarEventoLogisticaActivo(item);
-    renderizarComandasLogistica();
 }
 
 function actualizarEstadoLogistica(index, value, codigo = '') {
