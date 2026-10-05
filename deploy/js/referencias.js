@@ -172,20 +172,22 @@ Object.defineProperty(window.referenciasSeleccionadas, 'saladas', {
 // =================== HELPERS ===================
 
 function calcularCantidad(ref, pax) {
+    const esPostre = ref?.grupo === 'postre' || ref?.tipo === 'postre' || ref?.tipoSeleccion === 'postres';
+    const multPostres = window.menuSeleccionado?.mult_postres ?? window.multiplicadores?.postres ?? 1;
+
     if (ref.fuera_carta) {
         const tipo = ref.grupo === 'postre' ? 'postres' : 'saladas';
         const mult = tipo === 'postres'
-            ? (window.multiplicadores?.postres ?? window.menuSeleccionado?.mult_postres ?? 1)
+            ? multPostres
             : (window.multiplicadores?.saladas ?? 1);
         return Math.max(1, Math.floor((Number(pax) || 0) * mult));
+    }
+    if (esPostre) {
+        return Math.max(1, Math.floor((Number(pax) || 0) * multPostres));
     }
     if (ref.tipo === 'fijo')     return ref.cantidad * pax;       // ej: 2 uds x 20 pax = 40
     if (ref.tipo === 'porPax')   return pax * ref.cantidad;       // ej: 15 grs x 20 pax = 300 grs
     if (ref.tipo === 'cadaXpax') return Math.ceil(pax / (ref.divisor || 15)); // ej: ceil(20/15) = 2
-    if (ref.tipo === 'postre') {
-        const mult = window.menuSeleccionado?.mult_postres ?? 1;
-        return Math.max(1, Math.floor(pax * mult));
-    }
     return ref.cantidad || 1;
 }
 
@@ -638,7 +640,7 @@ function renderReferenciasPagina(tipo) {
             badgeLabel = `${ref.cantidad} grs/pax`;
         } else if (ref.tipo === 'cadaXpax') {
             badgeLabel = `1 c/${ref.divisor || 15}pax`;
-        } else if (ref.tipo === 'postre') {
+        } else if (ref.grupo === 'postre' || ref.tipo === 'postre') {
             badgeLabel = `${window.menuSeleccionado?.mult_postres ?? 1}/pax`;
         } else {
             badgeLabel = `${ref.cantidad} ${ref.unidad}`;
@@ -1032,7 +1034,14 @@ function seleccionarReferenciaPrincipal(refId, refNombre, tipo, element, cantida
     }
 
     const cantInput = parseFloat(element?.querySelector('.cantidad-input')?.value) || cantidad || 1;
-    seleccionadas.push({ id: String(refId), nombre: refNombre, cantidad: cantInput, unidad: unidad || 'uds' });
+    seleccionadas.push({
+        id: String(refId),
+        nombre: refNombre,
+        cantidad: cantInput,
+        unidad: unidad || 'uds',
+        tipo: tipo === 'postres' ? 'postre' : tipo,
+        grupo: tipo === 'postres' ? 'postre' : 'salado'
+    });
     if (element) element.classList.add('selected');
     actualizarContadoresSeleccion();
 }

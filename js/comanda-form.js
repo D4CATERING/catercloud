@@ -615,6 +615,11 @@ async function seleccionarMenu(menuId, element) {
             window.menuSeleccionado.mult_postres = _rule.multPostres;
         }
 
+        window.multiplicadores = {
+            ...(window.multiplicadores || { saladas: 1, postres: 1 }),
+            postres: Number(window.menuSeleccionado?.mult_postres ?? 1) || 1
+        };
+
         // Multiplicador desactivado para cat 2 y 3
         document.getElementById('multiplicadorSection').style.display = 'none';
 
