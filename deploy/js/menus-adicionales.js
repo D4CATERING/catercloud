@@ -892,7 +892,7 @@
   }
 
   async function restaurarMaterialMenuEnSelector(material, categoriaId = null) {
-    if (window.serviciosMode || Number(categoriaId || 0) === 3) return;
+    if (Number(categoriaId || 0) === 3) return;
     const materialBase = prepararMaterialMenuEdicion(material || {});
     if (!materialTieneItems(materialBase)) return;
 
@@ -956,12 +956,12 @@
 
   async function abrirMaterialLogisticaMenuEdicion(categoriaId) {
     window._materialInlineRepresentaAcumulado = false;
-    if (window.serviciosMode || Number(categoriaId || 0) === 3) {
+    if (Number(categoriaId || 0) === 3) {
       const cont = document.getElementById('materialLogisticaInline');
       const logisticaSection = document.getElementById('logisticaInlineSection');
       const notasSection = document.getElementById('logisticaInlineNotasSection');
-      if (logisticaSection) logisticaSection.style.display = 'none';
-      if (notasSection) notasSection.style.display = 'none';
+      if (logisticaSection) logisticaSection.style.display = 'block';
+      if (notasSection) notasSection.style.display = 'block';
       if (cont) {
         cont.style.display = 'none';
         cont.innerHTML = '';

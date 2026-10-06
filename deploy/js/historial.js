@@ -267,7 +267,29 @@ function verDetalleComanda(codigo) {
 
 function verExpedientePedido(codigo) {
     const comanda = obtenerComandaDelHistorial(codigo);
-    if (!comanda) { alert('Pedido no encontrado'); return; }
+    if (!comanda) {
+        const logistica = typeof _obtenerComandaLogisticaPorCodigo === 'function'
+            ? _obtenerComandaLogisticaPorCodigo(codigo)
+            : null;
+        if (logistica?.item && typeof _renderDetalleComandaLogistica === 'function') {
+            const dashboard = document.getElementById('dashboard');
+            const comandaForm = document.getElementById('comandaForm');
+            const historialPage = document.getElementById('historialPage');
+            const expedientePedido = document.getElementById('expedientePedido');
+            const cocinaPage = document.getElementById('cocinaPage');
+            const detalleComanda = document.getElementById('detalleComanda');
+            if (dashboard) dashboard.style.display = 'none';
+            if (comandaForm) comandaForm.style.display = 'none';
+            if (historialPage) historialPage.style.display = 'none';
+            if (expedientePedido) expedientePedido.style.display = 'none';
+            if (cocinaPage) cocinaPage.style.display = 'none';
+            if (detalleComanda) detalleComanda.style.display = 'block';
+            _renderDetalleComandaLogistica(logistica.item);
+            return;
+        }
+        alert('Pedido no encontrado');
+        return;
+    }
 
     const dashboard = document.getElementById('dashboard');
     const comandaForm = document.getElementById('comandaForm');
@@ -2555,35 +2577,33 @@ async function cargarComandaEnFormularioEdicion(comanda) {
         rellenarIntolerancias(comanda.alergias?.intolerancias || {});
     }
 
-    const logistica = comandaEsServicios ? {} : (comanda.logistica_inline || comanda.logistica || {});
+    const logistica = comanda.logistica_inline || comanda.logistica || {};
+    _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
+    _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
+    _rellenarCampoEdicion('log_inline_fecha_recogida', logistica.fecha_recogida || '');
+    _rellenarCampoEdicion('log_inline_hora_recogida', logistica.hora_recogida || '');
+    _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
+    _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
+    _rellenarCampoEdicion('log_inline_montaje', logistica.montaje || '');
+    _rellenarCampoEdicion('log_inline_duracion_evento', logistica.duracion_evento || '');
+    _rellenarCampoEdicion('log_inline_cantidad_camareros', logistica.cantidad_camareros || '');
+    const direccionInline = typeof window.separarDireccionLogistica === 'function'
+        ? window.separarDireccionLogistica(logistica.direccion || '')
+        : { calle: logistica.direccion || '', numero: '' };
+    _rellenarCampoEdicion('log_inline_calle', logistica.calle || direccionInline.calle || '');
+    _rellenarCampoEdicion('log_inline_numero', logistica.numero || direccionInline.numero || '');
+    _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
+    _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
     if (comandaEsServicios) {
-        if (typeof limpiarCamposLogisticaInline === 'function') limpiarCamposLogisticaInline();
         const logisticaSection = document.getElementById('logisticaInlineSection');
         const notasSection = document.getElementById('logisticaInlineNotasSection');
         const materialInline = document.getElementById('materialLogisticaInline');
-        if (logisticaSection) logisticaSection.style.display = 'none';
-        if (notasSection) notasSection.style.display = 'none';
+        if (logisticaSection) logisticaSection.style.display = 'block';
+        if (notasSection) notasSection.style.display = 'block';
         if (materialInline) {
             materialInline.style.display = 'none';
             materialInline.innerHTML = '';
         }
-    } else {
-        _rellenarCampoEdicion('log_inline_hora_entrega', logistica.hora_entrega || '');
-        _rellenarCampoEdicion('log_inline_hora_evento', logistica.hora_evento || '');
-        _rellenarCampoEdicion('log_inline_fecha_recogida', logistica.fecha_recogida || '');
-        _rellenarCampoEdicion('log_inline_hora_recogida', logistica.hora_recogida || '');
-        _rellenarCampoEdicion('log_inline_nombre_contacto', logistica.nombre_contacto || '');
-        _rellenarCampoEdicion('log_inline_telefono_contacto', logistica.telefono_contacto || '');
-        _rellenarCampoEdicion('log_inline_montaje', logistica.montaje || '');
-        _rellenarCampoEdicion('log_inline_duracion_evento', logistica.duracion_evento || '');
-        _rellenarCampoEdicion('log_inline_cantidad_camareros', logistica.cantidad_camareros || '');
-        const direccionInline = typeof window.separarDireccionLogistica === 'function'
-            ? window.separarDireccionLogistica(logistica.direccion || '')
-            : { calle: logistica.direccion || '', numero: '' };
-        _rellenarCampoEdicion('log_inline_calle', logistica.calle || direccionInline.calle || '');
-        _rellenarCampoEdicion('log_inline_numero', logistica.numero || direccionInline.numero || '');
-        _rellenarCampoEdicion('log_inline_codigo_postal', logistica.codigo_postal || '');
-        _rellenarCampoEdicion('log_inline_notas', logistica.notas_logistica || '');
     }
 
     const menus = [];
@@ -2631,8 +2651,8 @@ async function cargarComandaEnFormularioEdicion(comanda) {
         const logisticaSection = document.getElementById('logisticaInlineSection');
         const notasSection = document.getElementById('logisticaInlineNotasSection');
         const materialInline = document.getElementById('materialLogisticaInline');
-        if (logisticaSection) logisticaSection.style.display = 'none';
-        if (notasSection) notasSection.style.display = 'none';
+        if (logisticaSection) logisticaSection.style.display = 'block';
+        if (notasSection) notasSection.style.display = 'block';
         if (materialInline) {
             materialInline.style.display = 'none';
             materialInline.innerHTML = '';

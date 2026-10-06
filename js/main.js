@@ -911,6 +911,7 @@ function crearComandaLogistica() {
  * @returns {string} Código de la comanda
  */
 async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
+    const esLogisticaIndependiente = !!datosBase.es_logistica_independiente && !codigoCocina;
     window._logisticaBase = {
         codigoCocina,
         ordenId,
@@ -948,7 +949,7 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
         ? separarDireccionLogistica(logisticaGuardada.direccion)
         : { calle: '', numero: '' };
 
-    setText('log_codigo_cocina', codigoCocina);
+    setText('log_codigo_cocina', esLogisticaIndependiente ? 'Logística directa' : codigoCocina);
     setText('log_empresa', datosBase.empresa);
     setText('log_responsable', datosBase.responsable);
     setText('log_pax', datosBase.pax ? String(datosBase.pax) : '0');
@@ -981,7 +982,20 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
         }
     }
 
-    if (typeof setNavActive === 'function') setNavActive('nav-comanda');
+    const title = document.querySelector('#logisticaForm .header h1');
+    const subtitle = document.querySelector('#logisticaForm .header p');
+    const summaryTitle = document.querySelector('#logisticaForm .logistics-summary-header strong');
+    if (title) title.innerHTML = '<span>🚚</span> Comanda de Logística';
+    if (subtitle) {
+        subtitle.textContent = esLogisticaIndependiente
+            ? 'Completa los datos y material de una logística sin comanda de cocina'
+            : 'Completa los datos de entrega para la comanda de cocina';
+    }
+    if (summaryTitle) {
+        summaryTitle.textContent = esLogisticaIndependiente ? 'Logística independiente' : 'Comanda de cocina';
+    }
+
+    if (typeof setNavActive === 'function') setNavActive(esLogisticaIndependiente ? 'nav-logistica' : 'nav-comanda');
 }
 
 function volverDesdeCancelLogistica() {
@@ -1027,10 +1041,11 @@ async function guardarComandaLogistica() {
         ? obtenerMaterialSeleccionado('materialLogisticaPage')
         : null;
     const estadoPrevio = window._logisticaEditando || {};
+    const esLogisticaIndependiente = !!base.es_logistica_independiente && !base.codigoCocina;
     const datosLogistica = {
         tipo_registro: 'logistica',
         codigo_original: base.codigoLogistica || window._logisticaEditando?.codigo || '',
-        codigo_cocina: base.codigoCocina || '',
+        codigo_cocina: esLogisticaIndependiente ? '' : (base.codigoCocina || ''),
         orden_id: base.ordenId || null,
         empresa: base.empresa || '',
         responsable: base.responsable || '',
@@ -1042,6 +1057,7 @@ async function guardarComandaLogistica() {
         menu_nombre: base.menu_nombre || '',
         logistica: datosEntrega,
         material_logistica: materialSeleccionado,
+        es_logistica_independiente: esLogisticaIndependiente,
         logistics_status: estadoPrevio.logistics_status || estadoPrevio.estado || 'sin_preparar',
         logistics_assigned_to: estadoPrevio.logistics_assigned_to || '',
         logistics_prepared_items: estadoPrevio.logistics_prepared_items || 0,
@@ -1050,11 +1066,22 @@ async function guardarComandaLogistica() {
     };
 
     try {
+        if (esLogisticaIndependiente && !datosLogistica.codigo_original) {
+            datosLogistica.codigo_original = typeof window.obtenerCodigoComandaParaGuardar === 'function'
+                ? await window.obtenerCodigoComandaParaGuardar(datosLogistica)
+                : '';
+        }
         const codigo = datosLogistica.codigo_original || datosLogistica.codigo_cocina;
-        if (typeof window.sincronizarComandaLogisticaEnSupabase !== 'function') {
+        if (esLogisticaIndependiente) {
+            if (typeof window.crearComandaLogisticaIndependienteEnSupabase !== 'function') {
+                throw new Error('No esta disponible la creacion remota de logistica independiente.');
+            }
+        } else if (typeof window.sincronizarComandaLogisticaEnSupabase !== 'function') {
             throw new Error('No esta disponible la sincronizacion remota de logistica.');
         }
-        const sync = await window.sincronizarComandaLogisticaEnSupabase(datosLogistica.codigo_cocina || codigo, datosLogistica);
+        const sync = esLogisticaIndependiente
+            ? await window.crearComandaLogisticaIndependienteEnSupabase(datosLogistica)
+            : await window.sincronizarComandaLogisticaEnSupabase(datosLogistica.codigo_cocina || codigo, datosLogistica);
         datosLogistica.orden_id = sync.id || datosLogistica.orden_id || null;
         datosLogistica.supabase_order_id = sync.id || datosLogistica.supabase_order_id || null;
         if (sync.payload?.material_logistica) {
@@ -1494,7 +1521,7 @@ window.actualizarTipoMenajeGlobal = function() {
     // 3. Relanzar material para aplicar filtros solo_loza / solo_desechable
     const categoriaId = window.menuSeleccionado?._cat
         || parseInt(document.getElementById('categoria')?.value);
-    if (window.serviciosMode || Number(categoriaId || 0) === 3) return;
+    if (Number(categoriaId || 0) === 3) return;
     if (categoriaId && !window.menuSeleccionado?.omitir_material_menu && typeof window.autocompletarMaterialPorCategoria === 'function') {
         window.autocompletarMaterialPorCategoria(categoriaId, 'materialLogisticaInline');
     }

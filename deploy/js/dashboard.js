@@ -159,6 +159,8 @@ async function mostrarComandaCocina(options = {}) {
     if (logisticaPage) logisticaPage.style.display = 'none';
     const cocinaPage = document.getElementById('cocinaPage');
     if (cocinaPage) cocinaPage.style.display = 'none';
+    const reportingPage = document.getElementById('reportingPage');
+    if (reportingPage) reportingPage.style.display = 'none';
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('comandaForm').style.display = 'block';
     const historialPage = document.getElementById('historialPage');
@@ -272,8 +274,8 @@ async function mostrarServicios(options = {}) {
         }
         categoria.value = '3';
     }
-    if (logisticaInline) logisticaInline.style.display = 'none';
-    if (notasLogisticaInline) notasLogisticaInline.style.display = 'none';
+    if (logisticaInline) logisticaInline.style.display = 'block';
+    if (notasLogisticaInline) notasLogisticaInline.style.display = 'block';
     if (materialInline) {
         materialInline.style.display = 'none';
         materialInline.innerHTML = '';
@@ -303,6 +305,8 @@ async function mostrarLogistica() {
     document.getElementById('detalleComanda').style.display = 'none';
     const clientesPanel = document.getElementById('clientesPanel');
     if (clientesPanel) clientesPanel.style.display = 'none';
+    const reportingPage = document.getElementById('reportingPage');
+    if (reportingPage) reportingPage.style.display = 'none';
 
     const logisticaPage = document.getElementById('logisticaPage');
     if (logisticaPage) logisticaPage.style.display = 'block';
@@ -343,6 +347,8 @@ async function mostrarCocina() {
     document.getElementById('detalleComanda').style.display = 'none';
     const clientesPanel = document.getElementById('clientesPanel');
     if (clientesPanel) clientesPanel.style.display = 'none';
+    const reportingPage = document.getElementById('reportingPage');
+    if (reportingPage) reportingPage.style.display = 'none';
 
     const cocinaPage = document.getElementById('cocinaPage');
     if (cocinaPage) cocinaPage.style.display = 'block';
@@ -797,6 +803,11 @@ function guardarEventoLogisticaActivo(evento) {
         historial[index].logistics_assigned_to = evento.logistics_assigned_to || '';
         historial[index].logistics_prepared_items = evento.logistics_prepared_items || 0;
         historial[index].logistics_action_log = evento.logistics_action_log || [];
+        historial[index].logistics_kitchen_notice_read_keys = Array.isArray(evento.logistics_kitchen_notice_read_keys)
+            ? evento.logistics_kitchen_notice_read_keys
+            : (historial[index].logistics_kitchen_notice_read_keys || []);
+        historial[index].logistics_kitchen_notice_read_at = evento.logistics_kitchen_notice_read_at || historial[index].logistics_kitchen_notice_read_at || null;
+        historial[index].logistics_kitchen_notice_read_by = evento.logistics_kitchen_notice_read_by || historial[index].logistics_kitchen_notice_read_by || '';
         historial[index].logistics_revision_notice = Object.prototype.hasOwnProperty.call(evento, 'logistics_revision_notice') ? evento.logistics_revision_notice : (historial[index].logistics_revision_notice || null);
         historial[index].operational_revision_log = evento.operational_revision_log || historial[index].operational_revision_log || [];
         historial[index].logistics_completed_confirmed_at = evento.logistics_completed_confirmed_at || null;
@@ -814,6 +825,9 @@ function guardarEventoLogisticaActivo(evento) {
             logistics_assigned_to: historial[index].logistics_assigned_to || '',
             logistics_prepared_items: historial[index].logistics_prepared_items || 0,
             logistics_action_log: historial[index].logistics_action_log || [],
+            logistics_kitchen_notice_read_keys: historial[index].logistics_kitchen_notice_read_keys || [],
+            logistics_kitchen_notice_read_at: historial[index].logistics_kitchen_notice_read_at || null,
+            logistics_kitchen_notice_read_by: historial[index].logistics_kitchen_notice_read_by || '',
             logistics_revision_notice: historial[index].logistics_revision_notice || null,
             operational_revision_log: historial[index].operational_revision_log || [],
             logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
@@ -837,6 +851,11 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_assigned_to: evento.logistics_assigned_to || '',
         logistics_prepared_items: evento.logistics_prepared_items || 0,
         logistics_action_log: evento.logistics_action_log || [],
+        logistics_kitchen_notice_read_keys: Array.isArray(evento.logistics_kitchen_notice_read_keys)
+            ? evento.logistics_kitchen_notice_read_keys
+            : (historial[index].logistics_kitchen_notice_read_keys || []),
+        logistics_kitchen_notice_read_at: evento.logistics_kitchen_notice_read_at || historial[index].logistics_kitchen_notice_read_at || null,
+        logistics_kitchen_notice_read_by: evento.logistics_kitchen_notice_read_by || historial[index].logistics_kitchen_notice_read_by || '',
         logistics_revision_notice: Object.prototype.hasOwnProperty.call(evento, 'logistics_revision_notice') ? evento.logistics_revision_notice : (historial[index].logistics_revision_notice || null),
         operational_revision_log: evento.operational_revision_log || historial[index].operational_revision_log || [],
         logistics_completed_confirmed_at: evento.logistics_completed_confirmed_at || null,
@@ -855,6 +874,9 @@ function guardarEventoLogisticaActivo(evento) {
         logistics_assigned_to: historial[index].logistics_assigned_to || '',
         logistics_prepared_items: historial[index].logistics_prepared_items || 0,
         logistics_action_log: historial[index].logistics_action_log || [],
+        logistics_kitchen_notice_read_keys: historial[index].logistics_kitchen_notice_read_keys || [],
+        logistics_kitchen_notice_read_at: historial[index].logistics_kitchen_notice_read_at || null,
+        logistics_kitchen_notice_read_by: historial[index].logistics_kitchen_notice_read_by || '',
         logistics_revision_notice: historial[index].logistics_revision_notice || null,
         operational_revision_log: historial[index].operational_revision_log || [],
         logistics_completed_confirmed_at: historial[index].logistics_completed_confirmed_at || null,
@@ -1749,6 +1771,7 @@ function mostrarHistorial() {
     const cocinaPage = document.getElementById('cocinaPage');
     const expedientePedido = document.getElementById('expedientePedido');
     const clientesPanel = document.getElementById('clientesPanel');
+    const reportingPage = document.getElementById('reportingPage');
 
     if (dashboard) dashboard.style.display = 'none';
     if (comandaForm) comandaForm.style.display = 'none';
@@ -1761,6 +1784,7 @@ function mostrarHistorial() {
         expedientePedido.style.display = 'none';
     }
     if (clientesPanel) clientesPanel.style.display = 'none';
+    if (reportingPage) reportingPage.style.display = 'none';
     if (historialPage) historialPage.style.display = 'block';
 
     if (typeof setNavActive === 'function') setNavActive('nav-historial');
@@ -1804,6 +1828,8 @@ function volverAlDashboard() {
     document.getElementById('detalleComanda').style.display = 'none';
     const clientesPanel = document.getElementById('clientesPanel');
     if (clientesPanel) clientesPanel.style.display = 'none';
+    const reportingPage = document.getElementById('reportingPage');
+    if (reportingPage) reportingPage.style.display = 'none';
 
     window.comandaEditando = null;
     window.menuSeleccionado = null;

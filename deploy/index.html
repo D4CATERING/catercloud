@@ -39,6 +39,9 @@
     <div class="dc-nav-item" onclick="mostrarHistorial()" id="nav-historial">
       <span class="nav-icon">☰</span><span class="nav-label">Historial</span>
     </div>
+    <div class="dc-nav-item" onclick="mostrarReportes()" id="nav-reportes">
+      <span class="nav-icon">▦</span><span class="nav-label">Reportes</span>
+    </div>
     <div class="dc-nav-item" onclick="mostrarCocina()" id="nav-cocina">
       <span class="nav-icon nav-icon--kitchen" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false">
@@ -675,7 +678,7 @@
             </div>
             
             <div class="modal-footer">
-                <button type="button" class="btn-secondary" onclick="cerrarModalConfirmacion()">Solo Cocina</button>
+                <button type="button" class="btn-secondary" onclick="cerrarModalConfirmacion()">No, solo datos de entrega</button>
                 <button type="button" class="btn-primary" onclick="crearComandaLogistica()">Sí, crear Logística</button>
             </div>
         </div>
@@ -738,6 +741,110 @@
       <div class="modal-content logistics-prep-modal kitchen-prep-modal">
         <button type="button" class="logistics-prep-close" onclick="cerrarProduccionCocina()">×</button>
         <div id="cocinaProduccionContent"></div>
+      </div>
+    </div>
+
+    <div id="reportingPage" style="display: none;">
+      <div class="dc-page-header">
+        <button class="back-button" onclick="volverAlDashboard()">← Volver</button>
+        <h1>Reportes</h1>
+        <p>Consumos normalizados de cocina y logística para análisis</p>
+      </div>
+
+      <div class="dc-page-content">
+        <section class="reporting-shell">
+          <div class="reporting-toolbar">
+            <label>
+              Área
+              <select id="reportArea" onchange="renderReportes()">
+                <option value="todas">Todas</option>
+                <option value="cocina">Cocina</option>
+                <option value="logistica">Logística</option>
+              </select>
+            </label>
+            <label>
+              Desde
+              <input type="date" id="reportDesde" onchange="renderReportes()">
+            </label>
+            <label>
+              Hasta
+              <input type="date" id="reportHasta" onchange="renderReportes()">
+            </label>
+            <label>
+              Buscar
+              <input type="search" id="reportBuscar" placeholder="Item, menú, empresa..." oninput="renderReportes()">
+            </label>
+            <button type="button" class="reporting-secondary-btn" onclick="renderReportes()">Actualizar</button>
+            <button type="button" class="reporting-primary-btn" onclick="exportarReportingResumenCsv()">Exportar resumen</button>
+            <button type="button" class="reporting-secondary-btn" onclick="exportarReportingDetalleCsv()">Exportar detalle</button>
+          </div>
+
+          <div class="reporting-kpis">
+            <article>
+              <strong id="reportKpiPedidos">0</strong>
+              <span>Comandas</span>
+            </article>
+            <article>
+              <strong id="reportKpiItems">0</strong>
+              <span>Items distintos</span>
+            </article>
+            <article>
+              <strong id="reportKpiCantidad">0</strong>
+              <span>Cantidad total</span>
+            </article>
+          </div>
+
+          <div class="reporting-table-card">
+            <div class="reporting-table-header">
+              <h3>Resumen por item</h3>
+              <span>Haz clic en una fila para ver de qué comanda viene</span>
+            </div>
+            <div class="reporting-table-wrap">
+              <table class="reporting-table">
+                <thead>
+                  <tr>
+                    <th>Área</th>
+                    <th>Menú / servicio</th>
+                    <th>Grupo</th>
+                    <th>Item</th>
+                    <th>Cantidad total</th>
+                    <th>Unidad</th>
+                    <th>Nº comandas</th>
+                  </tr>
+                </thead>
+                <tbody id="reportResumenBody">
+                  <tr><td colspan="7" class="report-empty">Cargando datos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="reporting-table-card">
+            <div class="reporting-table-header">
+              <h3>Detalle por comanda</h3>
+              <span id="reportDetalleHint">Origen exacto de cada cantidad</span>
+            </div>
+            <div class="reporting-table-wrap reporting-table-wrap--detail">
+              <table class="reporting-table">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Fecha</th>
+                    <th>Empresa</th>
+                    <th>Menú / servicio</th>
+                    <th>Grupo</th>
+                    <th>Item original</th>
+                    <th>Cantidad</th>
+                    <th>Unidad</th>
+                  </tr>
+                </thead>
+                <tbody id="reportDetalleBody">
+                  <tr><td colspan="8" class="report-empty">Cargando datos...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -1359,6 +1466,7 @@
     <script src="js/routes-dashboard.js?v=20260929a"></script>
     <script src="js/operational-alerts.js?v=20261001c"></script>
     <script src="js/kitchen-module.js?v=20260928a"></script>
+    <script src="js/reporting.js?v=20261005a"></script>
     <script src="js/kitchen-dashboard.js?v=20260928a"></script>
     <script src="js/dashboard.js?v=20260929a"></script>
     <script src="js/dom-utils.js"></script>
@@ -1462,6 +1570,8 @@
         if (logisticaPage) logisticaPage.style.display = 'none';
         const cocinaPage = document.getElementById('cocinaPage');
         if (cocinaPage) cocinaPage.style.display = 'none';
+        const reportingPage = document.getElementById('reportingPage');
+        if (reportingPage) reportingPage.style.display = 'none';
         document.getElementById('historialPage').style.display = 'none';
         document.getElementById('expedientePedido').style.display = 'none';
         document.getElementById('detalleComanda').style.display = 'none';

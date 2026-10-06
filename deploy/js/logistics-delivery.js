@@ -55,9 +55,9 @@
 
     function requiresInlineDelivery(ctx = {}) {
         const categorias = getCategoriesFromContext(ctx);
-        if (categorias.includes(3)) return false;
-        if (ctx.serviciosMode && !categorias.length) return false;
-        return categorias.some(cat => [1, 2, 4, 5, 6].includes(cat));
+        if (categorias.includes(3)) return true;
+        if (ctx.serviciosMode && !categorias.length) return true;
+        return categorias.some(cat => [1, 2, 3, 4, 5, 6].includes(cat));
     }
 
     function readFromDom(prefix) {

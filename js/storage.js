@@ -580,6 +580,86 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
 
 window.sincronizarComandaLogisticaEnSupabase = sincronizarComandaLogisticaEnSupabase;
 
+async function crearComandaLogisticaIndependienteEnSupabase(datosLogistica = {}) {
+  const codigo = datosLogistica.codigo || datosLogistica.codigo_original || await obtenerCodigoComandaParaGuardar(datosLogistica);
+  if (!haySesionSupabase()) {
+    throw new Error('No hay sesion activa de Supabase. La logistica no se puede guardar para el equipo.');
+  }
+
+  const empresaNombre = (datosLogistica.empresa || datosLogistica.company_name || 'Logistica directa').toString();
+  const { company_id, company_name } = await getOrCreateCompanyIdByName(empresaNombre);
+  const responsable = datosLogistica.responsable || getResponsableFromUser() || getUsuarioActualEmail();
+  const materialLogistica = datosLogistica.material_logistica || {};
+  const preparadosMarcados = contarMaterialPreparadoSync(materialLogistica);
+  const payload = {
+    ...datosLogistica,
+    codigo,
+    codigo_original: codigo,
+    codigo_cocina: '',
+    tipo_registro: 'logistica',
+    es_logistica_independiente: true,
+    menu_nombre: datosLogistica.menu_nombre || 'Solo logistica',
+    logistica: datosLogistica.logistica || {},
+    logistica_inline: datosLogistica.logistica || {},
+    material_logistica: materialLogistica,
+    logistics_status: datosLogistica.logistics_status || datosLogistica.estado || 'sin_preparar',
+    logistics_prepared_items: Math.max(preparadosMarcados, Number(datosLogistica.logistics_prepared_items || 0)),
+    logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
+    tiene_comanda_logistica: true,
+    logistica_creada: true,
+    fecha_creacion: datosLogistica.fecha_creacion || fechaHoraIso(),
+    fecha_modificacion: fechaHoraIso(),
+    estado: datosLogistica.estado || 'sin_preparar',
+    version: 1,
+    creado_por_id: getUsuarioActualId() || datosLogistica.creado_por_id || null,
+    creado_por_nombre: datosLogistica.creado_por_nombre || getResponsableFromUser(),
+    creado_por_email: getUsuarioActualEmail() || datosLogistica.creado_por_email || ''
+  };
+
+  if (await codigoComandaExisteEnSupabase(codigo)) {
+    throw new Error(`El codigo ${codigo} ya existe en Supabase.`);
+  }
+
+  const { data, error } = await window.supabaseClient
+    .from('orders')
+    .insert({
+      company_id,
+      company_name: company_name || empresaNombre || null,
+      responsable_name: responsable || null,
+      codigo,
+      fecha_evento: payload.fecha_evento || null,
+      hora_salida: payload.hora_salida || null,
+      pax_total: Number(payload.pax || payload.pax_total || 0) || null,
+      estado: payload.estado,
+      version: payload.version,
+      created_by: getUsuarioActualId(),
+      updated_by: getUsuarioActualId(),
+      payload
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  payload.orden_id = data?.id || null;
+  payload.supabase_order_id = data?.id || null;
+  window.codigoComandaReservado = null;
+
+  logActividadApp('logistica_independiente_creada', codigo, {
+    empresa: payload.empresa || payload.company_name || '',
+    fecha_evento: payload.fecha_evento || null,
+    material: payload.material_logistica || {}
+  }, 'logistica');
+
+  emitirCambioHistorialCompartido('logistica_independiente_creada', codigo, {
+    cambios: ['logistica', 'material_logistica'],
+    version: payload.version
+  });
+
+  return { id: data?.id || null, payload };
+}
+
+window.crearComandaLogisticaIndependienteEnSupabase = crearComandaLogisticaIndependienteEnSupabase;
+
 // ========== STORAGE: guardado principal de comandas ==========
 
 /**
@@ -1263,6 +1343,8 @@ function tieneDatosLogisticaSync(item = {}) {
         item.logistics_ready_at ||
         item.logistics_completed_confirmed_at ||
         item.logistics_action_log?.length ||
+        item.logistics_kitchen_notice_read_keys?.length ||
+        item.logistics_kitchen_notice_read_at ||
         item.logistics_revision_notice ||
         Object.values(log || {}).some(Boolean) ||
         ['bebidas', 'menaje', 'extras'].some(tipo => Array.isArray(material?.[tipo]) && material[tipo].length)
@@ -1319,6 +1401,11 @@ function fusionarDatosLogisticaSync(base = {}, fuente = {}, options = {}) {
         logistics_action_log: preferirFuente
             ? (Array.isArray(fuente.logistics_action_log) ? fuente.logistics_action_log : base.logistics_action_log)
             : (Array.isArray(base.logistics_action_log) ? base.logistics_action_log : fuente.logistics_action_log),
+        logistics_kitchen_notice_read_keys: preferirFuente
+            ? (Array.isArray(fuente.logistics_kitchen_notice_read_keys) ? fuente.logistics_kitchen_notice_read_keys : base.logistics_kitchen_notice_read_keys)
+            : (Array.isArray(base.logistics_kitchen_notice_read_keys) ? base.logistics_kitchen_notice_read_keys : fuente.logistics_kitchen_notice_read_keys),
+        logistics_kitchen_notice_read_at: valorLogisticaSync(base.logistics_kitchen_notice_read_at, fuente.logistics_kitchen_notice_read_at, preferirFuente),
+        logistics_kitchen_notice_read_by: textoLogisticaSync(base.logistics_kitchen_notice_read_by, fuente.logistics_kitchen_notice_read_by, preferirFuente),
         logistics_revision_notice: Object.prototype.hasOwnProperty.call(fuente, 'logistics_revision_notice')
             ? (preferirFuente ? fuente.logistics_revision_notice : base.logistics_revision_notice)
             : (preferirFuente ? base.logistics_revision_notice : fuente.logistics_revision_notice),

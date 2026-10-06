@@ -353,15 +353,36 @@ function ajustarMaterialLogisticaPorPax(material = {}, paxAnterior = 0, paxNuevo
     return copia;
 }
 
+function tieneDatosEntregaEdicion(logistica = {}) {
+    return [
+        'nombre_contacto', 'telefono_contacto', 'montaje', 'duracion_evento',
+        'cantidad_camareros', 'direccion', 'calle', 'numero', 'codigo_postal',
+        'hora_entrega', 'hora_evento', 'fecha_recogida', 'hora_recogida', 'notas_logistica'
+    ].some(key => String(logistica?.[key] || '').trim());
+}
+
+function tieneMaterialLogisticaEdicion(material = {}) {
+    return ['bebidas', 'menaje', 'extras'].some(tipo => (material?.[tipo] || []).some(item =>
+        item?.checked !== false &&
+        (Number(item?.cantidad || 0) > 0 || (item?.subitems_selected || []).length > 0)
+    ));
+}
+
 function conservarLogisticaSeparadaEnEdicionServicios(anterior, nueva) {
     const paxAnterior = Number(anterior?.pax || anterior?.pax_total || 0);
     const paxNuevo = Number(nueva?.pax || nueva?.pax_total || 0);
     const materialAnterior = anterior?.material_logistica || {};
+    const materialNuevo = nueva?.material_logistica || {};
     const materialActualizado = ajustarMaterialLogisticaPorPax(materialAnterior, paxAnterior, paxNuevo);
+    const logisticaNueva = nueva?.logistica_inline || nueva?.logistica || {};
+    const logisticaAnterior = anterior?.logistica_inline || anterior?.logistica || {};
 
-    nueva.logistica = clonarDatoEdicion(anterior?.logistica || anterior?.logistica_inline || {}) || {};
-    nueva.logistica_inline = clonarDatoEdicion(anterior?.logistica_inline || anterior?.logistica || {}) || {};
-    nueva.material_logistica = materialActualizado;
+    const logisticaFinal = tieneDatosEntregaEdicion(logisticaNueva) ? logisticaNueva : logisticaAnterior;
+    nueva.logistica = clonarDatoEdicion(logisticaFinal) || {};
+    nueva.logistica_inline = clonarDatoEdicion(logisticaFinal) || {};
+    nueva.material_logistica = tieneMaterialLogisticaEdicion(materialNuevo)
+        ? clonarDatoEdicion(materialNuevo)
+        : materialActualizado;
     nueva.tiene_comanda_logistica = anterior?.tiene_comanda_logistica || anterior?.logistica_creada || Boolean(anterior?.documentos?.logistica);
     nueva.logistica_creada = anterior?.logistica_creada || nueva.tiene_comanda_logistica;
     nueva.documentos = {

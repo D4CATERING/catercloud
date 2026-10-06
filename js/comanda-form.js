@@ -40,8 +40,8 @@ function asegurarLogisticaInlineVisible() {
     const categoriaId = Number(document.getElementById('categoria')?.value || 0);
 
     if (categoriaId === 3 || window.serviciosMode) {
-        if (logisticaSection) logisticaSection.style.display = 'none';
-        if (notasSection) notasSection.style.display = 'none';
+        if (logisticaSection) logisticaSection.style.display = 'block';
+        if (notasSection) notasSection.style.display = 'block';
         if (materialInline) {
             materialInline.style.display = 'none';
             materialInline.innerHTML = '';
@@ -284,8 +284,8 @@ async function cargarMenus() {
     if (tipoMenajeGroup) tipoMenajeGroup.style.display = esCategoriaServicios ? 'none' : '';
     if (tipoMenaje && esCategoriaServicios) tipoMenaje.value = 'loza';
     if (comandaFormEl) comandaFormEl.classList.toggle('servicios-mode', esCategoriaServicios);
-    if (logisticaInline) logisticaInline.style.display = esCategoriaServicios ? 'none' : '';
-    if (notasLogisticaInline) notasLogisticaInline.style.display = esCategoriaServicios ? 'none' : '';
+    if (logisticaInline) logisticaInline.style.display = '';
+    if (notasLogisticaInline) notasLogisticaInline.style.display = '';
     if (materialInline && esCategoriaServicios) {
         materialInline.style.display = 'none';
         materialInline.innerHTML = '';

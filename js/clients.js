@@ -702,6 +702,13 @@ window.mostrarClientes = async function () {
     document.getElementById('dashboard').style.display    = 'none';
     document.getElementById('comandaForm').style.display  = 'none';
     document.getElementById('historialSection') && (document.getElementById('historialSection').style.display = 'none');
+    document.getElementById('historialPage') && (document.getElementById('historialPage').style.display = 'none');
+    document.getElementById('detalleComanda') && (document.getElementById('detalleComanda').style.display = 'none');
+    document.getElementById('expedientePedido') && (document.getElementById('expedientePedido').style.display = 'none');
+    document.getElementById('logisticaForm') && (document.getElementById('logisticaForm').style.display = 'none');
+    document.getElementById('logisticaPage') && (document.getElementById('logisticaPage').style.display = 'none');
+    document.getElementById('cocinaPage') && (document.getElementById('cocinaPage').style.display = 'none');
+    document.getElementById('reportingPage') && (document.getElementById('reportingPage').style.display = 'none');
     document.getElementById('clientesPanel').style.display = 'block';
 
     await cargarTablaClientes();

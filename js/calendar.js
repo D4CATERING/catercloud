@@ -150,6 +150,29 @@ function getEventosPorFecha() {
         });
     });
 
+    historialLogistica.forEach(item => {
+        if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return;
+        if (item.codigo_cocina && historial.some(c => String(c.codigo || '') === String(item.codigo_cocina))) return;
+        const fecha = (item.fecha_evento || '').split('T')[0];
+        if (!fecha) return;
+        if (!map[fecha]) map[fecha] = [];
+        const logistica = item.logistica || item.logistica_inline || {};
+
+        map[fecha].push({
+            codigo: item.codigo || item.codigo_original || '',
+            codigoVisible: item.codigo || item.codigo_original || 'Logística',
+            empresa: item.empresa || item.company_name || 'Logística directa',
+            contacto: logistica.nombre_contacto || '',
+            pax: item.pax || item.pax_total || 0,
+            menu: item.menu_nombre || 'Solo logística',
+            menus: [{ nombre: item.menu_nombre || 'Solo logística', pax: item.pax || 0 }],
+            hora: item.hora_salida || logistica.hora_entrega || '',
+            estado: item.estado || item.logistics_status || 'sin_preparar',
+            tipo: 'logistica',
+            tieneLogistica: true
+        });
+    });
+
     Object.values(map).forEach(arr =>
         arr.sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
     );
@@ -267,8 +290,8 @@ function _renderEventosDia(eventosPorFecha) {
             <button class="event-new-btn" onclick="nuevaComandaEnFecha('${dateStr}')">
                 + Crear comanda
             </button>
-            <button class="event-service-btn" onclick="nuevoServicioEnFecha('${dateStr}')">
-                + Crear servicio
+            <button class="event-service-btn" onclick="nuevaLogisticaEnFecha('${dateStr}')">
+                + Crear logística
             </button>
             <button class="event-secondary-btn" onclick="nuevaSolicitudEnFecha('${dateStr}')">
                 + Crear solicitud
@@ -493,6 +516,37 @@ async function nuevoServicioEnFecha(dateStr) {
     if (typeof window.actualizarDiaFechaEvento === 'function') {
         window.actualizarDiaFechaEvento();
     }
+}
+
+async function nuevaLogisticaEnFecha(dateStr) {
+    if (window.AppPermissions && !AppPermissions.requireServiceLogisticsCreate('Tu usuario no tiene permiso para crear comandas de logistica.')) {
+        return;
+    }
+
+    if (typeof abrirFormularioLogistica !== 'function') {
+        alert('No se pudo abrir el formulario de logística.');
+        return;
+    }
+
+    await abrirFormularioLogistica('', null, {
+        es_logistica_independiente: true,
+        tipo_registro: 'logistica',
+        empresa: 'Logística directa',
+        responsable: typeof obtenerNombreUsuarioActual === 'function'
+            ? obtenerNombreUsuarioActual()
+            : (window.currentUser?.email || ''),
+        pax: 0,
+        fecha_evento: dateStr,
+        hora_salida: '',
+        menu_nombre: 'Solo logística',
+        menu_principal: {
+            nombre: 'Solo logística',
+            categoria: 'Logística',
+            categoriaId: 0,
+            pax: 0
+        },
+        menus_adicionales: []
+    });
 }
 
 function getOpcionesMenuSolicitud() {

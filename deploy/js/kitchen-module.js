@@ -319,6 +319,10 @@ function getProduccionCocinaDetalle(comanda) {
     return grupos;
 }
 
+window.CaterCloudKitchenProduction = Object.assign(window.CaterCloudKitchenProduction || {}, {
+    getProduccionCocinaDetalle
+});
+
 function getTotalItemsProduccionCocina(comanda) {
     return getProduccionCocinaDetalle(comanda)
         .reduce((total, grupo) => total + grupo.items.length, 0);

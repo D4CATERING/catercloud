@@ -56,6 +56,20 @@ function getKeyCambioOperativo(areaVista, item, tipo, notice) {
     ].join(':');
 }
 
+function getHashNoticeOperativa(notice) {
+    return hashCambioOperativo(JSON.stringify(notice || {}));
+}
+
+function getLecturasCocinaLogistica(item = {}) {
+    return Array.isArray(item.logistics_kitchen_notice_read_keys)
+        ? item.logistics_kitchen_notice_read_keys
+        : [];
+}
+
+function avisoCocinaLeidoPorLogistica(item, notice) {
+    return getLecturasCocinaLogistica(item).includes(getHashNoticeOperativa(notice));
+}
+
 function getUsuarioKeyCambioOperativo() {
     return String(getUsuarioActualIdDashboard() || getUsuarioActualEmailDashboard() || 'usuario-local')
         .replace(/[^a-z0-9@._-]/gi, '_');
@@ -131,7 +145,7 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
         }
 
         if (areaVista === 'logistica') {
-            if (item.kitchen_revision_notice) {
+            if (item.kitchen_revision_notice && !avisoCocinaLeidoPorLogistica(item, item.kitchen_revision_notice)) {
                 cambios.push({
                     areaVista,
                     tipo: 'cocina',
@@ -140,6 +154,7 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
                     fechaEvento,
                     empresa,
                     label: 'Cocina',
+                    informativo: true,
                     notice: item.kitchen_revision_notice,
                     key: getKeyCambioOperativo(areaVista, item, 'cocina', item.kitchen_revision_notice)
                 });
@@ -270,6 +285,17 @@ function cerrarTarjetaCambioOperativo() {
     document.getElementById('operationalChangeOverlay')?.remove();
 }
 
+function getCambioOperativoPendientePorKey(key) {
+    return getCambiosOperativosPendientesGlobales().find(cambio => cambio.key === key)
+        || ['logistica', 'cocina'].flatMap(areaVista => {
+            const eventos = areaVista === 'cocina'
+                ? getEventosCocinaActivos()
+                : getEventosLogisticaActivos();
+            return getCambiosOperativosPendientes(areaVista, eventos);
+        }).find(cambio => cambio.key === key)
+        || null;
+}
+
 async function abrirCambioOperativoDesdeTarjeta(areaVista, index, key) {
     cerrarTarjetaCambioOperativo();
     const codigo = key ? String(key).split(':')[3] || '' : '';
@@ -288,14 +314,54 @@ function descartarCambioOperativoDesdeTarjeta(key) {
     cerrarTarjetaCambioOperativo();
 }
 
-function crearTarjetaCambioOperativoHtml({ key, areaVista, index, claseTipo = '', kicker, titulo, subtitulo, detalle, accion }) {
+function confirmarLecturaCambioOperativoDesdeTarjeta(key) {
+    const cambio = getCambioOperativoPendientePorKey(key);
+    if (!cambio || cambio.areaVista !== 'logistica' || cambio.tipo !== 'cocina') {
+        cerrarTarjetaCambioOperativo();
+        return;
+    }
+
+    const eventos = getEventosLogisticaActivos();
+    const item = eventos.find(evento => getCodigoOperativo(evento) === cambio.codigo) || eventos[cambio.index];
+    if (!item) {
+        cerrarTarjetaCambioOperativo();
+        return;
+    }
+
+    const hash = getHashNoticeOperativa(cambio.notice);
+    const lecturas = new Set(getLecturasCocinaLogistica(item));
+    lecturas.add(hash);
+    item.logistics_kitchen_notice_read_keys = Array.from(lecturas).slice(-80);
+    item.logistics_kitchen_notice_read_at = getTimestampOperativoDashboard();
+    item.logistics_kitchen_notice_read_by = getOperativeActorName();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
+
+    if (typeof registrarAccionOperativa === 'function') {
+        registrarAccionOperativa(item, 'logistica', 'Aviso de cocina leido', cambio.codigo || '');
+    }
+    if (typeof guardarEventoLogisticaActivo === 'function') {
+        guardarEventoLogisticaActivo(item);
+    }
+
+    cerrarTarjetaCambioOperativo();
+    setTimeout(refrescarAlertasOperativasGlobales, 100);
+}
+
+function crearTarjetaCambioOperativoHtml({ key, areaVista, index, claseTipo = '', kicker, titulo, subtitulo, detalle, accion, informativo = false }) {
     const clase = claseTipo ? ` operational-change-overlay--${claseTipo}` : '';
+    const closeAction = informativo
+        ? `confirmarLecturaCambioOperativoDesdeTarjeta('${key}')`
+        : `descartarCambioOperativoDesdeTarjeta('${key}')`;
+    const closeLabel = informativo ? 'Confirmar lectura' : 'Cerrar aviso';
+    const lecturaHtml = informativo
+        ? `<button type="button" class="operational-change-read" onclick="confirmarLecturaCambioOperativoDesdeTarjeta('${key}')">Confirmar lectura</button>`
+        : '';
     return {
         clase,
         html: `
         <article class="operational-change-card" role="dialog" aria-live="assertive" aria-label="Comanda modificada">
-            <button type="button" class="operational-change-close" aria-label="Cerrar aviso"
-                onclick="descartarCambioOperativoDesdeTarjeta('${key}')">×</button>
+            <button type="button" class="operational-change-close" aria-label="${closeLabel}"
+                onclick="${closeAction}">×</button>
             <button type="button" class="operational-change-body"
                 onclick="abrirCambioOperativoDesdeTarjeta('${areaVista}', ${index}, '${key}')">
                 <span class="operational-change-kicker">${escapeLogisticaHtml(kicker)}</span>
@@ -304,6 +370,7 @@ function crearTarjetaCambioOperativoHtml({ key, areaVista, index, claseTipo = ''
                 <small>${escapeLogisticaHtml(detalle)}</small>
                 <em>${escapeLogisticaHtml(accion)}</em>
             </button>
+            ${lecturaHtml}
         </article>
     `
     };
@@ -337,7 +404,8 @@ function mostrarTarjetaCambioOperativo(areaVista, eventos) {
         titulo: `Comanda modificada · ${codigoConFecha}`,
         subtitulo: `${cambio.empresa} · afecta ${cambio.label}`,
         detalle,
-        accion
+        accion,
+        informativo: !!cambio.informativo
     }).html;
     document.body.appendChild(overlay);
 }
@@ -369,7 +437,8 @@ function mostrarTarjetaCambioOperativoGlobal() {
         titulo: codigoConFecha,
         subtitulo: `${cambio.empresa} · aviso para ${tituloArea}`,
         detalle,
-        accion
+        accion,
+        informativo: !!cambio.informativo
     });
     overlay.id = 'operationalChangeOverlay';
     overlay.className = `operational-change-overlay${tarjeta.clase}`;
@@ -385,6 +454,7 @@ function refrescarAlertasOperativasGlobales() {
 }
 
 window.refrescarAlertasOperativasGlobales = refrescarAlertasOperativasGlobales;
+window.confirmarLecturaCambioOperativoDesdeTarjeta = confirmarLecturaCambioOperativoDesdeTarjeta;
 
 window.verificarNotificacionesOperativas = async function verificarNotificacionesOperativas() {
     if (typeof window.cargarHistorialRemotoSupabase === 'function') {
