@@ -1508,6 +1508,14 @@
       return;
     }
 
+    if (categoriaId === 1 && typeof window.validarReferenciasDesayunoParaMenu === 'function') {
+      const validacionDesayuno = window.validarReferenciasDesayunoParaMenu();
+      if (!validacionDesayuno.ok) {
+        mostrarToastError(validacionDesayuno.mensaje || 'Completa las selecciones del desayuno antes de añadir');
+        return;
+      }
+    }
+
     // Capturar material usando la fuente de verdad (window.materialLogistica)
     // ANTES de que limpiarMaterialLogistica() lo vacíe
     if ([2, 3].includes(Number(categoriaId))) {

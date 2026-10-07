@@ -1090,7 +1090,7 @@ async function sincronizarSolicitudPedido(solicitud) {
         solicitud.creado_por_nombre = responsable;
         solicitud.creado_por_email = getUsuarioActualEmail();
 
-        const { error } = await window.supabaseClient.from('orders').insert([{
+        const { data, error } = await window.supabaseClient.from('orders').insert([{
             created_by: getUsuarioActualId(),
             company_id,
             company_name,
@@ -1103,9 +1103,18 @@ async function sincronizarSolicitudPedido(solicitud) {
             version: solicitud.version || 1,
             updated_by: getUsuarioActualId(),
             payload: solicitud
-        }]);
+        }]).select('id').single();
 
         if (error) throw error;
+        if (data?.id) {
+            solicitud.orden_id = data.id;
+            solicitud.supabase_order_id = data.id;
+            await sincronizarPayloadOrdenSupabase(solicitud.codigo, {
+                orden_id: data.id,
+                supabase_order_id: data.id
+            }, { emit: false });
+            guardarComandaEnHistorialLocal(solicitud);
+        }
         emitirCambioHistorialCompartido('solicitud_creada', solicitud.codigo, {
             empresa: solicitud.empresa || '',
             fecha_evento: solicitud.fecha_evento || null

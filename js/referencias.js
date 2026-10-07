@@ -631,7 +631,7 @@ function renderReferenciasPagina(tipo) {
         div.className = 'referencia-option' + (tipo === 'rojo' ? ' referencia-roja' : '');
         div.dataset.id   = String(ref.id);
         div.dataset.tipo = tipo;
-        if (selected) div.classList.add('selected');
+        if (selected && Number(selected.cantidad || 0) > 0) div.classList.add('selected');
         if (obligatoria) div.classList.add('obligatoria');
 
         // Badge fijo (cantidad base de la carta, no cambia con PAX)
@@ -651,7 +651,7 @@ function renderReferenciasPagina(tipo) {
             <div class="cantidad-control" style="gap:4px; align-items:center;">
                 ${obligatoria ? '<span class="ref-required-badge">Incluido</span>' : ''}
                 <span class="ref-cant-badge" style="font-size:0.75rem;color:#64748b;white-space:nowrap;">${badgeLabel}</span>
-                <input type="number" class="cantidad-input" value="${cantMostrar}" min="0.1" step="0.5"
+                <input type="number" class="cantidad-input" value="${cantMostrar}" min="0" step="0.5"
                     style="width:52px;"
                     onfocus="this.select()"
                     oninput="actualizarCantidadReferencia('${String(ref.id).replace(/'/g, "\\'")}', '${tipo}', this.value)">
@@ -1065,12 +1065,68 @@ function actualizarContadoresSeleccion() {
 }
 
 function actualizarCantidadReferencia(refId, tipo, cantidad) {
-    const sel = (window.referenciasSeleccionadas[tipo] || []).find(r => String(r.id) === String(refId));
-    if (sel) {
-        sel.cantidad = parseFloat(cantidad) || 1;
-        sel.cantidad_manual = true;
-        sel._cantidad_manual_usuario = true;
+    if (!window.referenciasSeleccionadas[tipo]) window.referenciasSeleccionadas[tipo] = [];
+    const seleccionadas = window.referenciasSeleccionadas[tipo];
+    const valor = Math.max(0, parseFloat(cantidad) || 0);
+    const index = seleccionadas.findIndex(r => String(r.id) === String(refId));
+    const card = Array.from(document.querySelectorAll(`.referencia-option[data-tipo="${tipo}"]`))
+        .find(el => String(el.dataset.id) === String(refId));
+
+    if (index > -1) {
+        if (valor <= 0) {
+            seleccionadas.splice(index, 1);
+            if (card) card.classList.remove('selected');
+        } else {
+            seleccionadas[index].cantidad = valor;
+            seleccionadas[index].cantidad_manual = true;
+            seleccionadas[index]._cantidad_manual_usuario = true;
+            if (card) card.classList.add('selected');
+        }
+        actualizarContadoresSeleccion();
+        return;
     }
+
+    if (valor <= 0) {
+        if (card) card.classList.remove('selected');
+        actualizarContadoresSeleccion();
+        return;
+    }
+
+    const catalogo = window.referenciasPaginacion?.[tipo]?.items || [];
+    const ref = catalogo.find(item => String(item.id) === String(refId));
+    if (!ref) return;
+
+    const max = tipo === 'gris'
+        ? (window.menuSeleccionado?.items_gris_max || window.menuSeleccionado?.items_salados_max || 0)
+        : tipo === 'rojo'
+            ? (window.menuSeleccionado?.items_rojo_max || 0)
+            : (window.menuSeleccionado?.items_postres_max || 0);
+    const totalActual = contarReferenciasSeleccionadas(tipo);
+    if (max > 0 && totalActual >= max) {
+        if (card) {
+            const input = card.querySelector('.cantidad-input');
+            if (input) input.value = 0;
+            card.classList.remove('selected');
+        }
+        const label = tipo === 'gris' ? 'grises' : tipo === 'rojo' ? 'rojas' : 'postres';
+        alert(`Solo puedes seleccionar hasta ${max} referencias ${label}`);
+        actualizarContadoresSeleccion();
+        return;
+    }
+
+    seleccionadas.push({
+        id: String(refId),
+        nombre: ref.nombre,
+        cantidad: valor,
+        unidad: ref.unidad || 'uds',
+        tipo: tipo === 'postres' ? 'postre' : tipo,
+        grupo: tipo === 'postres' ? 'postre' : 'salado',
+        obligatoria: !!ref.obligatoria,
+        cantidad_manual: true,
+        _cantidad_manual_usuario: true
+    });
+    if (card) card.classList.add('selected');
+    actualizarContadoresSeleccion();
 }
 
 // Compatibilidad con código antiguo

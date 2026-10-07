@@ -2620,6 +2620,17 @@ h3 {
     border-color: #cbd5e1;
 }
 
+.dc-item-bubble.desayuno-selection-error {
+    background: #fff7ed;
+    border-color: #f97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.16);
+}
+
+.dc-item-bubble.desayuno-selection-error .dropdown-btn {
+    border-color: #f97316;
+    background: #fff7ed;
+}
+
 /* --- NOMBRE DEL ITEM --- */
 .dc-item-nombre {
     font-family: 'Roboto', sans-serif;

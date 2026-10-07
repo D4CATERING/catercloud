@@ -709,6 +709,7 @@ function actualizarCantidadDesayuno(refId, nuevaCantidad) {
         }
     }
     
+    actualizarAlertaSeleccionDesayuno(refId);
     console.log(`Cantidad actualizada para ${refId}:`, cantidad);
 }
 
@@ -1982,6 +1983,77 @@ function actualizarTextoDropdownDesayuno(refId) {
     }
 }
 
+function limpiarAlertasSeleccionDesayuno() {
+    document.querySelectorAll('.desayuno-selection-error').forEach(elemento => {
+        elemento.classList.remove('desayuno-selection-error');
+    });
+}
+
+function marcarAlertaSeleccionDesayuno(refId) {
+    const item = document.querySelector(`[data-id="${refId}"]`);
+    if (item) {
+        item.classList.add('desayuno-selection-error');
+        item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function actualizarAlertaSeleccionDesayuno(refId) {
+    const ref = window.referenciasDesayuno?.[refId];
+    const item = document.querySelector(`[data-id="${refId}"]`);
+    if (!ref || !item) return;
+
+    const cantidad = Number(ref.cantidad || 0);
+    if (cantidad <= 0 || referenciaDesayunoTieneSeleccion(ref)) {
+        item.classList.remove('desayuno-selection-error');
+    }
+}
+
+function referenciaDesayunoTieneSeleccion(ref) {
+    if (!ref) return true;
+
+    if (ref.tipo === 'bolleria') {
+        return (ref.opcionesSeleccionadas || []).length > 0;
+    }
+
+    if (ref.tipo === 'sandwich') {
+        return !!String(ref.sabor || '').trim();
+    }
+
+    if (ref.tipo === 'sandwich_multiple') {
+        return (ref.sandwiches || []).some(sandwich => String(sandwich?.sabor || '').trim());
+    }
+
+    if (ref.tipo === 'sandwich_o_pulguita') {
+        if (ref.modo === 'pulguita') return !!String(ref.pulguita || '').trim();
+        return (ref.sandwiches || []).some(sandwich => String(sandwich?.sabor || '').trim());
+    }
+
+    return true;
+}
+
+function validarReferenciasDesayunoParaMenu() {
+    limpiarAlertasSeleccionDesayuno();
+
+    const referencias = window.referenciasDesayuno || {};
+    const pendiente = Object.entries(referencias).find(([, ref]) => {
+        const cantidad = Number(ref?.cantidad || 0);
+        const requiereSeleccion = ['bolleria', 'sandwich', 'sandwich_multiple', 'sandwich_o_pulguita'].includes(ref?.tipo);
+        return cantidad > 0 && requiereSeleccion && !referenciaDesayunoTieneSeleccion(ref);
+    });
+
+    if (!pendiente) return { ok: true };
+
+    const [refId, ref] = pendiente;
+    marcarAlertaSeleccionDesayuno(refId);
+    return {
+        ok: false,
+        refId,
+        mensaje: `Selecciona una opcion para ${ref.nombre || 'el item de desayuno'} antes de añadir el menu.`
+    };
+}
+
+window.validarReferenciasDesayunoParaMenu = validarReferenciasDesayunoParaMenu;
+
 // Bollería
 window.abrirModalDesayunoBolleria = function(refId) {
     const ref = window.referenciasDesayuno?.[refId];
@@ -2056,6 +2128,7 @@ window.toggleBolleriaModalCheck = function(refId, opcion, checked, el) {
     }
 
     actualizarTextoDropdownDesayuno(refId);
+    actualizarAlertaSeleccionDesayuno(refId);
 };
 
 function esOpcionBolleriaVariada(opcion) {
@@ -2096,6 +2169,7 @@ window.seleccionarSandwichSimpleModal = function(refId, opcion) {
         const check = option.querySelector('.modal-option-check');
         if (check) check.textContent = activo ? '✓' : '';
     });
+    actualizarAlertaSeleccionDesayuno(refId);
 };
 
 // Sandwich múltiple
@@ -2153,6 +2227,7 @@ window.toggleSandwichMultipleModalCheck = function(refId, opcion, checked, el) {
     if (btn) btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
 
     actualizarTextoDropdownDesayuno(refId);
+    actualizarAlertaSeleccionDesayuno(refId);
 };
 
 function obtenerSaboresSandwichMultiple(ref) {
@@ -2300,6 +2375,7 @@ window.toggleSOPSandwichModalCheck = function(refId, opcion, checked, el) {
     if (btn) btn.textContent = seleccionadas.join(' + ') || 'Elegir sabores...';
 
     actualizarTextoDropdownDesayuno(refId);
+    actualizarAlertaSeleccionDesayuno(refId);
 };
 
 window.seleccionarSOPPulguitaModal = function(refId, opcion) {
@@ -2308,6 +2384,7 @@ window.seleccionarSOPPulguitaModal = function(refId, opcion) {
     const btn = document.getElementById('dropdown-text-' + refId);
     if (btn) btn.textContent = opcion;
     abrirModalDesayunoSandwichOPulguita(refId);
+    actualizarAlertaSeleccionDesayuno(refId);
     if (snapshot) {
         _modalDesayunoRefId = refId;
         _modalDesayunoSnapshot = snapshot;

@@ -336,6 +336,7 @@ function _renderExpedientePedido(comanda) {
     const puedeConfirmarSolicitud = puedeEditar && esSolicitud && estado !== 'confirmado' && estado !== 'anulada';
     const puedeConfirmarComanda = puedeEditar && !esSolicitud && estadoConfirmacion === 'por_confirmar' && estado !== 'anulada';
     const puedeAnularPedido = puedeEditar && estado !== 'anulada';
+    const puedeRestaurarPedido = puedeEditar && estado === 'anulada';
     const estadoVisibleHeader = esSolicitud || !tieneEstadoConfirmacionPedido(comanda) ? estado : estadoConfirmacion;
     const notasPedido = comanda.notas_pedido || comanda.anotaciones_pedido || '';
     const accionesCarpetaHtml = puedeEditar ? `<div class="expediente-folder-actions">
@@ -347,11 +348,12 @@ function _renderExpedientePedido(comanda) {
                 </button>
             </div>` : '';
     const editorCarpetaHtml = puedeEditar ? _renderEditorCarpetaExpediente(comanda) : '';
-    const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeConfirmarComanda || puedeAnularPedido)
+    const accionesEstadoHtml = (puedeConfirmarSolicitud || puedeConfirmarComanda || puedeAnularPedido || puedeRestaurarPedido)
         ? `<div class="expediente-status-actions">
                     ${puedeConfirmarSolicitud ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar</button>` : ''}
                     ${puedeConfirmarComanda ? `<button class="expediente-status-btn estado-confirmado" onclick="actualizarEstadoConfirmacionComandaDesdeExpediente('${comanda.codigo}', 'confirmado')">Confirmar comanda</button>` : ''}
                     ${puedeAnularPedido ? `<button class="expediente-status-btn estado-anulada" onclick="actualizarEstadoPedidoDesdeExpediente('${comanda.codigo}', 'anulada')">Anular</button>` : ''}
+                    ${puedeRestaurarPedido ? `<button class="expediente-status-btn estado-creada" onclick="restaurarPedidoDesdeExpediente('${comanda.codigo}')">Restaurar</button>` : ''}
                 </div>`
         : '';
     const tituloExpediente = esSolicitud ? 'Solicitud por confirmar' : (comanda.codigo || 'Sin codigo');
@@ -938,7 +940,7 @@ async function convertirSolicitudEnComanda(codigo) {
 
     const solicitud = obtenerComandaDelHistorial(codigo);
     if (!solicitud) { alert('Solicitud no encontrada'); return; }
-    window.solicitudConvirtiendo = {
+    const solicitudParaConvertir = {
         ...solicitud,
         codigo_solicitud: solicitud.codigo || codigo,
         orden_id: solicitud.orden_id || solicitud.supabase_order_id || null,
@@ -964,6 +966,7 @@ async function convertirSolicitudEnComanda(codigo) {
             fecha_evento: (solicitud.fecha_evento || '').split('T')[0]
         });
     }
+    window.solicitudConvirtiendo = solicitudParaConvertir;
 
     if (expedientePedido) {
         expedientePedido.hidden = true;
@@ -992,9 +995,104 @@ async function anularPedidoDesdeExpediente(codigo) {
         return;
     }
 
-    if (!confirm('Quieres marcar este pedido como anulado?')) return;
+    const comanda = obtenerComandaDelHistorial(codigo);
+    if (!comanda) {
+        alert('Pedido no encontrado.');
+        return;
+    }
+
+    mostrarConfirmacionAnulacionExpediente(comanda);
+}
+
+function mostrarConfirmacionAnulacionExpediente(comanda) {
+    cerrarConfirmacionAnulacionExpediente();
+
+    const codigo = comanda.codigo || '';
+    const fecha = comanda.fecha_evento ? formatearFecha(comanda.fecha_evento) : 'Fecha pendiente';
+    const overlay = document.createElement('div');
+    overlay.id = 'expedienteAnulacionConfirm';
+    overlay.className = 'expediente-confirm-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'expedienteAnulacionTitulo');
+    overlay.dataset.codigo = codigo;
+    overlay.innerHTML = `
+        <div class="expediente-confirm-card">
+            <div class="expediente-confirm-icon">!</div>
+            <div class="expediente-confirm-body">
+                <p class="expediente-confirm-kicker">Confirmar anulacion</p>
+                <h3 id="expedienteAnulacionTitulo">Anular ${textoSeguro(codigo || 'este pedido')}</h3>
+                <p>Esta accion sacara la comanda de calendario, cocina, logistica y reportes activos.</p>
+                <div class="expediente-confirm-details">
+                    <span>${textoSeguro(comanda.empresa || 'Empresa pendiente')}</span>
+                    <span>${textoSeguro(fecha)}</span>
+                </div>
+            </div>
+            <div class="expediente-confirm-actions">
+                <button type="button" class="expediente-confirm-cancel">Cancelar</button>
+                <button type="button" class="expediente-confirm-danger">Si, anular</button>
+            </div>
+        </div>
+    `;
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) cerrarConfirmacionAnulacionExpediente();
+    });
+    overlay.querySelector('.expediente-confirm-cancel')?.addEventListener('click', cerrarConfirmacionAnulacionExpediente);
+    overlay.querySelector('.expediente-confirm-danger')?.addEventListener('click', () => {
+        confirmarAnulacionPedidoDesdeExpediente(codigo);
+    });
+
+    document.body.appendChild(overlay);
+    overlay.querySelector('.expediente-confirm-cancel')?.focus();
+}
+
+function cerrarConfirmacionAnulacionExpediente() {
+    document.getElementById('expedienteAnulacionConfirm')?.remove();
+}
+
+async function confirmarAnulacionPedidoDesdeExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede anular pedidos.')) {
+        return;
+    }
+
     const ok = await actualizarComandaEnHistorial(codigo, { estado: 'anulada' });
-    if (ok) verExpedientePedido(codigo);
+    if (!ok) {
+        alert('No se pudo anular el pedido.');
+        return;
+    }
+
+    cerrarConfirmacionAnulacionExpediente();
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    if (typeof renderizarComandasCocina === 'function') renderizarComandasCocina();
+    if (typeof renderizarComandasLogistica === 'function') renderizarComandasLogistica();
+    verExpedientePedido(codigo);
+}
+
+async function restaurarPedidoDesdeExpediente(codigo) {
+    if (window.AppPermissions && !AppPermissions.requireWrite('Tu usuario solo puede consultar. No puede restaurar pedidos.')) {
+        return;
+    }
+
+    if (!confirm('Quieres restaurar este pedido anulado? Quedara pendiente de confirmacion.')) return;
+
+    const comanda = obtenerComandaDelHistorial(codigo);
+    const esSolicitud = comanda?.tipo_registro === 'solicitud';
+    const estadoRestaurado = esSolicitud ? 'por_confirmar' : 'creada';
+    const ok = await actualizarComandaEnHistorial(codigo, {
+        estado: estadoRestaurado,
+        estado_confirmacion: 'por_confirmar',
+        confirmation_status: 'por_confirmar'
+    });
+    if (!ok) {
+        alert('No se pudo restaurar el pedido.');
+        return;
+    }
+
+    if (typeof cargarCalendario === 'function') cargarCalendario();
+    if (typeof renderizarComandasCocina === 'function') renderizarComandasCocina();
+    if (typeof renderizarComandasLogistica === 'function') renderizarComandasLogistica();
+    verExpedientePedido(codigo);
 }
 
 async function actualizarEstadoPedidoDesdeExpediente(codigo, estado) {

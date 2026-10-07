@@ -682,6 +682,115 @@
   cursor: pointer;
 }
 
+.expediente-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, .48);
+}
+
+.expediente-confirm-card {
+  width: min(440px, 100%);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #fecaca;
+  border-top: 5px solid var(--dc-rojo);
+  background: #fff;
+  box-shadow: 0 24px 55px rgba(15, 23, 42, .28);
+}
+
+.expediente-confirm-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.expediente-confirm-body {
+  min-width: 0;
+}
+
+.expediente-confirm-kicker {
+  margin: 0 0 4px;
+  color: #991b1b;
+  font-size: .72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.expediente-confirm-body h3 {
+  margin: 0;
+  color: var(--dc-negro);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  letter-spacing: 0;
+}
+
+.expediente-confirm-body p {
+  margin: 8px 0 0;
+  color: var(--dc-muted);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.expediente-confirm-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.expediente-confirm-details span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid var(--dc-border);
+  color: var(--dc-azul);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.expediente-confirm-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.expediente-confirm-actions button {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.expediente-confirm-cancel {
+  border: 1px solid var(--dc-border);
+  background: #fff;
+  color: var(--dc-azul);
+}
+
+.expediente-confirm-danger {
+  border: 1px solid var(--dc-rojo);
+  background: var(--dc-rojo);
+  color: #fff;
+}
+
 .expediente-container {
   max-width: 920px;
   margin: 0 auto;
