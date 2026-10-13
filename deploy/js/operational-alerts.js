@@ -1,4 +1,8 @@
 // ========== OPERATIONAL ALERTS MODULE ==========
+// Las tarjetas flotantes de notificación quedan desactivadas por decisión operativa.
+// Se conservan las funciones públicas como no-op para no romper llamadas existentes.
+
+const OPERATIONAL_ALERT_CARDS_ENABLED = false;
 
 function hashCambioOperativo(value) {
     const texto = String(value || '');
@@ -87,6 +91,39 @@ function cambioOperativoYaGestionado(key) {
     return false;
 }
 
+function getMaterialLogisticaPlanoAvisos(material = {}) {
+    return ['bebidas', 'menaje', 'extras'].flatMap(tipo => Array.isArray(material?.[tipo]) ? material[tipo] : []);
+}
+
+function tieneCambiosOperativosPendientesEnArea(item = {}, area = '') {
+    if (area === 'cocina') {
+        return Object.keys(item.kitchen_items_updates || {}).length > 0;
+    }
+    if (area === 'logistica') {
+        return getMaterialLogisticaPlanoAvisos(item.material_logistica || {})
+            .some(material => !!material?.material_nuevo || !!material?.cantidad_actualizada);
+    }
+    return false;
+}
+
+function resolverAvisoOperativoSiTramitado(item, area) {
+    if (!item || !area) return false;
+    if (tieneCambiosOperativosPendientesEnArea(item, area)) return false;
+
+    const campoNotice = area === 'cocina' ? 'kitchen_revision_notice' : 'logistics_revision_notice';
+    if (!item[campoNotice]) return false;
+
+    item[campoNotice] = null;
+    item[`${area}_revision_resolved_at`] = getTimestampOperativoDashboard();
+    item[`${area}_revision_resolved_by`] = getOperativeActorName();
+    item.fecha_modificacion = getTimestampOperativoDashboard();
+
+    if (typeof registrarAccionOperativa === 'function') {
+        registrarAccionOperativa(item, area, 'Aviso de cambio tramitado', 'Tarjeta cerrada definitivamente al guardar cambios');
+    }
+    return true;
+}
+
 function parseFechaOperativaLocal(fecha) {
     if (!fecha) return null;
     const [year, month, day] = String(fecha).split('T')[0].split('-').map(Number);
@@ -117,6 +154,8 @@ function esFechaAvisoOperativoSemanaActual(item) {
 }
 
 function getCambiosOperativosPendientes(areaVista, eventos) {
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return [];
+
     if (window.AppPermissions) {
         if (areaVista === 'cocina' && !AppPermissions.canEditKitchen()) return [];
         if (areaVista === 'logistica' && !AppPermissions.canEditLogistics()) return [];
@@ -182,6 +221,8 @@ function getCambiosOperativosPendientes(areaVista, eventos) {
 }
 
 function getAreasAvisoOperativoPorRol() {
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return [];
+
     const role = window.AppPermissions?.role || 'viewer';
     if (role === 'admin') return [];
     if (role === 'cocina') return ['cocina'];
@@ -221,6 +262,8 @@ function getCambiosOperativosPendientesGlobales() {
 }
 
 function reproducirSonidoCambioOperativo(key) {
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return;
+
     if (!key || sessionStorage.getItem(`${key}:sound`)) return;
     const prefs = typeof cargarPreferencias === 'function' ? cargarPreferencias() : { notificaciones: true };
     if (prefs.notificaciones === false) return;
@@ -261,6 +304,8 @@ function reproducirSonidoCambioOperativo(key) {
 }
 
 function prepararSonidoAlertasOperativas() {
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return;
+
     if (window._operationalAlertAudioPrepared) return;
     window._operationalAlertAudioPrepared = true;
 
@@ -377,6 +422,9 @@ function crearTarjetaCambioOperativoHtml({ key, areaVista, index, claseTipo = ''
 }
 
 function mostrarTarjetaCambioOperativo(areaVista, eventos) {
+    cerrarTarjetaCambioOperativo();
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return;
+
     const cambios = getCambiosOperativosPendientes(areaVista, eventos);
     if (!cambios.length) {
         cerrarTarjetaCambioOperativo();
@@ -411,6 +459,9 @@ function mostrarTarjetaCambioOperativo(areaVista, eventos) {
 }
 
 function mostrarTarjetaCambioOperativoGlobal() {
+    cerrarTarjetaCambioOperativo();
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return;
+
     const cambios = getCambiosOperativosPendientesGlobales();
     if (!cambios.length) {
         cerrarTarjetaCambioOperativo();
@@ -449,6 +500,9 @@ function mostrarTarjetaCambioOperativoGlobal() {
 }
 
 function refrescarAlertasOperativasGlobales() {
+    cerrarTarjetaCambioOperativo();
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) return;
+
     if (document.hidden) return;
     mostrarTarjetaCambioOperativoGlobal();
 }
@@ -457,6 +511,20 @@ window.refrescarAlertasOperativasGlobales = refrescarAlertasOperativasGlobales;
 window.confirmarLecturaCambioOperativoDesdeTarjeta = confirmarLecturaCambioOperativoDesdeTarjeta;
 
 window.verificarNotificacionesOperativas = async function verificarNotificacionesOperativas() {
+    if (!OPERATIONAL_ALERT_CARDS_ENABLED) {
+        cerrarTarjetaCambioOperativo();
+        return {
+            usuario: getUsuarioActualEmailDashboard?.() || null,
+            rol: window.AppPermissions?.role || null,
+            areas: [],
+            pendientes: 0,
+            avisos: [],
+            desactivadas: true,
+            realtime: window._ordersRealtimeStatus || null,
+            ultimaLectura: window._ultimoHistorialRemotoOk || null
+        };
+    }
+
     if (typeof window.cargarHistorialRemotoSupabase === 'function') {
         await window.cargarHistorialRemotoSupabase({ render: false });
     }

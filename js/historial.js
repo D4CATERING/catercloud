@@ -266,7 +266,19 @@ function verDetalleComanda(codigo) {
 }
 
 function verExpedientePedido(codigo) {
-    const comanda = obtenerComandaDelHistorial(codigo);
+    let comanda = obtenerComandaDelHistorial(codigo);
+    if (!comanda) {
+        const logistica = typeof _obtenerComandaLogisticaPorCodigo === 'function'
+            ? _obtenerComandaLogisticaPorCodigo(codigo)
+            : null;
+        if (logistica?.item && typeof _asegurarCarpetaLogisticaDirecta === 'function') {
+            const carpetaLogistica = _asegurarCarpetaLogisticaDirecta(logistica.item);
+            if (carpetaLogistica) {
+                comanda = carpetaLogistica;
+            }
+        }
+    }
+
     if (!comanda) {
         const logistica = typeof _obtenerComandaLogisticaPorCodigo === 'function'
             ? _obtenerComandaLogisticaPorCodigo(codigo)
@@ -321,6 +333,7 @@ function _renderExpedientePedido(comanda) {
     const estado = comanda.estado || 'creada';
     const estadoLabel = getEstadoPedidoLabel(estado);
     const esSolicitud = comanda.tipo_registro === 'solicitud';
+    const esLogisticaDirecta = comanda.tipo_registro === 'logistica' || comanda.es_logistica_independiente;
     const puedeCrearComanda = estado !== 'anulada';
     const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
     const archivosHtml = _renderArchivosSolicitud(comanda);
@@ -357,6 +370,13 @@ function _renderExpedientePedido(comanda) {
                 </div>`
         : '';
     const tituloExpediente = esSolicitud ? 'Solicitud por confirmar' : (comanda.codigo || 'Sin codigo');
+    const accionesComandaHtml = esSolicitud
+        ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
+        : esLogisticaDirecta
+            ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>`
+            : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>
+               ${tieneLogisticaSeparada ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}
+               ${puedeCrearLogistica ? `<button class="btn-submit" onclick="crearComandaLogisticaDesdeExpediente('${comanda.codigo}')">Crear comanda Logistica</button>` : ''}`;
 
     cont.innerHTML = `
         <div class="expediente-header">
@@ -394,11 +414,7 @@ function _renderExpedientePedido(comanda) {
                 <p class="expediente-muted">${esSolicitud ? 'Actualiza el estado de la solicitud o crea la comanda cuando se confirme.' : 'La comanda ya esta creada y se puede consultar.'}</p>
                 ${accionesEstadoHtml}
                 <div class="expediente-actions">
-                    ${esSolicitud
-                        ? (puedeCrearComanda && puedeEditar ? `<button class="btn-submit" onclick="convertirSolicitudEnComanda('${comanda.codigo}')">Crear comanda</button>` : '')
-                        : `<button class="btn-submit" onclick="abrirComandaDesdeExpediente('${comanda.codigo}')">Abrir comanda</button>
-                           ${tieneLogisticaSeparada ? `<button class="btn-submit" onclick="abrirComandaLogisticaDesdeExpediente('${comanda.codigo}')">Abrir comanda Logistica</button>` : ''}
-                           ${puedeCrearLogistica ? `<button class="btn-submit" onclick="crearComandaLogisticaDesdeExpediente('${comanda.codigo}')">Crear comanda Logistica</button>` : ''}`}
+                    ${accionesComandaHtml}
                 </div>
             </section>
 
@@ -642,6 +658,33 @@ function _obtenerComandaLogisticaPorCodigo(codigo) {
         historial: historialLogistica,
         embebida: true
     };
+}
+
+function _esLogisticaDirectaPedido(item = {}) {
+    if (window.CaterCloudStorage?.esLogisticaIndependientePayload) {
+        return window.CaterCloudStorage.esLogisticaIndependientePayload(item);
+    }
+    return item.tipo_registro === 'logistica' || item.es_logistica_independiente || (!item.codigo_cocina && item.material_logistica);
+}
+
+function _asegurarCarpetaLogisticaDirecta(comandaLogistica = {}) {
+    if (!_esLogisticaDirectaPedido(comandaLogistica)) return null;
+
+    const codigo = comandaLogistica.codigo || comandaLogistica.codigo_original || '';
+    if (!codigo) return null;
+
+    const existente = typeof obtenerComandaDelHistorial === 'function' ? obtenerComandaDelHistorial(codigo) : null;
+    if (existente) return existente;
+    return window.CaterCloudStorage?.guardarComandaPrincipalLogisticaDirectaLocal?.({
+        ...comandaLogistica,
+        codigo,
+        codigo_original: codigo
+    }) || null;
+}
+
+function _asegurarCarpetaDesdeDetalleLogistica(codigo) {
+    const logistica = _obtenerComandaLogisticaPorCodigo(codigo);
+    return logistica?.item ? _asegurarCarpetaLogisticaDirecta(logistica.item) : null;
 }
 
 function _tieneDatosEntregaLogistica(comanda = {}) {
@@ -1554,8 +1597,45 @@ function _renderTotalTermosDetalle(comanda) {
     </div>`;
 }
 
+function configurarBotonConfirmacionDetalle(comanda = {}) {
+    const actions = document.querySelector('.comanda-actions');
+    if (!actions) return;
+
+    let button = document.getElementById('detalleConfirmarComandaBtn');
+    if (!button) {
+        button = document.createElement('button');
+        button.type = 'button';
+        button.id = 'detalleConfirmarComandaBtn';
+        button.className = 'btn-submit btn-confirmar-detalle';
+        button.textContent = 'Confirmar comanda';
+        actions.prepend(button);
+    }
+
+    const estadoConfirmacion = getEstadoConfirmacionPedido(comanda);
+    const estado = comanda.estado || '';
+    const puedeEditar = !window.AppPermissions || AppPermissions.canWrite();
+    const codigo = comanda.codigo || comanda.codigo_original || comanda.codigo_cocina || '';
+    const mostrar = puedeEditar &&
+        comanda.tipo_registro !== 'solicitud' &&
+        estadoConfirmacion === 'por_confirmar' &&
+        estado !== 'anulada' &&
+        Boolean(codigo);
+
+    button.style.display = mostrar ? '' : 'none';
+    button.onclick = mostrar ? () => confirmarComandaDesdeDetalle(codigo) : null;
+}
+
+async function confirmarComandaDesdeDetalle(codigo) {
+    if (!codigo) return;
+    if (typeof obtenerComandaDelHistorial === 'function' && !obtenerComandaDelHistorial(codigo)) {
+        _asegurarCarpetaDesdeDetalleLogistica(codigo);
+    }
+    await actualizarEstadoConfirmacionComandaDesdeExpediente(codigo, 'confirmado');
+}
+
 function _renderDetalleComanda(comanda) {
     window.detalleDocumentoActivo = { tipo: 'cocina', codigo: comanda.codigo };
+    configurarBotonConfirmacionDetalle(comanda);
     const editButton = document.querySelector('.comanda-actions button[title="Editar"]');
     if (editButton && window.AppPermissions) {
         editButton.style.display = AppPermissions.canEditOrders() ? '' : 'none';
@@ -1915,10 +1995,14 @@ function verDetalleComandaLogistica(comandaLogistica) {
 }
 
 function _renderDetalleComandaLogistica(comanda) {
+    if (typeof _asegurarCarpetaLogisticaDirecta === 'function') {
+        _asegurarCarpetaLogisticaDirecta(comanda);
+    }
+    configurarBotonConfirmacionDetalle(comanda);
     window.detalleDocumentoActivo = {
         tipo: 'logistica',
         codigo: comanda.codigo,
-        codigoCocina: comanda.codigo_cocina || comanda.codigo
+        codigoCocina: comanda.codigo_cocina || comanda.codigo_original || comanda.codigo
     };
     const editButton = document.querySelector('.comanda-actions button[title="Editar"]');
     if (editButton && window.AppPermissions) {

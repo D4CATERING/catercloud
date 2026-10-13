@@ -59,6 +59,37 @@ function getSemanaLocalDashboard() {
     return { inicio: toIso(inicio), fin: toIso(fin) };
 }
 
+function normalizarFechaDashboard(valor) {
+    if (!valor) return '';
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) {
+        const yyyy = valor.getFullYear();
+        const mm = String(valor.getMonth() + 1).padStart(2, '0');
+        const dd = String(valor.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+    const texto = String(valor).trim();
+    if (!texto) return '';
+    const fechaTexto = texto.split('T')[0].trim();
+
+    const iso = fechaTexto.match(/(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})/);
+    if (iso) {
+        return `${iso[1]}-${String(iso[2]).padStart(2, '0')}-${String(iso[3]).padStart(2, '0')}`;
+    }
+
+    const europeo = fechaTexto.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})/);
+    if (europeo) {
+        return `${europeo[3]}-${String(europeo[2]).padStart(2, '0')}-${String(europeo[1]).padStart(2, '0')}`;
+    }
+
+    const fecha = new Date(texto);
+    if (!Number.isNaN(fecha.getTime())) {
+        return normalizarFechaDashboard(fecha);
+    }
+
+    return fechaTexto;
+}
+
 function filtrarEventosPorPeriodoDashboard(eventos, getFechaItem, inputId, periodo) {
     if (periodo === 'todo') {
         return eventos || [];
@@ -66,16 +97,16 @@ function filtrarEventosPorPeriodoDashboard(eventos, getFechaItem, inputId, perio
     if (periodo === 'semana') {
         const { inicio, fin } = getSemanaLocalDashboard();
         return (eventos || []).filter(item => {
-            const fecha = getFechaItem(item);
+            const fecha = normalizarFechaDashboard(getFechaItem(item));
             return fecha >= inicio && fecha <= fin;
         });
     }
-    const fechaFiltro = document.getElementById(inputId)?.value || '';
+    const fechaFiltro = normalizarFechaDashboard(document.getElementById(inputId)?.value || '');
     if (fechaFiltro) {
-        return (eventos || []).filter(item => getFechaItem(item) === fechaFiltro);
+        return (eventos || []).filter(item => normalizarFechaDashboard(getFechaItem(item)) === fechaFiltro);
     }
     const hoy = getFechaLocalHoyDashboard();
-    return (eventos || []).filter(item => getFechaItem(item) === hoy);
+    return (eventos || []).filter(item => normalizarFechaDashboard(getFechaItem(item)) === hoy);
 }
 
 function actualizarBotonesPeriodoDashboard(prefix, periodo) {
@@ -364,10 +395,6 @@ async function mostrarCocina() {
 async function refrescarAlertasOperativas() {
     const cocinaPage = document.getElementById('cocinaPage');
     const logisticaPage = document.getElementById('logisticaPage');
-
-    if (!document.hidden && typeof window.cargarHistorialRemotoSupabase === 'function') {
-        await window.cargarHistorialRemotoSupabase({ render: false });
-    }
 
     if (cocinaPage && cocinaPage.style.display !== 'none') {
         renderizarComandasCocina();
@@ -679,7 +706,7 @@ function guardarHistorialCocinaLogistica(historial) {
 // Helpers de fecha/logistica de rutas viven en js/routes-dashboard.js
 
 function getMinutosHastaSalida(item) {
-    const fecha = String(item?.fecha_evento || '').split('T')[0];
+    const fecha = normalizarFechaDashboard(item?.fecha_evento || '');
     const hora = String(item?.hora_salida || '').trim();
     if (!fecha || !hora) return null;
 
@@ -750,7 +777,10 @@ function getEventosLogisticaActivos() {
     const historialLogistica = getHistorialLogistica();
     const historialCocina = getHistorialCocinaLogistica();
     const codigosConLogistica = getCodigosLogistica(historialLogistica);
-    const eventos = historialLogistica.map((item, index) => {
+    const eventos = historialLogistica
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.codigo_cocina || !window.CaterCloudStorage?.esLogisticaIndependientePayload?.(item))
+    .map(({ item, index }) => {
         const codigoCocina = item.codigo_cocina || item.codigo_original || item.codigo;
         const comandaCocina = historialCocina.find(cocina => {
             const codigo = cocina.codigo || cocina.codigo_comanda || cocina.id;
@@ -1046,7 +1076,10 @@ async function refrescarPreparadosLogisticaDesdeSupabase(item) {
 }
 
 function getCodigosLogistica(historial) {
-    return new Set((historial || []).map(item => item.codigo_cocina || item.codigo).filter(Boolean));
+    return new Set((historial || [])
+        .filter(item => item.codigo_cocina || !window.CaterCloudStorage?.esLogisticaIndependientePayload?.(item))
+        .map(item => item.codigo_cocina || item.codigo)
+        .filter(Boolean));
 }
 
 function getComandasServicioSinLogistica(historialLogistica) {
@@ -1089,7 +1122,7 @@ function renderizarAlertasLogistica(historial) {
     if (!box || !title || !list) return;
 
     const fechaFiltro = document.getElementById('logisticaFiltroFecha')?.value || '';
-    const periodo = fechaFiltro ? 'dia' : (window.logisticaFiltroPeriodo || 'hoy');
+    const periodo = window.logisticaFiltroPeriodo || (fechaFiltro ? 'dia' : 'hoy');
     const faltantes = filtrarEventosPorPeriodoDashboard(
         getComandasServicioSinLogistica(historial),
         getFechaLogisticaItem,
@@ -1442,7 +1475,7 @@ function abrirPreparacionLogistica(index, codigo = '') {
 
         <div class="logistics-prep-actions">
             <button type="button" class="btn-secondary" onclick="cerrarPreparacionLogistica()">Cerrar</button>
-            ${canEdit ? `<button type="button" class="btn-primary" onclick="cerrarPreparacionLogistica()">Guardar cambios</button>` : ''}
+            ${canEdit ? `<button type="button" class="btn-primary" onclick="guardarCambiosPreparacionLogistica(${index}, ${codigoArg})">Guardar cambios</button>` : ''}
         </div>
     `;
 
@@ -1504,6 +1537,23 @@ function cerrarPreparacionLogistica() {
     const modal = document.getElementById('logisticaPreparacionModal');
     if (modal) modal.style.display = 'none';
     renderizarComandasLogistica();
+}
+
+function guardarCambiosPreparacionLogistica(index, codigo = '') {
+    if (!requireEditarLogistica()) return;
+    codigo = leerJsArgSeguro(codigo);
+    const item = getEventoLogisticaPorIndiceOCodigo(index, codigo);
+    if (!item) return;
+
+    item.fecha_modificacion = getTimestampOperativoDashboard();
+    if (typeof resolverAvisoOperativoSiTramitado === 'function') {
+        resolverAvisoOperativoSiTramitado(item, 'logistica');
+    }
+    guardarEventoLogisticaActivo(item);
+    cerrarPreparacionLogistica();
+    if (typeof refrescarAlertasOperativasGlobales === 'function') {
+        setTimeout(refrescarAlertasOperativasGlobales, 100);
+    }
 }
 
 function actualizarItemLogistica(index, tipo, matIndex, materialKey = '', codigo = '') {

@@ -9,7 +9,10 @@ function guardarHistorialCocinaModulo(historial) {
 }
 
 function getFechaCocinaItem(item) {
-    return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+    const fecha = item?.fecha_evento || item?.fecha_creacion || '';
+    return typeof normalizarFechaDashboard === 'function'
+        ? normalizarFechaDashboard(fecha)
+        : String(fecha).split('T')[0];
 }
 
 function getEventoCocinaPorIndiceOCodigo(index, codigo = '') {
@@ -39,7 +42,7 @@ function getEventosCocinaActivos() {
             kitchen_produced_items: Number(item.kitchen_produced_items || 0)
         }))
         .filter(item => {
-            if (item.tipo_registro === 'logistica') return false;
+            if (window.CaterCloudStorage?.esLogisticaIndependientePayload?.(item)) return false;
             if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return false;
             return getMenusCocinaComanda(item).length > 0;
         })
@@ -54,14 +57,16 @@ window.verificarCocinaCaterCloud = async function verificarCocinaCaterCloud() {
     }
     const historial = getHistorialCocinaModulo();
     const eventos = getEventosCocinaActivos();
-    const inputFecha = document.getElementById('cocinaFiltroFecha')?.value || '';
+    const inputFecha = typeof normalizarFechaDashboard === 'function'
+        ? normalizarFechaDashboard(document.getElementById('cocinaFiltroFecha')?.value || '')
+        : (document.getElementById('cocinaFiltroFecha')?.value || '');
     const fechaFiltro = inputFecha || getFechaLocalHoyDashboard();
-    const periodo = inputFecha ? 'dia' : (window.cocinaFiltroPeriodo || 'hoy');
+    const periodo = window.cocinaFiltroPeriodo || (inputFecha ? 'dia' : 'hoy');
     const visiblesFecha = eventos.filter(item => getFechaCocinaItem(item) === fechaFiltro);
     const visiblesTodo = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', 'todo');
     const visiblesPeriodoActual = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', periodo);
     const sinMenuProduccion = historial.filter(item => {
-        if (item.tipo_registro === 'logistica') return false;
+        if (window.CaterCloudStorage?.esLogisticaIndependientePayload?.(item)) return false;
         if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return false;
         return getMenusCocinaComanda(item).length === 0;
     });
@@ -156,7 +161,7 @@ function renderizarComandasCocina() {
 
     const eventos = getEventosCocinaActivos();
     const fechaFiltro = document.getElementById('cocinaFiltroFecha')?.value || '';
-    const periodo = fechaFiltro ? 'dia' : (window.cocinaFiltroPeriodo || 'hoy');
+    const periodo = window.cocinaFiltroPeriodo || (fechaFiltro ? 'dia' : 'hoy');
     const eventosFiltrados = filtrarEventosPorPeriodoDashboard(eventos, getFechaCocinaItem, 'cocinaFiltroFecha', periodo);
 
     window.cocinaEventosActivos = eventosFiltrados;
@@ -446,9 +451,15 @@ function guardarCambiosProduccionCocina(index, codigo = '') {
         item.kitchen_status = 'sin_producir';
     }
 
+    if (typeof resolverAvisoOperativoSiTramitado === 'function') {
+        resolverAvisoOperativoSiTramitado(item, 'cocina');
+    }
     guardarEventoCocinaActivo(item);
     renderizarComandasCocina();
     cerrarProduccionCocina();
+    if (typeof refrescarAlertasOperativasGlobales === 'function') {
+        setTimeout(refrescarAlertasOperativasGlobales, 100);
+    }
 }
 
 function confirmarCompletadoCocina(index, codigo = '') {

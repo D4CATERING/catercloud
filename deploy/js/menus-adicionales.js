@@ -1015,9 +1015,46 @@
     window._restoreMaterialResumenTimer2 = setTimeout(restaurar, 700);
   }
 
+  function restarMaterialPorClave(total = {}, usado = {}) {
+    const resultado = cloneMenuData(window.normalizarMaterialLogistica(total || {}));
+    const usadoNormalizado = window.normalizarMaterialLogistica(usado || {});
+
+    ['bebidas', 'menaje', 'extras'].forEach(tipo => {
+      const cantidadesUsadas = new Map();
+      (usadoNormalizado[tipo] || []).forEach(item => {
+        const key = claveMaterialAcumulado(item, tipo);
+        cantidadesUsadas.set(key, (cantidadesUsadas.get(key) || 0) + Number(item.cantidad || 0));
+      });
+
+      resultado[tipo] = (resultado[tipo] || [])
+        .map(item => {
+          const key = claveMaterialAcumulado(item, tipo);
+          const restante = Number(item.cantidad || 0) - Number(cantidadesUsadas.get(key) || 0);
+          return {
+            ...item,
+            cantidad: Math.max(0, Math.round(restante * 100) / 100),
+            checked: restante > 0
+          };
+        })
+        .filter(item => Number(item.cantidad || 0) > 0 || (item.subitems_selected || []).length > 0);
+    });
+
+    return resultado;
+  }
+
+  function obtenerMaterialAcumuladoDeMenus(menus = [], excludeIndex = -1) {
+    return (menus || []).reduce((acc, menu, index) => {
+      if (index === excludeIndex) return acc;
+      return sumarMaterial(acc, menu?.material || { bebidas: [], menaje: [], extras: [] });
+    }, { bebidas: [], menaje: [], extras: [] });
+  }
+
   function obtenerMaterialParaEditarMenuResumen(menu) {
     const materialMenu = window.normalizarMaterialLogistica(menu?.material || menu?.material_logistica || menu?.materialLogistica || {});
     if (window.comandaEditando) {
+      const st = window.MenusAdicionalesState || { menusAdicionales: [] };
+      const indiceEditando = getIndiceMenuEditandoResumen();
+      const materialOtrosMenus = obtenerMaterialAcumuladoDeMenus(st.menusAdicionales || [], indiceEditando);
       const candidatos = [
         window._materialAcumulado,
         window.comandaEditando.material_logistica,
@@ -1029,10 +1066,11 @@
       for (const candidato of candidatos) {
         const materialGlobal = window.normalizarMaterialLogistica(candidato || {});
         if (!materialTieneItems(materialGlobal)) continue;
+        const materialHuerfano = restarMaterialPorClave(materialGlobal, materialOtrosMenus);
         return deduplicarMaterialMenuEdicion({
-          bebidas: [...(materialMenu.bebidas || []), ...(materialGlobal.bebidas || [])],
-          menaje: [...(materialMenu.menaje || []), ...(materialGlobal.menaje || [])],
-          extras: [...(materialMenu.extras || []), ...(materialGlobal.extras || [])]
+          bebidas: [...(materialMenu.bebidas || []), ...(materialHuerfano.bebidas || [])],
+          menaje: [...(materialMenu.menaje || []), ...(materialHuerfano.menaje || [])],
+          extras: [...(materialMenu.extras || []), ...(materialHuerfano.extras || [])]
         });
       }
     }
@@ -1255,15 +1293,23 @@
     const total = st.menusAdicionales.length;
     const indiceFormulario = Number(st.indiceMenuEditando ?? -1);
     const indiceResumen = Number(window._indiceMenuResumenEditando ?? -1);
+    const indicePersistente = Number(window._menuResumenEditandoIndex ?? -1);
+    const uidEditando = String(window._menuResumenEditandoUid || '');
 
     const formularioValido = indiceFormulario >= 0 && indiceFormulario < total;
     const resumenValido = indiceResumen >= 0 && indiceResumen < total;
+    const persistenteValido = indicePersistente >= 0 && indicePersistente < total;
+    const indiceUid = uidEditando
+      ? st.menusAdicionales.findIndex(menu => String(menu?._edicion_uid || '') === uidEditando)
+      : -1;
 
     if (!formularioValido && indiceFormulario >= 0) st.indiceMenuEditando = -1;
     if (!resumenValido && indiceResumen >= 0) window._indiceMenuResumenEditando = -1;
 
     if (formularioValido) return indiceFormulario;
     if (resumenValido) return indiceResumen;
+    if (indiceUid >= 0) return indiceUid;
+    if (persistenteValido) return indicePersistente;
     return -1;
   }
 
@@ -1553,8 +1599,13 @@
       : prepararMaterialMenuEdicion(materialSnapshotConManuales);
 
     // Construir objeto del menú
+    const indiceEditando = getIndiceMenuEditandoResumen();
+    const editandoMenuExistente = indiceEditando >= 0 && indiceEditando < st.menusAdicionales.length;
+    const uidEdicion = editandoMenuExistente
+      ? (st.menusAdicionales[indiceEditando]?._edicion_uid || window._menuResumenEditandoUid)
+      : null;
     const item = {
-      _edicion_uid: `nuevo_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      _edicion_uid: uidEdicion || `nuevo_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       id:          window.menuSeleccionado.id || '',
       nombre:      window.menuSeleccionado.nombre || '',
       categoriaId,
@@ -1608,8 +1659,6 @@
     }
 
     // Guardar o reemplazar el menu editado
-    const indiceEditando = getIndiceMenuEditandoResumen();
-    const editandoMenuExistente = indiceEditando >= 0 && indiceEditando < st.menusAdicionales.length;
     if (editandoMenuExistente) {
       st.menusAdicionales[indiceEditando] = item;
     } else {
@@ -1618,6 +1667,8 @@
     st.indiceMenuEditando = -1;
     st.indiceMenuSeleccionadoResumen = -1;
     window._indiceMenuResumenEditando = -1;
+    window._menuResumenEditandoIndex = -1;
+    window._menuResumenEditandoUid = '';
     window._materialMenuResumenEditando = null;
     clearTimeout(window._restoreMaterialResumenTimer1);
     clearTimeout(window._restoreMaterialResumenTimer2);
@@ -2059,12 +2110,17 @@
 
   window.editarMenuResumen = async function(index) {
     const st = window.MenusAdicionalesState;
+    if (st.menusAdicionales[index] && !st.menusAdicionales[index]._edicion_uid) {
+      st.menusAdicionales[index]._edicion_uid = `edicion_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}`;
+    }
     const menu = cloneMenuData(st.menusAdicionales[index]);
     if (!menu) return;
 
     clearTimeout(window._restoreMaterialEdicionTimer);
     st.indiceMenuEditando = index;
     window._indiceMenuResumenEditando = index;
+    window._menuResumenEditandoIndex = index;
+    window._menuResumenEditandoUid = menu._edicion_uid || '';
     window.menuSeleccionado = { ...menu, _cat: Number(menu.categoriaId || menu._cat || 0) };
 
     try {
@@ -2081,6 +2137,9 @@
       console.warn('No se pudo cargar el menu para editar:', error);
     }
     st.indiceMenuEditando = index;
+    window._indiceMenuResumenEditando = index;
+    window._menuResumenEditandoIndex = index;
+    window._menuResumenEditandoUid = menu._edicion_uid || window._menuResumenEditandoUid || '';
 
     const paxEl = document.getElementById('pax');
     if (paxEl) {
@@ -2183,6 +2242,8 @@
       st.indiceMenuEditando = -1;
       st.indiceMenuSeleccionadoResumen = -1;
       window._indiceMenuResumenEditando = -1;
+      window._menuResumenEditandoIndex = -1;
+      window._menuResumenEditandoUid = '';
       window._materialMenuResumenEditando = null;
       clearTimeout(window._restoreMaterialResumenTimer1);
       clearTimeout(window._restoreMaterialResumenTimer2);
@@ -2208,6 +2269,8 @@
     st.indiceMenuEditando = -1;
     st.indiceMenuSeleccionadoResumen = -1;
     window._indiceMenuResumenEditando = -1;
+    window._menuResumenEditandoIndex = -1;
+    window._menuResumenEditandoUid = '';
     window._materialMenuResumenEditando = null;
     clearTimeout(window._restoreMaterialResumenTimer1);
     clearTimeout(window._restoreMaterialResumenTimer2);
@@ -2263,6 +2326,8 @@
       st.indiceMenuEditando = -1;
       st.indiceMenuSeleccionadoResumen = -1;
       window._indiceMenuResumenEditando = -1;
+      window._menuResumenEditandoIndex = -1;
+      window._menuResumenEditandoUid = '';
       window._materialMenuResumenEditando = null;
       clearTimeout(window._restoreMaterialResumenTimer1);
       clearTimeout(window._restoreMaterialResumenTimer2);

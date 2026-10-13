@@ -127,6 +127,7 @@ function getEventosPorFecha() {
     const historial = window.CaterCloudStorage.leerHistorialComandasLocal();
     const historialLogistica = window.CaterCloudStorage.leerHistorialLogisticaLocal();
     const codigosConLogistica = new Set(historialLogistica.map(item => item.codigo_cocina || item.codigo).filter(Boolean));
+    const codigosPrincipales = new Set(historial.map(item => item.codigo || item.codigo_original).filter(Boolean).map(String));
     const map = {};
 
     historial.forEach(c => {
@@ -153,14 +154,16 @@ function getEventosPorFecha() {
     historialLogistica.forEach(item => {
         if (['anulada', 'eliminada'].includes(item.estado) || ['anulada', 'eliminada'].includes(item.estado_pedido)) return;
         if (item.codigo_cocina && historial.some(c => String(c.codigo || '') === String(item.codigo_cocina))) return;
+        const codigoLogistica = item.codigo || item.codigo_original || '';
+        if (!item.codigo_cocina && codigosPrincipales.has(String(codigoLogistica))) return;
         const fecha = (item.fecha_evento || '').split('T')[0];
         if (!fecha) return;
         if (!map[fecha]) map[fecha] = [];
         const logistica = item.logistica || item.logistica_inline || {};
 
         map[fecha].push({
-            codigo: item.codigo || item.codigo_original || '',
-            codigoVisible: item.codigo || item.codigo_original || 'Logística',
+            codigo: codigoLogistica,
+            codigoVisible: codigoLogistica || 'Logística',
             empresa: item.empresa || item.company_name || 'Logística directa',
             contacto: logistica.nombre_contacto || '',
             pax: item.pax || item.pax_total || 0,

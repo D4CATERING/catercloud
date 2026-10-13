@@ -116,6 +116,94 @@ function guardarHistorialLogisticaLocal(historial) {
     guardarJsonLocalStorage(ORDER_STORAGE_KEYS.logisticsHistory, historial || []);
 }
 
+function payloadTieneContenidoCocina(item = {}) {
+    const nombreMenu = String(item.menu_nombre || item.menu_categoria_nombre || item.menu || '').trim().toLowerCase();
+    const nombreEsSoloLogistica = nombreMenu === 'solo logística' ||
+        nombreMenu === 'solo logistica' ||
+        nombreMenu === 'logística' ||
+        nombreMenu === 'logistica';
+    return Boolean(
+        item.menu_principal ||
+        (!nombreEsSoloLogistica && nombreMenu) ||
+        item.referencias_desayuno ||
+        item.referencias ||
+        item.foodbox_lunch ||
+        item.bandejas ||
+        (Array.isArray(item.menus_adicionales) && item.menus_adicionales.length)
+    );
+}
+
+function esLogisticaIndependientePayload(item = {}) {
+    if (item.es_logistica_independiente) return true;
+    if (item.codigo_cocina) return false;
+    if (payloadTieneContenidoCocina(item)) return false;
+    return item.tipo_registro === 'logistica' || Boolean(item.material_logistica);
+}
+
+function construirComandaPrincipalLogisticaDirecta(datosLogistica = {}) {
+    const codigo = datosLogistica.codigo || datosLogistica.codigo_original || '';
+    const ahora = fechaHoraIso();
+    return {
+        ...datosLogistica,
+        codigo,
+        codigo_original: codigo,
+        codigo_cocina: '',
+        tipo_registro: 'logistica',
+        es_logistica_independiente: true,
+        empresa: datosLogistica.empresa || datosLogistica.company_name || 'Logística directa',
+        menu_nombre: datosLogistica.menu_nombre || 'Solo logística',
+        menu_categoria_nombre: datosLogistica.menu_categoria_nombre || 'Logística',
+        estado: ['anulada', 'eliminada'].includes(datosLogistica.estado) ? datosLogistica.estado : 'creada',
+        estado_logistica: datosLogistica.estado_logistica || datosLogistica.logistics_status || 'sin_preparar',
+        logistics_status: datosLogistica.logistics_status || datosLogistica.estado_logistica || 'sin_preparar',
+        estado_confirmacion: datosLogistica.estado_confirmacion || datosLogistica.confirmation_status || 'por_confirmar',
+        confirmation_status: datosLogistica.confirmation_status || datosLogistica.estado_confirmacion || 'por_confirmar',
+        tiene_comanda_logistica: true,
+        logistica_creada: true,
+        documentos: {
+            ...(datosLogistica.documentos || {}),
+            logistica: {
+                tipo: 'logistica',
+                nombre: 'Comanda Logistica',
+                codigo,
+                fecha_creacion: datosLogistica.fecha_creacion || ahora
+            }
+        },
+        fecha_creacion: datosLogistica.fecha_creacion || ahora,
+        fecha_modificacion: datosLogistica.fecha_modificacion || ahora
+    };
+}
+
+function guardarComandaPrincipalLogisticaDirectaLocal(datosLogistica = {}) {
+    const principal = construirComandaPrincipalLogisticaDirecta(datosLogistica);
+    if (!principal.codigo) return null;
+
+    const historial = leerHistorialComandasLocal();
+    const index = historial.findIndex(item => String(item.codigo || item.codigo_original || '') === String(principal.codigo));
+    if (index >= 0) {
+        historial[index] = {
+            ...historial[index],
+            ...principal,
+            fecha_creacion: historial[index].fecha_creacion || principal.fecha_creacion,
+            fecha_modificacion: fechaHoraIso()
+        };
+    } else {
+        historial.unshift(principal);
+    }
+    guardarHistorialComandasLocal(historial);
+
+    const logisticas = leerHistorialLogisticaLocal();
+    const sinDuplicadoDirecto = logisticas.filter(item => {
+        const codigoItem = item.codigo || item.codigo_original || '';
+        return !(String(codigoItem) === String(principal.codigo) && esLogisticaIndependientePayload(item));
+    });
+    if (sinDuplicadoDirecto.length !== logisticas.length) {
+        guardarHistorialLogisticaLocal(sinDuplicadoDirecto);
+    }
+
+    return principal;
+}
+
 async function sincronizarPayloadOrdenSupabase(codigo, patch = {}, options = {}) {
     if (!codigo || !haySesionSupabase()) return false;
 
@@ -203,6 +291,10 @@ window.CaterCloudStorage = Object.assign(window.CaterCloudStorage || {}, {
     guardarHistorialComandasLocal,
     leerHistorialLogisticaLocal,
     guardarHistorialLogisticaLocal,
+    esLogisticaIndependientePayload,
+    construirComandaPrincipalLogisticaDirecta,
+    guardarComandaPrincipalLogisticaDirectaLocal,
+    payloadTieneContenidoCocina,
     sincronizarPayloadOrdenSupabase,
     sincronizarAccionesOperativasSupabase,
     obtenerOrdenSupabasePorCodigo
@@ -540,7 +632,7 @@ async function sincronizarComandaLogisticaEnSupabase(codigoPedido, datosLogistic
     logistica: datosLogistica.logistica || {},
     logistica_inline: datosLogistica.logistica || {},
     material_logistica: materialLogistica,
-    logistics_status: datosLogistica.logistics_status || datosLogistica.estado || 'sin_preparar',
+    logistics_status: datosLogistica.logistics_status || datosLogistica.estado_logistica || 'sin_preparar',
     logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
     logistics_prepared_items: Math.max(preparadosMarcados, Number(datosLogistica.logistics_prepared_items || 0)),
     tiene_comanda_logistica: true,
@@ -603,13 +695,16 @@ async function crearComandaLogisticaIndependienteEnSupabase(datosLogistica = {})
     logistica_inline: datosLogistica.logistica || {},
     material_logistica: materialLogistica,
     logistics_status: datosLogistica.logistics_status || datosLogistica.estado || 'sin_preparar',
+    estado_logistica: datosLogistica.estado_logistica || datosLogistica.logistics_status || 'sin_preparar',
     logistics_prepared_items: Math.max(preparadosMarcados, Number(datosLogistica.logistics_prepared_items || 0)),
     logistics_assigned_to: datosLogistica.logistics_assigned_to || '',
     tiene_comanda_logistica: true,
     logistica_creada: true,
+    estado_confirmacion: datosLogistica.estado_confirmacion || datosLogistica.confirmation_status || 'por_confirmar',
+    confirmation_status: datosLogistica.confirmation_status || datosLogistica.estado_confirmacion || 'por_confirmar',
     fecha_creacion: datosLogistica.fecha_creacion || fechaHoraIso(),
     fecha_modificacion: fechaHoraIso(),
-    estado: datosLogistica.estado || 'sin_preparar',
+    estado: datosLogistica.estado || 'creada',
     version: 1,
     creado_por_id: getUsuarioActualId() || datosLogistica.creado_por_id || null,
     creado_por_nombre: datosLogistica.creado_por_nombre || getResponsableFromUser(),
@@ -630,7 +725,7 @@ async function crearComandaLogisticaIndependienteEnSupabase(datosLogistica = {})
       fecha_evento: payload.fecha_evento || null,
       hora_salida: payload.hora_salida || null,
       pax_total: Number(payload.pax || payload.pax_total || 0) || null,
-      estado: payload.estado,
+      estado: payload.estado || 'creada',
       version: payload.version,
       created_by: getUsuarioActualId(),
       updated_by: getUsuarioActualId(),
@@ -1430,6 +1525,95 @@ function fusionarDatosLogisticaSync(base = {}, fuente = {}, options = {}) {
     };
 }
 
+function valorOrdenTieneContenido(valor) {
+    if (valor === undefined || valor === null) return false;
+    if (typeof valor === 'string') return valor.trim() !== '';
+    if (Array.isArray(valor)) return valor.length > 0;
+    if (typeof valor === 'object') return Object.keys(valor).length > 0;
+    return true;
+}
+
+function elegirValorOrdenSync(baseValor, fuenteValor, preferirFuente = true) {
+    const fuenteTieneContenido = valorOrdenTieneContenido(fuenteValor);
+    const baseTieneContenido = valorOrdenTieneContenido(baseValor);
+    if (preferirFuente) return fuenteTieneContenido ? fuenteValor : baseValor;
+    return baseTieneContenido ? baseValor : fuenteValor;
+}
+
+function elegirTipoRegistroOrdenSync(base = {}, fuente = {}, preferirFuente = true) {
+    const baseTipo = base.tipo_registro;
+    const fuenteTipo = fuente.tipo_registro;
+    const hayContenidoCocina = payloadTieneContenidoCocina(base) || payloadTieneContenidoCocina(fuente);
+    if (hayContenidoCocina) {
+        if (preferirFuente && fuenteTipo && fuenteTipo !== 'logistica') return fuenteTipo;
+        if (baseTipo && baseTipo !== 'logistica') return baseTipo;
+        if (fuenteTipo && fuenteTipo !== 'logistica') return fuenteTipo;
+        return 'comanda';
+    }
+    return preferirFuente ? (fuenteTipo || baseTipo) : (baseTipo || fuenteTipo);
+}
+
+function fusionarDatosOrdenSync(base = {}, fuente = {}, options = {}) {
+    const preferirFuente = options.preferirFuente !== false;
+    const fusionBase = preferirFuente
+        ? { ...base, ...fuente }
+        : { ...fuente, ...base };
+    fusionBase.tipo_registro = elegirTipoRegistroOrdenSync(base, fuente, preferirFuente);
+    const camposComanda = [
+        'menu_principal',
+        'menus_adicionales',
+        'menu',
+        'menu_nombre',
+        'menu_categoria',
+        'menu_categoria_nombre',
+        'categoria',
+        'categoria_id',
+        'categoriaId',
+        'referencias_desayuno',
+        'referencias',
+        'referencias_extras',
+        'foodbox_lunch',
+        'bandejas',
+        'multiplicadores',
+        'alergias',
+        'notas_cocina',
+        'notas_adicionales',
+        'detalle_intolerancias'
+    ];
+    const camposOperativosCocina = [
+        'kitchen_status',
+        'estado_cocina',
+        'kitchen_assigned_to',
+        'kitchen_items_state',
+        'kitchen_items_updates',
+        'kitchen_produced_items',
+        'kitchen_action_log',
+        'kitchen_revision_notice',
+        'kitchen_completed_confirmed_at',
+        'kitchen_completed_confirmed_by',
+        'kitchen_ready_at',
+        'kitchen_ready_by'
+    ];
+
+    camposComanda.forEach(campo => {
+        fusionBase[campo] = elegirValorOrdenSync(base[campo], fuente[campo], preferirFuente);
+    });
+    camposOperativosCocina.forEach(campo => {
+        const baseTieneCampo = Object.prototype.hasOwnProperty.call(base, campo);
+        const fuenteTieneCampo = Object.prototype.hasOwnProperty.call(fuente, campo);
+        fusionBase[campo] = preferirFuente
+            ? (fuenteTieneCampo ? fuente[campo] : base[campo])
+            : (baseTieneCampo ? base[campo] : fuente[campo]);
+    });
+
+    fusionBase.documentos = {
+        ...(base.documentos || {}),
+        ...(fuente.documentos || {})
+    };
+
+    return fusionarDatosLogisticaSync(fusionBase, fuente, { preferirFuente });
+}
+
 function fusionarHistorialRemoto(localItems, remoteItems) {
     const mapa = new Map();
 
@@ -1443,9 +1627,9 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
         if (!key) return;
         const remoto = mapa.get(String(key));
         if (!remoto || getFechaModificacionHistorialSync(item) > getFechaModificacionHistorialSync(remoto)) {
-            mapa.set(String(key), remoto ? fusionarDatosLogisticaSync(item, remoto, { preferirFuente: false }) : item);
+            mapa.set(String(key), remoto ? fusionarDatosOrdenSync(remoto, item, { preferirFuente: true }) : item);
         } else if (remoto) {
-            mapa.set(String(key), fusionarDatosLogisticaSync(remoto, item, { preferirFuente: false }));
+            mapa.set(String(key), fusionarDatosOrdenSync(item, remoto, { preferirFuente: true }));
         }
     });
 
@@ -1458,6 +1642,13 @@ function fusionarHistorialRemoto(localItems, remoteItems) {
 }
 
 async function cargarHistorialRemotoSupabase(options = {}) {
+    const ahoraMs = Date.now();
+    const minIntervalMs = Number(options.minIntervalMs ?? 8000);
+    const ultimaCargaMs = Number(window._historialRemotoUltimaCargaMs || 0);
+    if (!options.force && ultimaCargaMs && ahoraMs - ultimaCargaMs < minIntervalMs) {
+        return Boolean(window._ultimoHistorialRemotoOk);
+    }
+
     if (!haySesionSupabase()) {
         await asegurarSesionSupabase(3500);
     }
@@ -1509,13 +1700,16 @@ async function cargarHistorialRemotoSupabase(options = {}) {
         (data || []).forEach(row => {
             const item = normalizarComandaRemota(row);
             if (!getCodigoHistorialSync(item)) return;
-            if (item.tipo_registro === 'logistica') {
+            if (item.tipo_registro === 'logistica' && !esLogisticaIndependientePayload(item)) {
                 logisticasRemotas.push(item);
             } else {
-                comandasRemotas.push(item);
+                comandasRemotas.push(esLogisticaIndependientePayload(item)
+                    ? construirComandaPrincipalLogisticaDirecta(item)
+                    : item);
             }
         });
 
+        window._historialRemotoUltimaCargaMs = Date.now();
         window._ultimoHistorialRemotoOk = {
             at: fechaHoraIso(),
             total: data.length,
@@ -1532,7 +1726,13 @@ async function cargarHistorialRemotoSupabase(options = {}) {
         const logisticasLocales = leerHistorialLogisticaLocal();
 
         const comandasFusionadas = fusionarHistorialRemoto(comandasLocales, comandasRemotas);
-        const logisticasFusionadas = fusionarHistorialRemoto(logisticasLocales, logisticasRemotas);
+        const codigosPrincipales = new Set(comandasFusionadas.map(item => item.codigo || item.codigo_original).filter(Boolean).map(String));
+        const logisticasLocalesSinDirectasDuplicadas = logisticasLocales.filter(item => {
+            const codigo = item.codigo || item.codigo_original || '';
+            return !(esLogisticaIndependientePayload(item) && codigosPrincipales.has(String(codigo)));
+        });
+        const logisticasFusionadas = fusionarHistorialRemoto(logisticasLocalesSinDirectasDuplicadas, logisticasRemotas)
+            .filter(item => !esLogisticaIndependientePayload(item));
 
         guardarHistorialComandasLocal(comandasFusionadas);
         guardarHistorialLogisticaLocal(logisticasFusionadas);
@@ -1574,6 +1774,16 @@ window.cargarHistorialRemotoSupabase = cargarHistorialRemotoSupabase;
 
 // ========== STORAGE: realtime y refresco compartido ==========
 
+function programarCargaHistorialRemotoSupabase(options = {}) {
+    clearTimeout(window._historialRemotoRealtimeTimer);
+    window._historialRemotoRealtimeTimer = setTimeout(() => {
+        cargarHistorialRemotoSupabase({
+            render: options.render !== false,
+            minIntervalMs: options.minIntervalMs ?? 6000
+        });
+    }, Number(options.delayMs ?? 1200));
+}
+
 function iniciarRealtimeHistorialSupabase() {
     if (!haySesionSupabase() || window._ordersRealtimeChannel) return;
 
@@ -1585,18 +1795,14 @@ function iniciarRealtimeHistorialSupabase() {
                     at: fechaHoraIso(),
                     payload: payload?.payload || null
                 };
-                if (typeof window.cargarHistorialRemotoSupabase === 'function') {
-                    window.cargarHistorialRemotoSupabase({ render: true });
-                }
+                programarCargaHistorialRemotoSupabase({ render: true });
             })
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'orders'
             }, () => {
-                if (typeof window.cargarHistorialRemotoSupabase === 'function') {
-                    window.cargarHistorialRemotoSupabase({ render: true });
-                }
+                programarCargaHistorialRemotoSupabase({ render: true });
             })
             .subscribe(status => {
                 window._ordersRealtimeStatus = {
@@ -1604,7 +1810,7 @@ function iniciarRealtimeHistorialSupabase() {
                     at: fechaHoraIso()
                 };
                 if (status === 'SUBSCRIBED') {
-                    window.cargarHistorialRemotoSupabase?.({ render: true });
+                    window.cargarHistorialRemotoSupabase?.({ render: true, minIntervalMs: 15000 });
                 }
             });
     } catch (error) {
@@ -1632,9 +1838,9 @@ function iniciarRefrescoHistorialCompartido() {
     if (window._historialCompartidoTimer) clearInterval(window._historialCompartidoTimer);
     window._historialCompartidoTimer = setInterval(() => {
         if (!document.hidden && getUsuarioActualId() && typeof window.cargarHistorialRemotoSupabase === 'function') {
-            window.cargarHistorialRemotoSupabase({ render: true });
+            window.cargarHistorialRemotoSupabase({ render: true, minIntervalMs: 45000 });
         }
-    }, 3000);
+    }, 60000);
 }
 
 document.addEventListener('user:changed', () => {
@@ -1651,7 +1857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     iniciarRealtimeHistorialSupabase();
     iniciarRefrescoHistorialCompartido();
     if (typeof window.cargarHistorialRemotoSupabase === 'function') {
-        window.cargarHistorialRemotoSupabase({ render: true });
+        window.cargarHistorialRemotoSupabase({ render: true, force: true });
     }
 });
 

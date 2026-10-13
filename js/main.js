@@ -954,7 +954,7 @@ async function abrirFormularioLogistica(codigoCocina, ordenId, datosBase = {}) {
     setText('log_responsable', datosBase.responsable);
     setText('log_pax', datosBase.pax ? String(datosBase.pax) : '0');
     setText('log_fecha_evento', datosBase.fecha_evento);
-    setText('log_hora_salida', datosBase.hora_salida);
+    setValue('log_hora_salida', datosBase.hora_salida);
 
     setValue('log_nombre_contacto', logisticaGuardada.nombre_contacto || document.getElementById('log_inline_nombre_contacto')?.value || '');
     setValue('log_telefono_contacto', logisticaGuardada.telefono_contacto || document.getElementById('log_inline_telefono_contacto')?.value || '');
@@ -1007,8 +1007,9 @@ function volverDesdeCancelLogistica() {
 }
 
 function validarComandaLogisticaPage() {
-    const salida = window._logisticaBase?.hora_salida ||
-        document.getElementById('log_hora_salida')?.textContent ||
+    const salida =
+        document.getElementById('log_hora_salida')?.value ||
+        window._logisticaBase?.hora_salida ||
         document.getElementById('hora_salida')?.value ||
         '';
 
@@ -1036,33 +1037,43 @@ async function guardarComandaLogistica() {
     if (!validarComandaLogisticaPage()) return;
 
     const base = window._logisticaBase || {};
+    const horaSalidaLogistica = document.getElementById('log_hora_salida')?.value || base.hora_salida || '';
     const datosEntrega = window.CaterCloudLogisticsDelivery?.readFromDom('log') || {};
     const materialSeleccionado = typeof obtenerMaterialSeleccionado === 'function'
         ? obtenerMaterialSeleccionado('materialLogisticaPage')
         : null;
     const estadoPrevio = window._logisticaEditando || {};
     const esLogisticaIndependiente = !!base.es_logistica_independiente && !base.codigoCocina;
+    const estadoOperativoLogistica = estadoPrevio.logistics_status || estadoPrevio.estado_logistica || 'sin_preparar';
+    const estadoPedidoLogistica = esLogisticaIndependiente
+        ? (['anulada', 'eliminada'].includes(estadoPrevio.estado) ? estadoPrevio.estado : (estadoPrevio.estado_pedido || 'creada'))
+        : estadoOperativoLogistica;
+    const estadoConfirmacionLogistica = estadoPrevio.estado_confirmacion || estadoPrevio.confirmation_status || 'por_confirmar';
     const datosLogistica = {
         tipo_registro: 'logistica',
         codigo_original: base.codigoLogistica || window._logisticaEditando?.codigo || '',
         codigo_cocina: esLogisticaIndependiente ? '' : (base.codigoCocina || ''),
         orden_id: base.ordenId || null,
-        empresa: base.empresa || '',
+        cliente_id: base.cliente_id || (typeof window.obtenerClienteIdParaComanda === 'function' ? window.obtenerClienteIdParaComanda() : null),
+        empresa: base.empresa || document.getElementById('log_empresa')?.textContent?.trim() || '',
         responsable: base.responsable || '',
         pax: base.pax || 0,
         fecha_evento: base.fecha_evento || '',
-        hora_salida: base.hora_salida || '',
+        hora_salida: horaSalidaLogistica,
         menu_principal: base.menu_principal || null,
         menus_adicionales: base.menus_adicionales || [],
         menu_nombre: base.menu_nombre || '',
         logistica: datosEntrega,
         material_logistica: materialSeleccionado,
         es_logistica_independiente: esLogisticaIndependiente,
-        logistics_status: estadoPrevio.logistics_status || estadoPrevio.estado || 'sin_preparar',
+        logistics_status: estadoOperativoLogistica,
+        estado_logistica: estadoOperativoLogistica,
         logistics_assigned_to: estadoPrevio.logistics_assigned_to || '',
         logistics_prepared_items: estadoPrevio.logistics_prepared_items || 0,
+        estado_confirmacion: estadoConfirmacionLogistica,
+        confirmation_status: estadoConfirmacionLogistica,
         fecha_creacion: new Date().toISOString(),
-        estado: estadoPrevio.estado || estadoPrevio.logistics_status || 'sin_preparar'
+        estado: estadoPedidoLogistica
     };
 
     try {
@@ -1122,21 +1133,27 @@ async function guardarComandaLogistica() {
 
 function guardarComandaLogisticaEnHistorial(datosLogistica) {
     try {
-        let historial = window.CaterCloudStorage.leerHistorialLogisticaLocal();
-
         const fecha = new Date();
         const year = fecha.getFullYear().toString().slice(-2);
+        let historial = window.CaterCloudStorage.leerHistorialLogisticaLocal();
         const codigo = datosLogistica.codigo_original || datosLogistica.codigo_cocina
             || `LOG-${year}${(fecha.getMonth() + 1).toString().padStart(2, '0')}${fecha.getDate().toString().padStart(2, '0')}-${(historial.length + 1).toString().padStart(3, '0')}`;
-        const existente = historial.find(item => item.codigo === datosLogistica.codigo_original);
-
         const comandaLogistica = {
             codigo,
             ...datosLogistica,
-            fecha_creacion: existente?.fecha_creacion || datosLogistica.fecha_creacion,
+            codigo_original: datosLogistica.codigo_original || codigo,
+            fecha_creacion: datosLogistica.fecha_creacion,
             fecha_modificacion: new Date().toISOString()
         };
 
+        if (comandaLogistica.es_logistica_independiente) {
+            const principal = window.CaterCloudStorage.guardarComandaPrincipalLogisticaDirectaLocal(comandaLogistica);
+            console.log(`Comanda de logistica directa ${principal?.codigo || codigo} guardada como carpeta principal`);
+            return principal?.codigo || codigo;
+        }
+
+        const existente = historial.find(item => item.codigo === datosLogistica.codigo_original);
+        comandaLogistica.fecha_creacion = existente?.fecha_creacion || datosLogistica.fecha_creacion;
         const indexExistente = historial.findIndex(item => item.codigo === codigo || item.codigo === datosLogistica.codigo_original);
         if (indexExistente >= 0) {
             historial[indexExistente] = comandaLogistica;
@@ -1160,6 +1177,11 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
     if (!codigoPedido) return;
 
     try {
+        if (comandaLogistica.es_logistica_independiente) {
+            window.CaterCloudStorage.guardarComandaPrincipalLogisticaDirectaLocal(comandaLogistica);
+            return;
+        }
+
         const historialPrincipal = window.CaterCloudStorage.leerHistorialComandasLocal();
         const index = historialPrincipal.findIndex(item => item.codigo === codigoPedido);
         if (index === -1) return;
@@ -1183,6 +1205,9 @@ function vincularComandaLogisticaEnHistorialPrincipal(comandaLogistica) {
             material_logistica: comandaLogistica.material_logistica || comanda.material_logistica || {},
             tiene_comanda_logistica: true,
             logistics_status: comandaLogistica.logistics_status || comandaLogistica.estado || comanda.logistics_status || 'sin_preparar',
+            estado_logistica: comandaLogistica.estado_logistica || comandaLogistica.logistics_status || comanda.estado_logistica || 'sin_preparar',
+            estado_confirmacion: comandaLogistica.estado_confirmacion || comandaLogistica.confirmation_status || comanda.estado_confirmacion || comanda.confirmation_status || 'por_confirmar',
+            confirmation_status: comandaLogistica.confirmation_status || comandaLogistica.estado_confirmacion || comanda.confirmation_status || comanda.estado_confirmacion || 'por_confirmar',
             logistics_assigned_to: comandaLogistica.logistics_assigned_to || comanda.logistics_assigned_to || '',
             logistics_prepared_items: comandaLogistica.logistics_prepared_items ?? comanda.logistics_prepared_items ?? 0,
             logistica_creada: true,
@@ -1378,6 +1403,12 @@ async function cancelarFormularioComanda() {
 function volverDesdeDetalleComanda() {
     const activo = window.detalleDocumentoActivo || {};
     const codigo = activo.codigoCocina || activo.codigo || (document.getElementById('detalleCodigo')?.textContent || '').replace(/^.*-\s*/, '').trim();
+
+    if (activo.tipo === 'logistica' && codigo && typeof obtenerComandaDelHistorial === 'function' && !obtenerComandaDelHistorial(codigo)) {
+        if (typeof _asegurarCarpetaDesdeDetalleLogistica === 'function') {
+            _asegurarCarpetaDesdeDetalleLogistica(codigo);
+        }
+    }
 
     if (codigo && typeof verExpedientePedido === 'function') {
         verExpedientePedido(codigo);

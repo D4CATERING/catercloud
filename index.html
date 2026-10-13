@@ -724,7 +724,7 @@
             <div class="logistics-events-toolbar">
               <label>
                 Filtrar por dia
-                <input type="date" id="cocinaFiltroFecha" onchange="renderizarComandasCocina()">
+                <input type="date" id="cocinaFiltroFecha" onchange="window.cocinaFiltroPeriodo='dia'; renderizarComandasCocina()">
               </label>
               <button type="button" id="cocinaFiltroHoyBtn" onclick="filtrarCocinaHoy()">Hoy</button>
               <button type="button" id="cocinaFiltroSemanaBtn" onclick="filtrarCocinaSemana()">Semana</button>
@@ -790,7 +790,57 @@
             </article>
             <article>
               <strong id="reportKpiCantidad">0</strong>
-              <span>Cantidad total</span>
+              <span>Total mixto</span>
+            </article>
+          </div>
+
+          <div class="reporting-charts-grid">
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Producción por item</h3>
+                <span>Cantidad + unidad</span>
+              </div>
+              <div id="reportChartProduccion" class="reporting-chart-bars"></div>
+            </article>
+
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Consumo logística</h3>
+                <span>Cantidad + unidad</span>
+              </div>
+              <div id="reportChartLogistica" class="reporting-chart-bars"></div>
+            </article>
+
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Menús / servicios</h3>
+                <span>Número de comandas</span>
+              </div>
+              <div id="reportChartMenus" class="reporting-chart-bars"></div>
+            </article>
+
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Evolución por fecha</h3>
+                <span>Comandas por día</span>
+              </div>
+              <div id="reportChartFechas" class="reporting-chart-bars"></div>
+            </article>
+
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Comandas por semana</h3>
+                <span>Últimas semanas</span>
+              </div>
+              <div id="reportChartEstados" class="reporting-chart-bars"></div>
+            </article>
+
+            <article class="reporting-chart-card">
+              <div class="reporting-chart-header">
+                <h3>Comandas por mes</h3>
+                <span>Evolución mensual</span>
+              </div>
+              <div id="reportChartTopItems" class="reporting-chart-bars"></div>
             </article>
           </div>
 
@@ -1309,8 +1359,8 @@
                         </div>
 
                         <div class="info-item logistics-summary-item logistics-summary-item--small">
-                            <div class="info-label">Hora de Salida</div>
-                            <div id="log_hora_salida" class="info-value log-readonly">—</div>
+                            <label for="log_hora_salida" class="info-label">Hora de Salida</label>
+                            <input type="time" id="log_hora_salida" class="info-value log-summary-input">
                         </div>
                     </div>
                 </div>
@@ -1459,16 +1509,16 @@
 
     <!-- Scripts: Aplicación -->
     <script src="js/activity-log.js?v=20260928a"></script>
-    <script src="js/storage.js?v=20260929c"></script>
+    <script src="js/storage.js?v=20261013b"></script>
     <script src="js/clients.js?v=20260928a"></script>
     <script src="js/calendar.js?v=20260928a"></script>
     <script src="js/routes-module.js?v=20260928a"></script>
-    <script src="js/routes-dashboard.js?v=20260929a"></script>
+    <script src="js/routes-dashboard.js?v=20261013a"></script>
     <script src="js/operational-alerts.js?v=20261001c"></script>
     <script src="js/kitchen-module.js?v=20260928a"></script>
     <script src="js/reporting.js?v=20261005a"></script>
-    <script src="js/kitchen-dashboard.js?v=20260928a"></script>
-    <script src="js/dashboard.js?v=20260929a"></script>
+    <script src="js/kitchen-dashboard.js?v=20261013b"></script>
+    <script src="js/dashboard.js?v=20261013a"></script>
     <script src="js/dom-utils.js"></script>
     <script src="js/desayunos.js?v=20260928b"></script>
     <script src="js/referencias.js?v=20260928b"></script>

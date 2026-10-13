@@ -718,8 +718,12 @@
 
         const cantidad = Number(item.cantidad || 0);
         const activo = item.checked || cantidad > 0;
+        const unidadActual = obtenerUnidadVisualMaterial(tipo, item, containerId);
+        const unidadAttrs = containerId === 'materialLogisticaPage'
+            ? `onchange="updateMaterialUnidad('${tipo}', '${item.id}', this.value, '${containerId}')"`
+            : '';
         const cantidadHtml = activo
-            ? renderizarCantidadConUnidad(cantidad, obtenerUnidadVisualMaterial(tipo, item, containerId), `onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')"`, containerId, item)
+            ? renderizarCantidadConUnidad(cantidad, unidadActual, `onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')"`, containerId, item, unidadAttrs)
             : `<button type="button" class="dc-material-btn" onclick="toggleMaterialItemNew('${tipo}', '${item.id}', '${containerId}')"><i class="ti ti-plus"></i></button>`;
 
         return `
@@ -865,12 +869,73 @@
         return containerId === 'materialLogisticaPage' || modo === 'servicios';
     }
 
+    function esFormularioLogisticaIndependiente(containerId) {
+        const base = window._logisticaBase || {};
+        return containerId === 'materialLogisticaPage' &&
+            !!base.es_logistica_independiente &&
+            !base.codigoCocina;
+    }
+
     function obtenerUnidadPedidoMaterialPorContexto(item, containerId) {
         if (esContextoLogisticaServicios(containerId)) {
             const unidadServicio = String(item?.unidad_comanda_servicio || '').trim();
             if (unidadServicio) return unidadServicio;
         }
         return obtenerUnidadPedidoMaterial(item);
+    }
+
+    function obtenerOpcionesUnidadMaterial(unidadActual = '') {
+        const unidadesBase = ['ud', 'uds', 'paquete', 'paq', 'caja', 'barca', 'botella', 'botellas', 'litro', 'Lt', 'rollo', 'bolsa', 'kg', 'grs'];
+        const unidades = [];
+        const agregarUnidad = (unidad) => {
+            const valor = String(unidad || '').trim();
+            if (!valor) return;
+            if (!unidades.some(u => u.toLowerCase() === valor.toLowerCase())) {
+                unidades.push(valor);
+            }
+        };
+        agregarUnidad(unidadActual);
+        unidadesBase.forEach(agregarUnidad);
+        return unidades;
+    }
+
+    function renderizarSelectorUnidadMaterial(unidad, attrs = '') {
+        const unidadActual = String(unidad || 'ud').trim() || 'ud';
+        return `
+            <select class="dc-material-unit dc-material-unit-select" onclick="event.stopPropagation()" ${attrs}>
+                ${obtenerOpcionesUnidadMaterial(unidadActual).map(opcion => `
+                    <option value="${escapeHtmlMaterial(opcion)}" ${opcion.toLowerCase() === unidadActual.toLowerCase() ? 'selected' : ''}>
+                        ${escapeHtmlMaterial(opcion)}
+                    </option>
+                `).join('')}
+            </select>
+        `;
+    }
+
+    function renderizarUnidadMaterial(unidad, attrs = '', containerId = '') {
+        if (esFormularioLogisticaIndependiente(containerId)) {
+            return renderizarSelectorUnidadMaterial(unidad, attrs);
+        }
+        return `<span class="dc-material-unit">${escapeHtmlMaterial(unidad || 'uds')}</span>`;
+    }
+
+    function obtenerConversionMaterialParaUnidad(item, unidad, containerId) {
+        const unidadElegida = normalizarTextoLogistica(unidad);
+        const unidadStock = normalizarTextoLogistica(obtenerUnidadStockMaterial(item));
+        if (unidadElegida && unidadStock && unidadElegida === unidadStock) return 1;
+        if (['ud', 'uds'].includes(unidadElegida) && ['ud', 'uds'].includes(unidadStock)) return 1;
+        return obtenerConversionMaterialPorContexto(item, containerId);
+    }
+
+    function aplicarUnidadComandaMaterial(item, unidad, containerId) {
+        const unidadLimpia = String(unidad || '').trim() || 'ud';
+        item.unidad = unidadLimpia;
+        item.unidad_comanda = unidadLimpia;
+        if (esContextoLogisticaServicios(containerId)) {
+            item.unidad_comanda_servicio = unidadLimpia;
+        }
+        item.unidad_inventario = item._manual_otro ? (item.unidad_inventario || unidadLimpia) : obtenerUnidadStockMaterial(item);
+        item.conversion_a_stock = obtenerConversionMaterialParaUnidad(item, unidadLimpia, containerId);
     }
 
     function obtenerConversionMaterialPorContexto(item, containerId) {
@@ -912,6 +977,10 @@
 
     function formatearDetalleDinamicoMaterial(item, cantidadBase, containerId = obtenerContainerMaterialActivo()) {
         if (esBebidaServicioSinDescripcion(item)) return '';
+        if (containerId === 'materialLogisticaPage') {
+            const unidadPedido = normalizarTextoLogistica(obtenerUnidadPedidoMaterialPorContexto(item, containerId));
+            if (unidadPedido === 'ud' || unidadPedido === 'uds') return '';
+        }
 
         const conversion = obtenerConversionMaterialPorContexto(item, containerId);
         if (conversion > 1) {
@@ -994,7 +1063,10 @@
             tipo,
             subcategoria: item.subcategoria || (item._manual_otro ? 'otros' : ''),
             _manual_otro: !!item._manual_otro,
-            descripcion: esFormularioLogisticaMenus(containerId) && !permiteDescripcionMaterialMenu(item)
+            descripcion: containerId === 'materialLogisticaPage' &&
+                ['ud', 'uds'].includes(normalizarTextoLogistica(unidadVisual))
+                ? ''
+                : esFormularioLogisticaMenus(containerId) && !permiteDescripcionMaterialMenu(item)
                 ? ''
                 : usaUnidadesMenu
                 ? ''
@@ -1041,13 +1113,16 @@
         return Math.max(0, Math.round(valor / step) * step);
     }
 
-    function renderizarCantidadConUnidad(cantidad, unidad, attrs = '', containerId = '', item = null) {
+    function renderizarCantidadConUnidad(cantidad, unidad, attrs = '', containerId = '', item = null, unidadAttrs = '') {
         const step = obtenerStepCantidadLogistica(containerId, item);
         const valor = step === '1' ? Math.round(Number(cantidad || 0)) : (cantidad || 0);
+        const unidadHtml = unidadAttrs
+            ? renderizarUnidadMaterial(unidad, unidadAttrs, containerId)
+            : `<span class="dc-material-unit">${unidad || 'uds'}</span>`;
         return `
             <div class="dc-material-qty">
                 <input type="number" class="dc-material-cantidad" value="${valor}" min="0" step="${step}" onfocus="this.select()" ${attrs}>
-                <span class="dc-material-unit">${unidad || 'uds'}</span>
+                ${unidadHtml}
             </div>
         `;
     }
@@ -1196,7 +1271,7 @@
                             ${subitemsSeleccionados.map(subitem => `
                                 <div class="logistics-builder-subselected-row">
                                     <span>${subitem.nombre}</span>
-                                    ${renderizarCantidadConUnidad(subitem.cantidad || 0, subitem.unidad, `onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`, containerId, subitem) }
+                                    ${renderizarCantidadConUnidad(subitem.cantidad || 0, obtenerUnidadPedidoMaterialPorContexto(subitem, containerId) || subitem.unidad, `onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`, containerId, subitem, `onchange="updateSubitemUnidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`) }
                                     <button type="button" title="Quitar"
                                         onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">&times;</button>
                                 </div>
@@ -1219,7 +1294,7 @@
                 <div class="logistics-builder-qty">
                     <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, item)}" value="${item.cantidad || 0}" onfocus="this.select()" onclick="this.select()"
                         onchange="updateMaterialCantidadServicio('${tipo}', '${item.id}', this.value, '${containerId}')">
-                    <span>${unidadPedido}</span>
+                    ${renderizarUnidadMaterial(unidadPedido, `onchange="updateMaterialUnidad('${tipo}', '${item.id}', this.value, '${containerId}')"`, containerId) }
                 </div>
             </div>
         `;
@@ -1250,7 +1325,7 @@
                 <div class="logistics-builder-selected-item">
                     <span>${subitem.nombre}</span>
                 <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, subitem)}" value="${subitem.cantidad || 0}" onfocus="this.select()" onclick="this.select()" onchange="updateSubitemCantidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')">
-                    <small>${obtenerUnidadPedidoMaterialPorContexto(subitem, containerId) || subitem.unidad || 'uds'}</small>
+                    ${renderizarUnidadMaterial(obtenerUnidadPedidoMaterialPorContexto(subitem, containerId) || subitem.unidad || 'uds', `onchange="updateSubitemUnidad('${tipo}', '${item.id}', '${subitem.id}', this.value, '${containerId}')"`, containerId) }
                     <button type="button" onclick="toggleSubitem('${tipo}', '${item.id}', '${subitem.id}', false, '${containerId}'); renderizarMaterial('${containerId}')">Quitar</button>
                 </div>
             `).join('');
@@ -1260,7 +1335,7 @@
             <div class="logistics-builder-selected-item">
                 <span>${item.nombre}</span>
                 <input type="number" min="0" step="${obtenerStepCantidadLogistica(containerId, item)}" value="${item.cantidad || 0}" onfocus="this.select()" onclick="this.select()" onchange="updateMaterialCantidad('${tipo}', '${item.id}', this.value, '${containerId}')">
-                <small>${obtenerUnidadPedidoMaterialPorContexto(item, containerId) || item.unidad || 'uds'}</small>
+                ${renderizarUnidadMaterial(obtenerUnidadPedidoMaterialPorContexto(item, containerId) || item.unidad || 'uds', `onchange="updateMaterialUnidad('${tipo}', '${item.id}', this.value, '${containerId}')"`, containerId) }
                 <button type="button" onclick="toggleMaterialItemBuilder('${tipo}', '${item.id}', false, '${containerId}')">Quitar</button>
             </div>
         `;
@@ -1435,6 +1510,7 @@
         } else if (!item.cantidad || item.cantidad === 0) {
             const sugerida = calcularCantidadServicio(item, obtenerPaxLogistica());
             item.cantidad = sugerida > 0 ? sugerida : 1;
+            aplicarUnidadComandaMaterial(item, obtenerUnidadPedidoMaterialPorContexto(item, containerId), containerId);
         } else if (tipo === 'menaje' && (!item.cantidad || item.cantidad === 0)) {
             const pax = parseInt(document.getElementById('log_pax')?.textContent || document.getElementById('pax')?.value || 0);
             if (pax > 0) item.cantidad = pax;
@@ -1472,13 +1548,15 @@
         if (checked) {
             if (!(parent.subitems_selected || []).some(s => String(s.id) === String(subitemId))) {
                 if (!parent.subitems_selected) parent.subitems_selected = [];
+                const unidadSubitem = obtenerUnidadVisualMaterial(tipo, subitem, containerId);
                 parent.subitems_selected.push({
                     id: subitem.id,
                     item_id: subitem.item_id,
                     nombre: subitem.nombre,
                     cantidad: 1,
-                    unidad: obtenerUnidadVisualMaterial(tipo, subitem, containerId),
-                    unidad_comanda: obtenerUnidadVisualMaterial(tipo, subitem, containerId),
+                    unidad: unidadSubitem,
+                    unidad_comanda: unidadSubitem,
+                    unidad_comanda_servicio: esContextoLogisticaServicios(containerId) ? unidadSubitem : undefined,
                     descripcion: subitem.descripcion || subitem.presentacion || '',
                     source_table: subitem.source_table || 'logistics_materials',
                     unidad_inventario: subitem.unidad_inventario || subitem.unidad || 'ud',
@@ -1517,6 +1595,16 @@
         }
     };
 
+    window.updateMaterialUnidad = function(tipo, itemId, unidad, containerId = 'materialLogisticaPage') {
+        const item = window.materialLogistica[tipo]?.find(i => String(i.id) === String(itemId));
+        if (!item) return;
+        aplicarUnidadComandaMaterial(item, unidad, containerId);
+        if (Number(item.cantidad || 0) > 0) {
+            item.checked = true;
+        }
+        renderizarMaterial(containerId);
+    };
+
     window.updateMaterialCantidadServicio = function(tipo, itemId, cantidad, containerId = 'materialLogisticaPage') {
         const item = window.materialLogistica[tipo].find(i => String(i.id) === String(itemId));
         if (!item) return;
@@ -1524,9 +1612,8 @@
         const valor = normalizarCantidadPorModo(cantidad, containerId, item);
         item.cantidad = valor;
         item.checked = valor > 0;
-        item.unidad = obtenerUnidadPedidoMaterialPorContexto(item, containerId);
+        aplicarUnidadComandaMaterial(item, obtenerUnidadPedidoMaterialPorContexto(item, containerId), containerId);
         item.unidad_inventario = obtenerUnidadStockMaterial(item);
-        item.conversion_a_stock = obtenerConversionMaterialPorContexto(item, containerId);
         item.descripcion = formatearDetalleDinamicoMaterial(item, undefined, containerId);
         renderizarMaterial(containerId);
     };
@@ -1566,6 +1653,7 @@
             cantidad,
             unidad,
             unidad_comanda: unidad,
+            unidad_comanda_servicio: esContextoLogisticaServicios(containerId) ? unidad : undefined,
             unidad_inventario: unidad,
             conversion_a_stock: 1,
             source_table: 'manual',
@@ -1598,6 +1686,17 @@
         if (containerId === 'materialLogisticaPage') {
             renderizarSeleccionadosLogistica(containerId);
         }
+    };
+
+    window.updateSubitemUnidad = function(tipo, parentId, subitemId, unidad, containerId = 'materialLogisticaPage') {
+        const parent = window.materialLogistica[tipo]?.find(i => String(i.id) === String(parentId));
+        if (!parent) return;
+
+        const selected = (parent.subitems_selected || []).find(s => String(s.id) === String(subitemId));
+        if (!selected) return;
+
+        aplicarUnidadComandaMaterial(selected, unidad, containerId);
+        renderizarMaterial(containerId);
     };
 
     // ──────────────────────────────────────────────────────────

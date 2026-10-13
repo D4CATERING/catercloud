@@ -241,13 +241,21 @@
                         resultado[tipo].push(...subitemsValidos);
                     } else if (item.tiene_subitems && item.subitems_selected.length === 0) {
                         resultado[tipo].push({
-                            id: item.id, item_id: item.item_id,
-                            nombre: item.nombre, cantidad: item.cantidad || 0, unidad: item.unidad
+                            ...item,
+                            id: item.id,
+                            item_id: item.item_id || item.id,
+                            nombre: item.nombre,
+                            cantidad: item.cantidad || 0,
+                            unidad: item.unidad
                         });
                     } else if (!item.tiene_subitems) {
                         resultado[tipo].push({
-                            id: item.id, item_id: item.item_id,
-                            nombre: item.nombre, cantidad: item.cantidad || 0, unidad: item.unidad
+                            ...item,
+                            id: item.id,
+                            item_id: item.item_id || item.id,
+                            nombre: item.nombre,
+                            cantidad: item.cantidad || 0,
+                            unidad: item.unidad
                         });
                     }
                 }
@@ -298,9 +306,11 @@
                 }
             }).join('');
 
-            // Re-insertar items de desayunos (desayunos.js los limpia al cambiar de menú)
+            // Reinsertar solo elementos heredados que aun no existan en el estado.
             itemsDesayuno.forEach(item => {
-                lista.appendChild(item);
+                const zumoId = item.getAttribute('data-zumo-id');
+                const yaExisteZumo = zumoId && (window.materialLogistica.bebidas || []).some(b => b._zumoId === zumoId);
+                if (!yaExisteZumo) lista.appendChild(item);
             });
         });
     }

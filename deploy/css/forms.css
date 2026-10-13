@@ -1942,6 +1942,18 @@ textarea.dc-input {
     white-space: nowrap;
 }
 
+.dc-material-unit-select {
+    min-width: 62px;
+    height: 24px;
+    padding: 2px 18px 2px 5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #fff;
+    color: #334155;
+    font-family: 'Roboto', sans-serif;
+    cursor: pointer;
+}
+
 .dc-material-cantidad:focus {
     outline: none;
     border-color: #10b981;
@@ -4316,6 +4328,26 @@ h3 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#logisticaForm .logistics-summary-item .log-summary-input {
+  width: 100%;
+  min-height: 24px;
+  padding: 1px 4px;
+  border: 1px solid #dbe4ee;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #131B23;
+  font-size: .78rem;
+  line-height: 1.2;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+#logisticaForm .logistics-summary-item .log-summary-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, .1);
+  outline: none;
 }
 
 @media (max-width: 900px) {
@@ -6693,7 +6725,7 @@ h3 {
 
 .logistics-builder-selected-item {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 70px 45px auto;
+  grid-template-columns: minmax(0, 1fr) 70px 74px auto;
   gap: 10px;
   align-items: center;
   padding: 9px 14px;
@@ -6716,6 +6748,20 @@ h3 {
 .logistics-builder-selected-item small {
   color: var(--dc-muted);
   font-size: .72rem;
+}
+
+.logistics-builder-selected-item .dc-material-unit-select {
+  width: 74px;
+  min-width: 74px;
+  height: 30px;
+  font-size: .72rem;
+}
+
+.btn-confirmar-detalle {
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: .78rem;
 }
 
 .logistics-builder-selected-item button {
@@ -6970,7 +7016,7 @@ h3 {
 }
 
 #logisticaForm #materialLogisticaPage .logistics-builder-pick {
-  grid-template-columns: minmax(0, 1fr) 70px;
+  grid-template-columns: minmax(0, 1fr) 96px;
   min-height: 42px;
   gap: 2px 6px;
   padding: 5px 7px;
@@ -7030,7 +7076,7 @@ h3 {
 }
 
 #logisticaForm #materialLogisticaPage .logistics-builder-qty {
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 40px 52px;
   gap: 4px;
 }
 
@@ -7045,6 +7091,14 @@ h3 {
   font-size: .58rem;
 }
 
+#logisticaForm #materialLogisticaPage .logistics-builder-qty .dc-material-unit-select {
+  width: 52px;
+  min-width: 52px;
+  height: 24px;
+  padding: 2px 14px 2px 4px;
+  font-size: .58rem;
+}
+
 #logisticaForm #materialLogisticaPage .logistics-builder-subselected {
   display: grid;
   gap: 5px;
@@ -7056,7 +7110,7 @@ h3 {
 
 #logisticaForm #materialLogisticaPage .logistics-builder-subselected-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 76px 22px;
+  grid-template-columns: minmax(0, 1fr) 106px 22px;
   align-items: center;
   gap: 5px;
   font-size: .66rem;
@@ -7077,7 +7131,7 @@ h3 {
 }
 
 #logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-qty {
-  grid-template-columns: 38px auto;
+  grid-template-columns: 38px 62px;
   justify-self: end;
 }
 
@@ -7086,6 +7140,13 @@ h3 {
 }
 
 #logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-unit {
+  font-size: .56rem;
+}
+
+#logisticaForm #materialLogisticaPage .logistics-builder-subselected-row .dc-material-unit-select {
+  width: 62px;
+  min-width: 62px;
+  height: 23px;
   font-size: .56rem;
 }
 
@@ -8661,6 +8722,208 @@ h3 {
   font-size: .78rem;
 }
 
+.reporting-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reporting-chart-card {
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, .06);
+  overflow: hidden;
+}
+
+.reporting-chart-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.reporting-chart-header h3 {
+  margin: 0;
+  color: #111827;
+  font-family: var(--font-title);
+  font-size: .82rem;
+  text-transform: uppercase;
+}
+
+.reporting-chart-header span {
+  color: #64748b;
+  font-size: .68rem;
+  white-space: nowrap;
+}
+
+.reporting-chart-bars {
+  min-height: 276px;
+  padding: 10px 12px 12px;
+  overflow: hidden;
+}
+
+.report-chart-empty {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: .76rem;
+  text-align: center;
+}
+
+.report-svg-wrap {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.report-svg-wrap--scroll {
+  max-height: 318px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.report-chart-context {
+  justify-self: end;
+  color: #64748b;
+  font-size: .68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-svg-chart {
+  display: block;
+  width: 100%;
+  height: 250px;
+  overflow: visible;
+}
+
+.report-svg-chart--horizontal {
+  height: auto;
+  min-height: 276px;
+}
+
+.report-svg-hbar-group {
+  cursor: pointer;
+  outline: none;
+}
+
+.report-svg-hbar-bg {
+  fill: #edf2f7;
+}
+
+.report-svg-hbar {
+  filter: drop-shadow(0 6px 8px rgba(15, 23, 42, .1));
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.report-svg-hbar-group:hover .report-svg-hbar,
+.report-svg-hbar-group:focus .report-svg-hbar {
+  opacity: .82;
+  transform: translateX(2px);
+}
+
+.report-svg-hbar-label,
+.report-svg-hbar-value {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-svg-hbar-label {
+  fill: #334155;
+}
+
+.report-svg-hbar-value {
+  fill: #0f172a;
+}
+
+.report-svg-grid {
+  stroke: #e8edf3;
+  stroke-width: 1;
+}
+
+.report-svg-axis-line {
+  stroke: #cbd5e1;
+  stroke-width: 1.25;
+}
+
+.report-svg-axis {
+  fill: #64748b;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.report-svg-bar {
+  filter: drop-shadow(0 8px 10px rgba(15, 23, 42, .12));
+}
+
+.report-svg-line {
+  fill: none;
+  stroke: #4e79a7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4;
+}
+
+.report-svg-area {
+  fill: rgba(78, 121, 167, .14);
+}
+
+.report-svg-dot {
+  fill: #fff;
+  stroke: #4e79a7;
+  stroke-width: 4;
+}
+
+.report-svg-value {
+  fill: #0f172a;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.report-svg-label {
+  fill: #475569;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.report-chart-legend {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  color: #475569;
+  font-size: .68rem;
+  font-weight: 700;
+}
+
+.report-chart-legend span {
+  display: inline-flex;
+  max-width: 46%;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-chart-legend i {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 999px;
+}
+
 .reporting-table-card {
   min-height: 0;
   overflow: hidden;
@@ -8755,6 +9018,16 @@ h3 {
   }
 
   .reporting-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .reporting-charts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .reporting-charts-grid {
     grid-template-columns: 1fr;
   }
 }

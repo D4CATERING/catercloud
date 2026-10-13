@@ -1611,7 +1611,10 @@ async function eliminarParadaRutaLogistica(stopId) {
 }
 
 function getFechaLogisticaItem(item) {
-    return String(item?.fecha_evento || item?.fecha_creacion || '').split('T')[0];
+    const fecha = item?.fecha_evento || item?.fecha_creacion || '';
+    return typeof normalizarFechaDashboard === 'function'
+        ? normalizarFechaDashboard(fecha)
+        : String(fecha).split('T')[0];
 }
 
 function getLogisticaRutaItem(item) {
@@ -1620,7 +1623,10 @@ function getLogisticaRutaItem(item) {
 
 function getFechaRecogidaRutaItem(item) {
     const log = getLogisticaRutaItem(item);
-    return String(log.fecha_recogida || item?.fecha_recogida || '').split('T')[0];
+    const fecha = log.fecha_recogida || item?.fecha_recogida || '';
+    return typeof normalizarFechaDashboard === 'function'
+        ? normalizarFechaDashboard(fecha)
+        : String(fecha).split('T')[0];
 }
 
 function getHoraRecogidaClienteRutaItem(item) {

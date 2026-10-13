@@ -11,7 +11,108 @@
     window._clienteContactosEmpresa = [];
 
     function _getEmpresaActualCliente() {
-        return (document.getElementById('empresa')?.value || document.getElementById('log_empresa')?.textContent || '').trim();
+        const logisticaVisible = document.getElementById('logisticaForm')?.style.display !== 'none';
+        const logEmpresa = (document.getElementById('log_empresa')?.textContent || '').trim();
+        const empresaForm = (document.getElementById('empresa')?.value || '').trim();
+        const empresa = logisticaVisible && logEmpresa ? logEmpresa : (empresaForm || logEmpresa);
+        return empresa === '—' || empresa === 'Logística directa' ? '' : empresa;
+    }
+
+    function _normalizarClienteTexto(valor) {
+        return String(valor || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function _clienteCoincide(valorA, valorB) {
+        return _normalizarClienteTexto(valorA) === _normalizarClienteTexto(valorB);
+    }
+
+    function _mezclarDatosCliente(base = {}, nuevos = {}) {
+        return {
+            empresa: nuevos.empresa || base.empresa || '',
+            contacto: nuevos.contacto || base.contacto || null,
+            telefono: nuevos.telefono || base.telefono || null,
+            direccion: nuevos.direccion || base.direccion || null,
+            codigo_postal: nuevos.codigo_postal || base.codigo_postal || null,
+            created_by: base.created_by || nuevos.created_by || window.currentUser?.id || null
+        };
+    }
+
+    async function _buscarClientesPorEmpresaExacta(empresa) {
+        const empresaBase = String(empresa || '').trim();
+        if (!empresaBase || !window.supabaseClient) return [];
+
+        const { data, error } = await window.supabaseClient
+            .from('clients')
+            .select('id, empresa, contacto, telefono, direccion, codigo_postal, created_by')
+            .ilike('empresa', empresaBase)
+            .eq('activo', true)
+            .limit(80);
+        if (error) throw error;
+
+        return (data || []).filter(cliente => _clienteCoincide(cliente.empresa, empresaBase));
+    }
+
+    async function _buscarClienteExistente(empresa, contacto = '') {
+        const clientes = await _buscarClientesPorEmpresaExacta(empresa);
+        const contactoBase = String(contacto || '').trim();
+        if (contactoBase) {
+            return clientes.find(cliente => _clienteCoincide(cliente.contacto, contactoBase)) || null;
+        }
+        return clientes.find(cliente => !String(cliente.contacto || '').trim()) || clientes[0] || null;
+    }
+
+    async function _guardarClienteSinDuplicar(clienteData, clienteId = '') {
+        if (clienteId) {
+            const { data, error } = await window.supabaseClient
+                .from('clients')
+                .update(clienteData)
+                .eq('id', clienteId)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+
+        const contacto = String(clienteData.contacto || '').trim();
+        const existenteExacto = await _buscarClienteExistente(clienteData.empresa, contacto);
+        if (existenteExacto && (contacto || !String(existenteExacto.contacto || '').trim())) {
+            const datosActualizados = _mezclarDatosCliente(existenteExacto, clienteData);
+            const { data, error } = await window.supabaseClient
+                .from('clients')
+                .update(datosActualizados)
+                .eq('id', existenteExacto.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+
+        const contactosEmpresa = await _buscarClientesPorEmpresaExacta(clienteData.empresa);
+        const filaSinContacto = contactosEmpresa.find(cliente => !String(cliente.contacto || '').trim());
+        if (filaSinContacto && contacto) {
+            const datosActualizados = _mezclarDatosCliente(filaSinContacto, clienteData);
+            const { data, error } = await window.supabaseClient
+                .from('clients')
+                .update(datosActualizados)
+                .eq('id', filaSinContacto.id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+
+        const { data, error } = await window.supabaseClient
+            .from('clients')
+            .insert(clienteData)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
     }
 
     function _crearSelectorContactos(prefix) {
@@ -33,6 +134,15 @@
         _setVal(`${prefix}_telefono_contacto`, contacto.telefono);
         _setDireccionLogistica(prefix, contacto.direccion);
         _setVal(`${prefix}_codigo_postal`, contacto.codigo_postal);
+
+        if (prefix === 'log' && contacto.empresa) {
+            const logEmpresa = document.getElementById('log_empresa');
+            if (logEmpresa) logEmpresa.textContent = contacto.empresa;
+            if (window._logisticaBase) {
+                window._logisticaBase.empresa = contacto.empresa;
+                window._logisticaBase.cliente_id = contacto.id || window._logisticaBase.cliente_id || null;
+            }
+        }
 
         const selector = document.getElementById(`${prefix}_contacto_selector`);
         if (selector && contacto.id) selector.value = contacto.id;
@@ -110,10 +220,41 @@
             timer = setTimeout(() => buscarContactos(term, dropdown, input, prefix), 300);
         });
 
+        input.addEventListener('blur', function () {
+            const term = this.value.trim();
+            if (term.length < 2) return;
+            setTimeout(() => aplicarContactoExactoSiExiste(term, prefix), 180);
+        });
+
         document.addEventListener('click', function (e) {
             if (!wrapper.contains(e.target)) dropdown.style.display = 'none';
         });
     };
+
+    async function aplicarContactoExactoSiExiste(term, prefix = 'log_inline') {
+        if (!window.supabaseClient) return;
+        const input = document.getElementById(`${prefix}_nombre_contacto`);
+        if (!input || input.value.trim() !== term) return;
+
+        try {
+            const empresaActual = _getEmpresaActualCliente();
+            let query = window.supabaseClient
+                .from('clients')
+                .select('id, empresa, contacto, telefono, direccion, codigo_postal')
+                .ilike('contacto', term)
+                .eq('activo', true)
+                .limit(20);
+            if (empresaActual) query = query.ilike('empresa', empresaActual);
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            const exacto = (data || []).find(cliente => _clienteCoincide(cliente.contacto, term));
+            if (exacto) _aplicarContactoLogistica(prefix, exacto);
+        } catch (err) {
+            console.error('Error vinculando contacto existente:', err);
+        }
+    }
 
     async function buscarContactos(term, dropdown, input, prefix = 'log_inline') {
         if (!window.supabaseClient) return;
@@ -276,20 +417,14 @@
                     };
                 }
 
-                const { data: nuevoCliente, error } = await window.supabaseClient
-                    .from('clients')
-                    .insert({
-                        empresa:       clienteActual.empresa,
-                        contacto:      nombre,
-                        telefono:      telefono || null,
-                        direccion:     clienteActual.direccion,
-                        codigo_postal: clienteActual.codigo_postal,
-                        created_by:    window.currentUser?.id || null
-                    })
-                    .select()
-                    .single();
-
-                if (error) throw error;
+                const nuevoCliente = await _guardarClienteSinDuplicar({
+                    empresa:       clienteActual.empresa,
+                    contacto:      nombre,
+                    telefono:      telefono || null,
+                    direccion:     clienteActual.direccion,
+                    codigo_postal: clienteActual.codigo_postal,
+                    created_by:    window.currentUser?.id || null
+                });
 
                 // Autorrellenar campos
                 _setVal(`${prefix}_nombre_contacto`, nombre);
@@ -630,27 +765,7 @@
         const clienteId = document.getElementById('mc_id')?.value;
 
         try {
-            let savedCliente;
-            if (clienteId) {
-                // Editar
-                const { data, error } = await window.supabaseClient
-                    .from('clients')
-                    .update(clienteData)
-                    .eq('id', clienteId)
-                    .select()
-                    .single();
-                if (error) throw error;
-                savedCliente = data;
-            } else {
-                // Crear
-                const { data, error } = await window.supabaseClient
-                    .from('clients')
-                    .insert(clienteData)
-                    .select()
-                    .single();
-                if (error) throw error;
-                savedCliente = data;
-            }
+            const savedCliente = await _guardarClienteSinDuplicar(clienteData, clienteId);
 
             // Seleccionar el cliente guardado y cerrar modal
             if (typeof window._modalClienteOptions?.onSave === 'function') {
@@ -658,6 +773,7 @@
             } else {
                 seleccionarCliente(savedCliente);
             }
+            await window.actualizarSelectoresContactosCliente(savedCliente.empresa, savedCliente.id);
             window._modalClienteOptions = null;
             document.getElementById('modalCliente')?.remove();
 
